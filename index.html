@@ -1779,11 +1779,11 @@ td strong { color: var(--text-1); font-weight: 600; }
 const SUPABASE_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_RkGimnQ1rzRrU4Io5qn9xg_Fgi4LxiO';
 
-let supabase = null;
+let sb = null;
 try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } catch (e) {
-  console.warn('Supabase not yet configured. Update SUPABASE_ANON_KEY in index.html.');
+  console.warn('Supabase client not ready:', e);
 }
 
 // ============ STATE ============
@@ -1980,13 +1980,13 @@ async function loadClients() {
   const tbody = document.getElementById('clients-tbody');
   tbody.innerHTML = '<tr><td colspan="5" class="loading-row"><span class="loading-dots">Loading clients</span></td></tr>';
 
-  if (!supabase) {
+  if (!sb) {
     tbody.innerHTML = '<tr><td colspan="5" class="loading-row">Add your Supabase anon key to connect.</td></tr>';
     return;
   }
 
   try {
-    const { data, error } = await supabase.from('clients').select('*').order('name');
+    const { data, error } = await sb.from('clients').select('*').order('name');
     if (error) throw error;
     state.clients = data || [];
     document.getElementById('client-count').textContent = state.clients.length;
@@ -2043,9 +2043,9 @@ function populateClientDropdowns() {
 
 // ============ PIPELINE ============
 async function loadPipeline() {
-  if (!supabase) return;
+  if (!sb) return;
   try {
-    const { data, error } = await supabase.from('smm_content').select('*').order('created_at', { ascending: false });
+    const { data, error } = await sb.from('smm_content').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     state.pipeline = data || [];
     renderPipeline();
@@ -2149,9 +2149,9 @@ async function updatePipelineStatus(id, newStatus) {
   item.status = newStatus;
   renderPipeline();
 
-  if (!supabase) return;
+  if (!sb) return;
   try {
-    const { error } = await supabase.from('smm_content').update({ status: newStatus }).eq('id', id);
+    const { error } = await sb.from('smm_content').update({ status: newStatus }).eq('id', id);
     if (error) throw error;
     toast('Moved to ' + newStatus.toUpperCase(), 'success');
   } catch (e) {
@@ -2179,9 +2179,9 @@ document.getElementById('pipeline-client-filter').addEventListener('change', e =
 
 // ============ SHOOTS ============
 async function loadShoots() {
-  if (!supabase) return;
+  if (!sb) return;
   try {
-    const { data, error } = await supabase.from('smm_shoots').select('*').order('shoot_date', { ascending: true });
+    const { data, error } = await sb.from('smm_shoots').select('*').order('shoot_date', { ascending: true });
     if (error) throw error;
     state.shoots = data || [];
     renderShoots();
@@ -2272,9 +2272,9 @@ async function updateShootStatus(id, newStatus) {
   sh.status = newStatus;
   renderShoots();
 
-  if (!supabase) return;
+  if (!sb) return;
   try {
-    const { error } = await supabase.from('smm_shoots').update({ status: newStatus }).eq('id', id);
+    const { error } = await sb.from('smm_shoots').update({ status: newStatus }).eq('id', id);
     if (error) throw error;
     toast('Shoot moved to ' + newStatus.toUpperCase(), 'success');
   } catch (e) {
@@ -2520,7 +2520,7 @@ function submitIdeaAdd() {
 }
 
 async function createPipelineItem(item) {
-  if (!supabase) {
+  if (!sb) {
     // Offline fallback — add locally only
     item.id = 'local-' + Date.now();
     state.pipeline.unshift(item);
@@ -2529,7 +2529,7 @@ async function createPipelineItem(item) {
     return;
   }
   try {
-    const { data, error } = await supabase.from('smm_content').insert([item]).select();
+    const { data, error } = await sb.from('smm_content').insert([item]).select();
     if (error) throw error;
     state.pipeline.unshift(data[0]);
     renderPipeline();
@@ -2541,7 +2541,7 @@ async function createPipelineItem(item) {
 }
 
 async function createShoot(sh) {
-  if (!supabase) {
+  if (!sb) {
     sh.id = 'local-' + Date.now();
     state.shoots.unshift(sh);
     renderShoots();
@@ -2549,7 +2549,7 @@ async function createShoot(sh) {
     return;
   }
   try {
-    const { data, error } = await supabase.from('smm_shoots').insert([sh]).select();
+    const { data, error } = await sb.from('smm_shoots').insert([sh]).select();
     if (error) throw error;
     state.shoots.unshift(data[0]);
     renderShoots();
@@ -2581,7 +2581,7 @@ async function init() {
   renderSOPs();
   loadIdeas();
 
-  if (supabase && SUPABASE_ANON_KEY !== 'REPLACE_WITH_YOUR_ANON_KEY') {
+  if (sb && SUPABASE_ANON_KEY !== 'REPLACE_WITH_YOUR_ANON_KEY') {
     await loadClients();
     await loadPipeline();
     await loadShoots();
