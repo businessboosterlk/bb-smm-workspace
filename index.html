@@ -3,1439 +3,2646 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BB SMM Workspace</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>SMM WORKSPACE — Business Booster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg-0:#07100f;--bg-1:#0c1816;--bg-2:#112320;--bg-3:#16302c;--line:#1e3d38;--line-bright:#2a544c;--text:#e8f4f1;--text-dim:#8aa39d;--text-mute:#5a716c;--teal:#f59e0b;--teal-dim:#d97706;--teal-glow:rgba(245,158,11,0.15);--amber:#fbbf24;--red:#f87171;--green:#4ade80;--blue:#60a5fa;--purple:#c084fc;--radius:10px;--radius-lg:16px}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{font-family:'Space Grotesk',-apple-system,sans-serif;background:var(--bg-0);color:var(--text);font-size:14px;line-height:1.5;overflow:hidden;height:100vh}
-body{background:radial-gradient(ellipse at top right,rgba(245,158,11,0.06) 0%,transparent 50%),radial-gradient(ellipse at bottom left,rgba(245,158,11,0.04) 0%,transparent 50%),var(--bg-0)}
-::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg-0)}::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--line-bright)}
+/* ==============================
+   BB SMM WORKSPACE V3
+   Premium black + neon palette
+   ============================== */
 
-/* LOGIN */
-#login{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(245,158,11,0.08) 0%,transparent 60%),var(--bg-0)}
-#login.hidden{display:none;pointer-events:none;z-index:-1}
-.login-box{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:48px 40px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,0.6);text-align:center}
-.login-logo{width:56px;height:56px;margin:0 auto 20px;border-radius:14px;background:linear-gradient(135deg,var(--teal) 0%,var(--teal-dim) 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;color:#07100f;box-shadow:0 8px 24px var(--teal-glow)}
-.login-title{font-size:22px;font-weight:600;margin-bottom:6px;letter-spacing:-0.02em}
-.login-sub{color:var(--text-dim);font-size:13px;margin-bottom:32px}
-.login-input{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;color:var(--text);font-family:inherit;font-size:14px;margin-bottom:12px;outline:none;transition:all 0.2s}
-.login-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-glow)}
-.login-btn{width:100%;background:var(--teal);color:#07100f;border:none;border-radius:var(--radius);padding:14px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;margin-top:8px;transition:all 0.2s}
-.login-btn:hover{background:var(--teal-dim);transform:translateY(-1px)}
-.login-hint{color:var(--text-mute);font-size:11px;margin-top:20px;font-family:'JetBrains Mono',monospace}
+:root {
+  /* BB Neon Palette */
+  --bb-pink: #FF2D78;
+  --bb-cyan: #00E5FF;
+  --bb-purple: #A855F7;
+  --bb-green: #00FF85;
+  --bb-orange: #FF6B2B;
 
-/* LAYOUT */
-.app{display:flex;height:100vh}
-.sidebar{width:240px;background:var(--bg-1);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0}
-.sidebar-header{padding:20px 18px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-.sidebar-logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal) 0%,var(--teal-dim) 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#07100f}
-.sidebar-title{font-size:13px;font-weight:600}
-.sidebar-sub{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace}
-.sidebar-nav{flex:1;padding:14px 10px;overflow-y:auto}
-.nav-section{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.1em;padding:12px 10px 6px;font-family:'JetBrains Mono',monospace}
-.nav-item{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--text-dim);transition:all 0.15s;font-size:13px;font-weight:500;margin-bottom:2px}
-.nav-item:hover{background:var(--bg-2);color:var(--text)}
-.nav-item.active{background:var(--bg-3);color:var(--teal);position:relative}
-.nav-item.active::before{content:'';position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--teal);border-radius:0 3px 3px 0}
-.nav-icon{width:16px;height:16px;flex-shrink:0}
-.nav-badge{margin-left:auto;background:var(--bg-3);color:var(--teal);padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;font-family:'JetBrains Mono',monospace}
-.nav-badge.red{background:rgba(248,113,113,0.15);color:var(--red)}
-.sidebar-user{padding:14px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
-.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal) 0%,var(--teal-dim) 100%);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;color:#07100f}
-.user-info{flex:1;min-width:0}
-.user-name{font-size:12px;font-weight:600}
-.user-role{font-size:10px;color:var(--text-mute);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em}
-.user-logout{background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:14px;padding:4px}
-.user-logout:hover{color:var(--red)}
+  /* Base */
+  --bg-0: #000000;
+  --bg-1: #0A0A0B;
+  --bg-2: #111113;
+  --bg-3: #18181B;
+  --bg-hover: #1F1F23;
 
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:56px;background:var(--bg-1);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0}
-.topbar-title{font-size:15px;font-weight:600}
-.topbar-search{flex:1;max-width:340px;margin-left:16px;position:relative}
-.topbar-search input{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px 8px 34px;color:var(--text);font-family:inherit;font-size:12px;outline:none}
-.topbar-search input:focus{border-color:var(--teal)}
-.topbar-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-mute)}
-.topbar-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.05em;margin-left:auto}
-.topbar-action{background:var(--teal);color:#07100f;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer}
-.topbar-action:hover{background:var(--teal-dim)}
-.topbar-icon-btn{background:var(--bg-2);border:1px solid var(--line);color:var(--text-dim);width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.topbar-icon-btn:hover{border-color:var(--teal);color:var(--teal)}
-.topbar-icon-btn svg{width:14px;height:14px}
+  /* Borders */
+  --border-1: rgba(255,255,255,0.06);
+  --border-2: rgba(255,255,255,0.10);
+  --border-3: rgba(255,255,255,0.16);
 
-.content{flex:1;overflow-y:auto;padding:28px}
-.view{display:none}
-.view.active{display:block;animation:fadeIn 0.3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.page-header{margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.page-title{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px}
-.page-sub{color:var(--text-dim);font-size:13px}
+  /* Text */
+  --text-1: #FFFFFF;
+  --text-2: #A1A1AA;
+  --text-3: #71717A;
+  --text-4: #52525B;
 
-.card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px}
-.card-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);margin-bottom:14px;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px}
-.card-title .dot{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+  /* Sizing */
+  --sidebar-w: 260px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
 
-/* TODAY */
-.today-hero{background:linear-gradient(135deg,var(--bg-2) 0%,var(--bg-1) 100%);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px;margin-bottom:20px;position:relative;overflow:hidden}
-.today-hero::before{content:'';position:absolute;top:-50%;right:-10%;width:400px;height:400px;background:radial-gradient(circle,var(--teal-glow) 0%,transparent 70%);pointer-events:none}
-.hero-greeting{font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
-.hero-name{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:12px}
-.hero-focus{display:inline-flex;align-items:center;gap:8px;background:var(--bg-3);border:1px solid var(--line-bright);padding:8px 14px;border-radius:100px;font-size:12px;font-weight:500;color:var(--teal)}
-.hero-stats{display:flex;gap:28px;margin-top:20px;position:relative;z-index:1;flex-wrap:wrap}
-.hero-stat-num{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace}
-.hero-stat-label{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px}
-.today-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-@media (max-width:1100px){.today-grid{grid-template-columns:1fr}}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-.pillars-list{display:flex;flex-direction:column;gap:8px}
-.pillar{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;cursor:pointer;transition:all 0.15s}
-.pillar:hover{border-color:var(--line-bright)}
-.pillar.done{background:rgba(74,222,128,0.05);border-color:rgba(74,222,128,0.2)}
-.pillar.done .pillar-text{text-decoration:line-through;color:var(--text-mute)}
-.pillar-check{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line-bright);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.pillar.done .pillar-check{background:var(--green);border-color:var(--green);color:#07100f}
-.pillar-text{font-size:13px;flex:1}
-.pillar-time{font-size:10px;color:var(--text-mute);font-family:'JetBrains Mono',monospace}
+html, body {
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100vh;
+}
 
-.priorities-list{display:flex;flex-direction:column;gap:8px}
-.priority-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;cursor:pointer}
-.priority-item:hover{border-left-color:var(--amber)}
-.priority-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);font-weight:600;flex-shrink:0;margin-top:2px}
-.priority-text{font-size:13px;flex:1}
-.priority-client{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px}
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
 
-.posts-today{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.post-today{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer}
-.post-today:hover{border-color:var(--teal)}
-.post-today-client{font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
-.post-today-title{font-size:13px;font-weight:500;margin-bottom:8px}
-.post-today-status{display:inline-block;padding:3px 8px;border-radius:100px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
-.status-scheduled{background:rgba(96,165,250,0.15);color:var(--blue)}
-.status-approval{background:rgba(251,191,36,0.15);color:var(--amber)}
-.status-live{background:rgba(74,222,128,0.15);color:var(--green)}
-.status-idea{background:rgba(138,163,157,0.15);color:var(--text-dim)}
-.status-script{background:rgba(96,165,250,0.15);color:var(--blue)}
-.status-design{background:rgba(192,132,252,0.15);color:var(--purple)}
+input, textarea, select {
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  outline: none;
+  transition: all 0.15s;
+  width: 100%;
+}
 
-.quick-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.quick-check{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px}
-.quick-check-name{font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.quick-check-icons{display:flex;gap:4px}
-.quick-check-icon{width:26px;height:26px;border-radius:6px;background:var(--bg-3);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;color:var(--text-mute);font-weight:600}
-.quick-check-icon.done{background:var(--green);border-color:var(--green);color:#07100f}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--bb-cyan);
+  background: var(--bg-3);
+}
 
-/* CLIENTS */
-.clients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.client-card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
-.client-card:hover{border-color:var(--teal);transform:translateY(-2px)}
-.client-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--green)}
-.client-card.health-yellow::before{background:var(--amber)}
-.client-card.health-red::before{background:var(--red)}
-.client-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.client-avatar{width:40px;height:40px;border-radius:10px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--teal);flex-shrink:0}
-.client-name{font-size:14px;font-weight:600}
-.client-meta{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.05em;font-family:'JetBrains Mono',monospace}
-.client-stats{display:flex;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
-.client-stat{flex:1}
-.client-stat-num{font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace}
-.client-stat-label{font-size:9px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px}
-.client-tier{position:absolute;top:16px;right:16px;font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
-.tier-1{background:rgba(45,212,191,0.15);color:var(--teal)}
-.tier-2{background:rgba(96,165,250,0.15);color:var(--blue)}
-.tier-3{background:rgba(192,132,252,0.15);color:var(--purple)}
-.client-renewal{margin-top:10px;padding:6px 10px;background:var(--bg-2);border-radius:6px;font-size:10px;color:var(--text-mute);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em}
-.client-renewal.urgent{background:rgba(251,191,36,0.1);color:var(--amber)}
-.client-renewal.critical{background:rgba(248,113,113,0.1);color:var(--red)}
+/* ============ APP LAYOUT ============ */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  height: 100vh;
+  width: 100vw;
+}
 
-.client-detail{display:none}
-.client-detail.active{display:block}
-.detail-header{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px}
-.back-btn{background:none;border:1px solid var(--line);color:var(--text-dim);padding:6px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;margin-bottom:14px;display:inline-flex;align-items:center;gap:6px}
-.back-btn:hover{color:var(--teal);border-color:var(--teal)}
-.detail-title-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
-.detail-avatar{width:56px;height:56px;border-radius:14px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:var(--teal)}
-.detail-name{font-size:22px;font-weight:700}
-.detail-meta{font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.05em;font-family:'JetBrains Mono',monospace;margin-top:2px}
-.detail-actions{margin-left:auto;display:flex;gap:8px}
-.detail-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap}
-.detail-tab{padding:10px 16px;background:none;border:none;color:var(--text-dim);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-.detail-tab:hover{color:var(--text)}
-.detail-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
-.detail-pane{display:none}
-.detail-pane.active{display:block}
-.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
-.info-cell{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:14px}
-.info-cell-label{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
-.info-cell-value{font-size:14px;font-weight:500}
+/* ============ SIDEBAR ============ */
+.sidebar {
+  background: var(--bg-1);
+  border-right: 1px solid var(--border-1);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px;
+  overflow-y: auto;
+}
 
-textarea.notes-area,input.edit-input,select.edit-input{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--text);font-family:inherit;font-size:13px;outline:none}
-textarea.notes-area{min-height:180px;resize:vertical}
-textarea.notes-area:focus,input.edit-input:focus,select.edit-input:focus{border-color:var(--teal)}
+.sidebar-header {
+  padding: 4px 8px 20px;
+  border-bottom: 1px solid var(--border-1);
+  margin-bottom: 16px;
+}
 
-/* PIPELINE */
-.pipeline-filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
-.filter-btn{background:var(--bg-1);border:1px solid var(--line);color:var(--text-dim);padding:7px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:500}
-.filter-btn:hover{border-color:var(--line-bright);color:var(--text)}
-.filter-btn.active{background:var(--bg-3);border-color:var(--teal);color:var(--teal)}
-.filter-divider{width:1px;height:20px;background:var(--line);margin:0 4px}
-.filter-select{background:var(--bg-1);border:1px solid var(--line);color:var(--text);padding:7px 12px;border-radius:8px;font-family:inherit;font-size:12px;outline:none}
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+}
 
-.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px}
-.kanban-col{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);min-width:260px;flex:1;display:flex;flex-direction:column;max-height:calc(100vh - 260px)}
-.kanban-col-header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-.kanban-col-dot{width:8px;height:8px;border-radius:50%}
-.kanban-col-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;flex:1}
-.kanban-col-count{background:var(--bg-3);color:var(--text-dim);font-size:10px;font-weight:600;padding:2px 8px;border-radius:100px;font-family:'JetBrains Mono',monospace}
-.kanban-col-body{padding:12px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px}
-.kanban-card{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer}
-.kanban-card:hover{border-color:var(--line-bright);transform:translateY(-1px)}
-.kanban-card.dragging{opacity:0.4}
-.kanban-card-client{font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;margin-bottom:6px;display:flex;justify-content:space-between}
-.kanban-card-title{font-size:13px;font-weight:500;margin-bottom:8px;line-height:1.3}
-.kanban-card-footer{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-mute)}
-.kanban-card-tag{background:var(--bg-3);padding:2px 7px;border-radius:100px;font-weight:500}
-.kanban-card-tag.video{background:rgba(192,132,252,0.15);color:var(--purple)}
-.kanban-card-tag.post{background:rgba(96,165,250,0.15);color:var(--blue)}
-.kanban-card-approved{color:var(--green);font-weight:600;font-size:10px}
-.kanban-add{background:none;border:1px dashed var(--line);border-radius:8px;color:var(--text-mute);padding:10px;cursor:pointer;font-family:inherit;font-size:11px;margin-top:4px}
-.kanban-add:hover{border-color:var(--teal);color:var(--teal)}
-.kanban-col.drag-over .kanban-col-body{background:rgba(245,158,11,0.04)}
+.logo-img {
+  height: 42px;
+  width: auto;
+  filter: brightness(1.1);
+  display: block;
+}
 
-/* SWEEP */
-.sweep-list{display:flex;flex-direction:column;gap:10px}
-.sweep-row{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 18px;display:grid;grid-template-columns:1fr repeat(6,62px);gap:10px;align-items:center}
-@media (max-width:900px){.sweep-row{grid-template-columns:1fr;gap:8px}}
-.sweep-client{font-weight:600;font-size:13px}
-.sweep-tier{font-size:9px;color:var(--text-mute);text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-top:2px}
-.sweep-check{display:flex;flex-direction:column;align-items:center;gap:4px}
-.sweep-check-label{font-size:8px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.05em;font-family:'JetBrains Mono',monospace}
-.sweep-check-box{width:28px;height:28px;border-radius:8px;border:1.5px solid var(--line-bright);background:var(--bg-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px}
-.sweep-check-box.done{background:var(--green);border-color:var(--green);color:#07100f;font-weight:700}
+.workspace-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  color: var(--bb-cyan);
+  margin-top: 14px;
+  padding-left: 4px;
+  border-top: 1px solid var(--border-1);
+  padding-top: 14px;
+}
 
-/* CALENDAR */
-.cal-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-.cal-nav{background:var(--bg-1);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px}
-.cal-nav:hover{border-color:var(--teal);color:var(--teal)}
-.cal-month{font-size:16px;font-weight:600}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px}
-.cal-day-label{text-align:center;font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;padding:8px 0}
-.cal-day{background:var(--bg-2);border:1px solid var(--line);border-radius:8px;min-height:100px;padding:8px;font-size:11px;cursor:pointer}
-.cal-day:hover{border-color:var(--line-bright)}
-.cal-day.empty{background:transparent;border:none;cursor:default}
-.cal-day.today{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal)}
-.cal-day-num{font-weight:600;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
-.cal-day.today .cal-day-num{color:var(--teal)}
-.cal-event{background:var(--bg-3);border-left:2px solid var(--blue);padding:3px 6px;border-radius:4px;font-size:10px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.cal-event.video{border-left-color:var(--purple)}
-.cal-event.scheduled{border-left-color:var(--blue)}
-.cal-event.live{border-left-color:var(--green)}
+.nav-section {
+  margin-bottom: 20px;
+}
 
-/* REPORTS */
-.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-@media (max-width:900px){.report-grid{grid-template-columns:1fr}}
-.report-form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
-.report-form-row label{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace}
-.report-form-row input,.report-form-row select,.report-form-row textarea{background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none}
-.report-form-row textarea{min-height:80px;resize:vertical}
-.report-form-row input:focus,.report-form-row select:focus,.report-form-row textarea:focus{border-color:var(--teal)}
-.btn-primary{background:var(--teal);color:#07100f;border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer}
-.btn-primary:hover{background:var(--teal-dim)}
-.btn-secondary{background:var(--bg-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px 16px;font-family:inherit;font-weight:500;font-size:12px;cursor:pointer}
-.btn-secondary:hover{border-color:var(--line-bright)}
-.btn-danger{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:var(--red);border-radius:8px;padding:10px 16px;font-family:inherit;font-weight:500;font-size:12px;cursor:pointer}
+.nav-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--text-4);
+  padding: 0 12px 8px;
+  text-transform: uppercase;
+}
 
-/* ESCALATION */
-.escalation-tree{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px}
-.esc-row{display:flex;gap:16px;padding:14px;background:var(--bg-2);border-radius:10px;margin-bottom:10px;border-left:3px solid var(--green)}
-.esc-row.warn{border-left-color:var(--amber)}
-.esc-row.critical{border-left-color:var(--red)}
-.esc-icon{font-size:20px;flex-shrink:0}
-.esc-title{font-weight:600;font-size:13px;margin-bottom:4px}
-.esc-body{font-size:12px;color:var(--text-dim)}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-weight: 500;
+  font-size: 13.5px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  text-decoration: none;
+}
 
-/* STRIKES */
-.strike-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px}
-.strike-row{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer}
-.strike-row:hover{border-color:var(--line-bright)}
-.strike-num{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace}
-.strike-num.red{color:var(--red)}
-.strike-num.amber{color:var(--amber)}
-.strike-num.green{color:var(--green)}
-.strike-label{font-size:10px;color:var(--text-mute);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px}
+.nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-1);
+}
 
-/* IDEAS */
-.ideas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.idea-card{background:var(--bg-1);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:10px;padding:14px}
-.idea-text{font-size:13px;margin-bottom:10px}
-.idea-meta{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--text-mute);font-family:'JetBrains Mono',monospace}
-.idea-actions{display:flex;gap:6px;margin-top:10px}
-.idea-actions button{font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg-2);color:var(--text-dim);cursor:pointer;font-family:inherit}
-.idea-actions button:hover{border-color:var(--teal);color:var(--teal)}
-.idea-actions button.del:hover{border-color:var(--red);color:var(--red)}
-.idea-add-box{background:var(--bg-1);border:1px dashed var(--line);border-radius:10px;padding:14px;display:flex;gap:8px;margin-bottom:16px}
-.idea-add-box input{flex:1;background:var(--bg-2);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-family:inherit;outline:none}
-.idea-add-box input:focus{border-color:var(--teal)}
+.nav-item.active {
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--bb-cyan);
+  border-color: rgba(0, 229, 255, 0.2);
+}
 
-/* RESOURCES */
-.resource-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-.resource-card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:18px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit;width:100%}
-.resource-card:hover{border-color:var(--teal);transform:translateY(-2px)}
-.resource-icon-sq{width:36px;height:36px;border-radius:10px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;margin-bottom:12px;color:var(--teal);font-size:18px}
-.resource-title{font-size:14px;font-weight:600;margin-bottom:4px}
-.resource-desc{font-size:11px;color:var(--text-dim)}
-.resource-panel{display:none;max-width:900px}
-.resource-panel.active{display:block}
-.resource-panel-header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
-.resource-panel-title{font-size:22px;font-weight:700}
-.resource-block{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;margin-bottom:14px}
-.resource-block h3{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--teal)}
-.resource-block p{font-size:13px;color:var(--text-dim);margin-bottom:10px;line-height:1.6}
-.resource-block ul{list-style:none;padding:0}
-.resource-block li{font-size:13px;color:var(--text-dim);padding:6px 0;padding-left:18px;position:relative}
-.resource-block li::before{content:'→';position:absolute;left:0;color:var(--teal)}
-.resource-block pre{background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);white-space:pre-wrap;line-height:1.7;margin-top:8px}
+.nav-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
 
-/* MODAL */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;z-index:500;padding:20px}
-.modal.active{display:flex}
-.modal-box{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
-.modal-box.wide{max-width:720px}
-.modal-title{font-size:18px;font-weight:600;margin-bottom:4px}
-.modal-sub{color:var(--text-dim);font-size:12px;margin-bottom:20px}
-.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end;flex-wrap:wrap}
-.modal-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
-.modal-tab{padding:8px 14px;background:none;border:none;color:var(--text-dim);font-family:inherit;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-.modal-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
-.modal-pane{display:none}
-.modal-pane.active{display:block}
+.nav-item .nav-badge {
+  margin-left: auto;
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 20px;
+  font-weight: 600;
+}
 
-.approval-log{background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:8px;max-height:140px;overflow-y:auto}
-.approval-entry{font-size:11px;color:var(--text-dim);padding:6px 0;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace}
-.approval-entry:last-child{border-bottom:none}
-.approval-entry.approved{color:var(--green)}
+.nav-item.active .nav-badge {
+  background: var(--bb-cyan);
+  color: var(--bg-0);
+}
 
-@media (max-width:768px){.sidebar{width:64px}.sidebar-title,.sidebar-sub,.nav-item span:not(.nav-icon),.user-info,.nav-section{display:none}.nav-item{justify-content:center}.content{padding:16px}.topbar-search{display:none}}
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-1);
+}
+
+/* ============ MAIN AREA ============ */
+.main {
+  overflow-y: auto;
+  background: var(--bg-0);
+  position: relative;
+}
+
+.page {
+  padding: 28px 36px 60px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-1);
+}
+
+.page-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  color: var(--text-3);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ============ BUTTONS ============ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn:hover {
+  background: var(--bg-3);
+  border-color: var(--border-3);
+}
+
+.btn-primary {
+  background: var(--bb-cyan);
+  color: var(--bg-0);
+  border-color: var(--bb-cyan);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: #00C4DB;
+  border-color: #00C4DB;
+}
+
+.btn-pink { background: var(--bb-pink); border-color: var(--bb-pink); color: #fff; font-weight: 600; }
+.btn-purple { background: var(--bb-purple); border-color: var(--bb-purple); color: #fff; font-weight: 600; }
+.btn-green { background: var(--bb-green); border-color: var(--bb-green); color: var(--bg-0); font-weight: 600; }
+.btn-orange { background: var(--bb-orange); border-color: var(--bb-orange); color: #fff; font-weight: 600; }
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border-2);
+}
+
+.btn-sm { padding: 6px 10px; font-size: 12px; }
+.btn-icon { padding: 8px; }
+
+/* ============ CARDS ============ */
+.card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.card-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 14px;
+}
+
+/* ============ TODAY PAGE ============ */
+.today-hero {
+  background: linear-gradient(135deg, rgba(255,45,120,0.08), rgba(0,229,255,0.06) 50%, rgba(168,85,247,0.08));
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.today-greeting {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.today-date {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+.today-stat-row {
+  display: flex;
+  gap: 24px;
+}
+
+.today-stat {
+  text-align: right;
+}
+
+.today-stat-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.today-stat-lbl {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* ============ CALENDAR STRIP ============ */
+.cal-strip {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.cal-strip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.cal-strip-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.cal-strip-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.cal-day {
+  padding: 12px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  position: relative;
+}
+
+.cal-day:hover {
+  background: var(--bg-3);
+  border-color: var(--border-2);
+  transform: translateY(-1px);
+}
+
+.cal-day.today {
+  background: rgba(0, 229, 255, 0.08);
+  border-color: var(--bb-cyan);
+}
+
+.cal-day-dow {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+
+.cal-day-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.cal-day-count {
+  font-size: 10px;
+  color: var(--bb-cyan);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.cal-day.today .cal-day-num { color: var(--bb-cyan); }
+
+/* ============ PILLARS GRID ============ */
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.pillar-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: all 0.15s;
+  border-left: 3px solid var(--bb-cyan);
+}
+
+.pillar-card:hover {
+  background: var(--bg-2);
+}
+
+.pillar-card.p-pink { border-left-color: var(--bb-pink); }
+.pillar-card.p-purple { border-left-color: var(--bb-purple); }
+.pillar-card.p-green { border-left-color: var(--bb-green); }
+.pillar-card.p-orange { border-left-color: var(--bb-orange); }
+.pillar-card.p-cyan { border-left-color: var(--bb-cyan); }
+
+.pillar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pillar-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pillar-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: var(--text-4);
+  font-weight: 700;
+}
+
+.pillar-desc {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.pillar-task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pillar-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-1);
+}
+
+.pillar-task:last-child { border-bottom: none; }
+
+.pillar-task input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--bb-cyan);
+  flex-shrink: 0;
+}
+
+.pillar-task.done {
+  color: var(--text-4);
+  text-decoration: line-through;
+}
+
+/* ============ DAILY TASKS STRIP ============ */
+.daily-tasks-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.daily-task-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.task-mini {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+.task-mini-head {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--bb-green);
+  margin-bottom: 10px;
+}
+
+.task-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.task-mini-row input { width: 14px; height: 14px; accent-color: var(--bb-green); }
+
+/* ============ EOD CHECKLIST ============ */
+.eod-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.eod-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.eod-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--bb-orange);
+}
+
+.eod-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.eod-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.eod-item:hover { background: var(--bg-3); }
+.eod-item input { width: 15px; height: 15px; accent-color: var(--bb-orange); }
+.eod-item.done { color: var(--text-4); text-decoration: line-through; }
+
+/* ============ PIPELINE (KANBAN) ============ */
+.pipeline-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.filter-chip:hover { background: var(--bg-3); color: var(--text-1); }
+.filter-chip.active { background: var(--bb-cyan); color: var(--bg-0); border-color: var(--bb-cyan); font-weight: 600; }
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  min-height: 60vh;
+}
+
+.kanban-col {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kanban-col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 6px 12px;
+  border-bottom: 1px solid var(--border-1);
+  margin-bottom: 10px;
+}
+
+.kanban-col-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.kanban-col-count {
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+
+/* Column accents */
+.col-accent-ideas .kanban-col-name { color: var(--bb-purple); }
+.col-accent-brief .kanban-col-name { color: var(--bb-cyan); }
+.col-accent-progress .kanban-col-name { color: var(--bb-orange); }
+.col-accent-review .kanban-col-name { color: var(--bb-pink); }
+.col-accent-live .kanban-col-name { color: var(--bb-green); }
+
+.col-accent-ideas .kanban-col { border-top: 3px solid var(--bb-purple); }
+
+.kanban-col[data-accent="ideas"] { border-top: 2px solid var(--bb-purple); }
+.kanban-col[data-accent="brief"] { border-top: 2px solid var(--bb-cyan); }
+.kanban-col[data-accent="progress"] { border-top: 2px solid var(--bb-orange); }
+.kanban-col[data-accent="review"] { border-top: 2px solid var(--bb-pink); }
+.kanban-col[data-accent="live"] { border-top: 2px solid var(--bb-green); }
+
+.kanban-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+  padding-right: 2px;
+}
+
+.kanban-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  cursor: grab;
+  transition: all 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+
+.kanban-card:hover {
+  background: var(--bg-3);
+  border-color: var(--border-2);
+  transform: translateY(-1px);
+}
+
+.kanban-card:active { cursor: grabbing; }
+
+.kanban-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+}
+
+/* THE STATUS HEADER ON EVERY CARD - this is what the user asked for */
+.card-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -12px -12px 10px;
+  padding: 6px 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-1);
+}
+
+.card-status-label {
+  color: var(--text-2);
+}
+
+.status-ideas { color: var(--bb-purple); }
+.status-brief { color: var(--bb-cyan); }
+.status-progress { color: var(--bb-orange); }
+.status-review { color: var(--bb-pink); }
+.status-live { color: var(--bb-green); }
+
+.card-type-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.type-post { background: rgba(0, 229, 255, 0.15); color: var(--bb-cyan); }
+.type-video { background: rgba(255, 45, 120, 0.15); color: var(--bb-pink); }
+.type-story { background: rgba(168, 85, 247, 0.15); color: var(--bb-purple); }
+
+.kanban-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.kanban-card-client {
+  font-size: 10.5px;
+  color: var(--text-3);
+  letter-spacing: 0.3px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.kanban-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.card-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ============ TABLE ============ */
+.table-wrap {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-1);
+  font-size: 13px;
+}
+
+th {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 600;
+  background: var(--bg-2);
+}
+
+td { color: var(--text-2); }
+
+tr:last-child td { border-bottom: none; }
+
+tr:hover td { background: var(--bg-2); color: var(--text-1); }
+
+td strong { color: var(--text-1); font-weight: 600; }
+
+.pkg-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pkg-spark { background: rgba(0, 229, 255, 0.15); color: var(--bb-cyan); }
+.pkg-ignite { background: rgba(255, 107, 43, 0.15); color: var(--bb-orange); }
+.pkg-blaze { background: rgba(255, 45, 120, 0.15); color: var(--bb-pink); }
+.pkg-custom { background: rgba(168, 85, 247, 0.15); color: var(--bb-purple); }
+
+.health-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.health-dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.health-green { color: var(--bb-green); }
+.health-green::before { background: var(--bb-green); box-shadow: 0 0 8px var(--bb-green); }
+.health-amber { color: var(--bb-orange); }
+.health-amber::before { background: var(--bb-orange); box-shadow: 0 0 8px var(--bb-orange); }
+.health-red { color: var(--bb-pink); }
+.health-red::before { background: var(--bb-pink); box-shadow: 0 0 8px var(--bb-pink); }
+
+/* ============ CALENDAR PAGE ============ */
+.cal-month {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.cal-month-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.cal-month-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cal-dow {
+  padding: 8px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-4);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.cal-cell {
+  aspect-ratio: 1.2 / 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.12s;
+  display: flex;
+  flex-direction: column;
+  min-height: 80px;
+}
+
+.cal-cell:hover { background: var(--bg-3); border-color: var(--border-2); }
+.cal-cell.muted { opacity: 0.4; }
+.cal-cell.today { border-color: var(--bb-cyan); background: rgba(0, 229, 255, 0.05); }
+
+.cal-cell-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cal-cell-dots {
+  display: flex;
+  gap: 3px;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.cal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* ============ MODAL ============ */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.modal-bg.open { display: flex; }
+
+.modal {
+  background: var(--bg-1);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.modal-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.modal-close:hover { color: var(--text-1); }
+
+.form-group { margin-bottom: 14px; }
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+/* ============ ESCALATION HELPER ============ */
+.escalation-card {
+  background: linear-gradient(135deg, rgba(255, 45, 120, 0.08), rgba(255, 107, 43, 0.05));
+  border: 1px solid rgba(255, 45, 120, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.escalation-step {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-1);
+}
+
+.escalation-step:last-child { border-bottom: none; }
+
+.esc-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--bb-pink);
+  flex-shrink: 0;
+}
+
+.esc-content h4 {
+  font-size: 13px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.esc-content p {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* ============ SOPS ============ */
+.sop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.sop-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sop-card:hover {
+  border-color: var(--border-3);
+  background: var(--bg-2);
+  transform: translateY(-2px);
+}
+
+.sop-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--bb-cyan);
+  margin-bottom: 8px;
+}
+
+.sop-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.sop-desc {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+/* ============ IDEAS INBOX ============ */
+.ideas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.idea-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  transition: all 0.12s;
+}
+
+.idea-row:hover { background: var(--bg-2); }
+
+.idea-text { flex: 1; font-size: 13px; color: var(--text-2); }
+
+/* ============ PAGES HIDE/SHOW ============ */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ============ SCROLLBAR ============ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-3); }
+
+/* ============ LOADING STATE ============ */
+.loading-row {
+  padding: 30px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: ''; }
+  40% { content: '.'; }
+  60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}
+
+/* ============ TOAST ============ */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--text-1);
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--bb-green); }
+.toast.error { border-color: var(--bb-pink); }
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1100px) {
+  .kanban-board { grid-template-columns: repeat(3, 1fr); }
+  .daily-task-row { grid-template-columns: 1fr; }
+  .eod-list { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .page { padding: 20px 16px 40px; }
+  .kanban-board { grid-template-columns: 1fr; }
+  .today-hero { flex-direction: column; align-items: flex-start; }
+  .cal-strip-days { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Utility */
+.flex { display: flex; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.gap-8 { gap: 8px; }
+.gap-14 { gap: 14px; }
+.mb-14 { margin-bottom: 14px; }
+.mb-20 { margin-bottom: 20px; }
+.mt-20 { margin-top: 20px; }
+.text-muted { color: var(--text-3); }
+.text-small { font-size: 12px; }
+
 </style>
 </head>
 <body>
+<div class="app">
 
-<div id="login">
-  <div class="login-box">
-    <div class="login-logo">BB</div>
-    <div class="login-title">SMM Workspace</div>
-    <div class="login-sub">Business Booster · Internal Tool</div>
-    <input type="text" class="login-input" id="loginName" placeholder="Your name" autocomplete="off">
-    <input type="password" class="login-input" id="loginPass" placeholder="Password" autocomplete="off">
-    <button class="login-btn" onclick="doLogin()">Enter Workspace →</button>
-    <div class="login-hint">DEMO PASSWORD: bb2026</div>
-  </div>
-</div>
-
-<div class="app" id="app" style="display:none;">
+  <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo">BB</div>
-      <div>
-        <div class="sidebar-title">SMM Workspace</div>
-        <div class="sidebar-sub">v2.0</div>
+      <div class="logo-wrap">
+        <img src="bb-logo.png" alt="Business Booster" class="logo-img" onerror="this.style.display='none'">
       </div>
+      <div class="workspace-label">SMM WORKSPACE</div>
     </div>
-    <nav class="sidebar-nav">
-      <div class="nav-section">Daily</div>
-      <div onclick="navTo('today')" class="nav-item active" data-view="today"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Today</span></div>
-      <div onclick="navTo('inbox')" class="nav-item" data-view="inbox"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><span>Inbox Sweep</span></div>
-      <div onclick="navTo('ideas')" class="nav-item" data-view="ideas"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21h6M12 17v4M12 2a7 7 0 0 1 7 7c0 3-2 5-3 6H8c-1-1-3-3-3-6a7 7 0 0 1 7-7z"/></svg><span>Ideas</span><span class="nav-badge" id="ideasCount">0</span></div>
 
-      <div class="nav-section">Work</div>
-      <div onclick="navTo('clients')" class="nav-item" data-view="clients"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Clients</span><span class="nav-badge" id="clientCount">13</span></div>
-      <div onclick="navTo('pipeline')" class="nav-item" data-view="pipeline"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Pipeline</span></div>
-      <div onclick="navTo('calendar')" class="nav-item" data-view="calendar"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Calendar</span></div>
+    <div class="nav-section">
+      <div class="nav-section-title">Daily</div>
+      <button class="nav-item active" data-page="today">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Today
+      </button>
+      <button class="nav-item" data-page="calendar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="14" r="1" fill="currentColor"/><circle cx="12" cy="14" r="1" fill="currentColor"/><circle cx="16" cy="14" r="1" fill="currentColor"/></svg>
+        Calendar
+      </button>
+    </div>
 
-      <div class="nav-section">Output</div>
-      <div onclick="navTo('reports')" class="nav-item" data-view="reports"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Reports</span></div>
-      <div onclick="navTo('alerts')" class="nav-item" data-view="alerts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Alerts</span></div>
-      <div onclick="navTo('escalation')" class="nav-item" data-view="escalation"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Escalation</span></div>
-      <div onclick="navTo('strikes')" class="nav-item" data-view="strikes"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Strike Tracker</span><span class="nav-badge" id="strikeBadge">0</span></div>
+    <div class="nav-section">
+      <div class="nav-section-title">Pipelines</div>
+      <button class="nav-item" data-page="pipeline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/></svg>
+        Content Pipeline
+      </button>
+      <button class="nav-item" data-page="shoots">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><circle cx="12" cy="13" r="1" fill="currentColor"/></svg>
+        Shoot Pipeline
+      </button>
+    </div>
 
-      <div class="nav-section">Knowledge</div>
-      <div onclick="navTo('resources')" class="nav-item" data-view="resources"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Resources</span></div>
-      <div class="nav-section">Hub</div>
-      <div onclick="window.open('https://businessboosterlk.github.io/bb-command-centre/','_blank')" class="nav-item" style="cursor:pointer;"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg><span>Command Centre</span></div>
-    </nav>
-    <div class="sidebar-user">
-      <div class="user-avatar" id="userInitial">?</div>
-      <div class="user-info"><div class="user-name" id="userName">SMM</div><div class="user-role">Social Media Mgr</div></div>
-      <button class="user-logout" onclick="doLogout()" title="Logout">⏻</button>
+    <div class="nav-section">
+      <div class="nav-section-title">Accounts</div>
+      <button class="nav-item" data-page="clients">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Clients
+        <span class="nav-badge" id="client-count">—</span>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Support</div>
+      <button class="nav-item" data-page="escalation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Escalation Helper
+      </button>
+      <button class="nav-item" data-page="sops">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+        SMM SOPs
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Capture</div>
+      <button class="nav-item" data-page="ideas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+        Ideas Inbox
+        <span class="nav-badge" id="ideas-count">0</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <a class="nav-item" href="https://businessboosterlk.github.io/bb-command-centre" target="_blank" style="color: var(--bb-orange);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Command Centre
+      </a>
     </div>
   </aside>
 
+  <!-- ============ MAIN ============ -->
   <main class="main">
-    <div class="topbar">
-      <div class="topbar-title" id="pageTitle">Today</div>
-      <div class="topbar-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="globalSearch" placeholder="Search clients, cards, ideas..." oninput="doSearch()">
-      </div>
-      <button class="topbar-icon-btn" onclick="exportData()" title="Export all data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-      <div class="topbar-date" id="topDate"></div>
-      <button class="topbar-action" onclick="openModal('quickAdd')">+ Quick Add</button>
-    </div>
-    <div class="content">
 
-      <!-- TODAY -->
-      <div class="view active" id="view-today">
-        <div class="today-hero">
-          <div class="hero-greeting" id="greeting">GOOD MORNING</div>
-          <div class="hero-name" id="heroName">SMM</div>
-          <div class="hero-focus" id="heroFocus">● Loading focus...</div>
-          <div class="hero-stats">
-            <div><div class="hero-stat-num" id="statClients">13</div><div class="hero-stat-label">Clients</div></div>
-            <div><div class="hero-stat-num" id="statPosts">0</div><div class="hero-stat-label">Posts Today</div></div>
-            <div><div class="hero-stat-num" id="statTasks">0</div><div class="hero-stat-label">Tasks Open</div></div>
-            <div><div class="hero-stat-num" id="statSweep">0%</div><div class="hero-stat-label">Sweep Done</div></div>
-            <div><div class="hero-stat-num" id="statRenewals">0</div><div class="hero-stat-label">Renewals Soon</div></div>
+    <!-- ============ TODAY PAGE ============ -->
+    <section class="page active" id="page-today">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Today</h1>
+          <div class="page-subtitle" id="today-header-sub">Your daily operating system</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openModal('quick-add')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Quick Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Today hero -->
+      <div class="today-hero">
+        <div>
+          <div class="today-greeting" id="today-greeting">Good morning</div>
+          <div class="today-date" id="today-date">—</div>
+        </div>
+        <div class="today-stat-row">
+          <div class="today-stat">
+            <div class="today-stat-num" id="stat-posts">0</div>
+            <div class="today-stat-lbl">Posts Today</div>
           </div>
-        </div>
-        <div class="today-grid">
-          <div class="card">
-            <div class="card-title"><span class="dot"></span>7 Daily Pillars · 8:30–10:30am</div>
-            <div class="pillars-list" id="pillarsList"></div>
+          <div class="today-stat">
+            <div class="today-stat-num" id="stat-review">0</div>
+            <div class="today-stat-lbl">In Review</div>
           </div>
-          <div class="card">
-            <div class="card-title"><span class="dot"></span>Top Priorities Today</div>
-            <div class="priorities-list" id="prioritiesList"></div>
-          </div>
-        </div>
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-title"><span class="dot"></span>Quick Sweep · Stories &amp; WhatsApp Groups</div>
-          <p style="color:var(--text-dim);font-size:12px;margin-bottom:12px;">S = Story posted today · W = WhatsApp group checked. Full detail in Inbox Sweep.</p>
-          <div class="quick-strip" id="quickStrip"></div>
-        </div>
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-title"><span class="dot"></span>Posts Going Live Today</div>
-          <div class="posts-today" id="postsToday"></div>
-        </div>
-        <div class="card">
-          <div class="card-title"><span class="dot"></span>End-of-Day Checklist</div>
-          <div class="pillars-list" id="eodList"></div>
-        </div>
-      </div>
-
-      <!-- CLIENTS -->
-      <div class="view" id="view-clients">
-        <div class="page-header">
-          <div><div class="page-title">Clients</div><div class="page-sub">Click a client to open their workspace</div></div>
-          <button class="btn-primary" onclick="openAddClient()">+ Add Client</button>
-        </div>
-        <div id="clientsOverview"><div class="clients-grid" id="clientsGrid"></div></div>
-        <div class="client-detail" id="clientDetail"></div>
-      </div>
-
-      <!-- PIPELINE -->
-      <div class="view" id="view-pipeline">
-        <div class="page-header"><div><div class="page-title">Content Pipeline</div><div class="page-sub">Drag between columns · click a card to edit</div></div></div>
-        <div class="pipeline-filters">
-          <button class="filter-btn active" data-type="all" onclick="setTypeFilter('all')">All</button>
-          <button class="filter-btn" data-type="post" onclick="setTypeFilter('post')">📸 Posts</button>
-          <button class="filter-btn" data-type="video" onclick="setTypeFilter('video')">🎬 Videos</button>
-          <div class="filter-divider"></div>
-          <select class="filter-select" id="clientFilter" onchange="renderKanban()"><option value="all">All Clients</option></select>
-        </div>
-        <div class="kanban" id="kanban"></div>
-      </div>
-
-      <!-- CALENDAR -->
-      <div class="view" id="view-calendar">
-        <div class="page-header"><div><div class="page-title">Content Calendar</div><div class="page-sub">Shows scheduled cards by date · click a day to see detail</div></div></div>
-        <div class="cal-header">
-          <button class="cal-nav" onclick="calNav(-1)">← Prev</button>
-          <div class="cal-month" id="calMonth"></div>
-          <button class="cal-nav" onclick="calNav(1)">Next →</button>
-          <button class="cal-nav" onclick="calToday()">Today</button>
-        </div>
-        <div class="cal-grid" id="calGrid"></div>
-      </div>
-
-      <!-- INBOX SWEEP -->
-      <div class="view" id="view-inbox">
-        <div class="page-header"><div><div class="page-title">Inbox Sweep</div><div class="page-sub">Tier 1 = 3x daily · Tier 2/3 = 2x daily · Resets every morning</div></div></div>
-        <div class="sweep-list" id="sweepList"></div>
-      </div>
-
-      <!-- IDEAS -->
-      <div class="view" id="view-ideas">
-        <div class="page-header"><div><div class="page-title">Ideas Inbox</div><div class="page-sub">Dump ideas fast. Promote to pipeline when ready.</div></div></div>
-        <div class="idea-add-box">
-          <input type="text" id="newIdea" placeholder="Type an idea and hit enter... e.g. tyre safety carousel for KTH" onkeypress="if(event.key==='Enter')addIdea()">
-          <button class="btn-primary" onclick="addIdea()">Add</button>
-        </div>
-        <div class="ideas-grid" id="ideasGrid"></div>
-      </div>
-
-      <!-- REPORTS -->
-      <div class="view" id="view-reports">
-        <div class="page-header"><div><div class="page-title">Weekly Reports</div><div class="page-sub">5 minutes per client · due by 12pm Friday</div></div></div>
-        <div class="report-grid">
-          <div class="card">
-            <div class="card-title"><span class="dot"></span>Build a Snapshot</div>
-            <div class="report-form-row"><label>Client</label><select id="repClient"></select></div>
-            <div class="report-form-row"><label>Week ending</label><input type="date" id="repWeek"></div>
-            <div class="report-form-row"><label>Reach (vs last week)</label><input type="text" id="repReach" placeholder="e.g. 12,400 ↑ 18%"></div>
-            <div class="report-form-row"><label>Engagement rate</label><input type="text" id="repEng" placeholder="e.g. 4.2%"></div>
-            <div class="report-form-row"><label>Top post + why</label><textarea id="repTop"></textarea></div>
-            <div class="report-form-row"><label>Worst post + why</label><textarea id="repWorst"></textarea></div>
-            <div class="report-form-row"><label>Status</label><select id="repStatus"><option>🟢 Green</option><option>🟡 Amber</option><option>🔴 Red</option></select></div>
-            <div class="report-form-row"><label>Flag to PM</label><textarea id="repFlag"></textarea></div>
-            <button class="btn-primary" onclick="saveReport()">Save Snapshot</button>
-          </div>
-          <div class="card">
-            <div class="card-title"><span class="dot"></span>Saved Reports</div>
-            <div id="savedReports"></div>
+          <div class="today-stat">
+            <div class="today-stat-num" id="stat-shoots">0</div>
+            <div class="today-stat-lbl">Shoots This Week</div>
           </div>
         </div>
       </div>
 
-      <!-- ALERTS -->
-      <div class="view" id="view-alerts">
-        <div class="page-header"><div><div class="page-title">Raise an Alert</div><div class="page-sub">One-click alerts pre-formatted for the Hub</div></div></div>
-        <div class="report-grid">
-          <div class="card">
-            <div class="card-title"><span class="dot"></span>New Alert</div>
-            <div class="report-form-row"><label>Alert type</label><select id="alertType" onchange="updateAlertPreview()"><option value="viral">🔥 Viral Opportunity</option><option value="decline">📉 Declining Performance</option><option value="sentiment">⚠️ Negative Sentiment</option></select></div>
-            <div class="report-form-row"><label>Client</label><select id="alertClient" onchange="updateAlertPreview()"></select></div>
-            <div class="report-form-row"><label>Platform</label><select id="alertPlatform" onchange="updateAlertPreview()"><option>Instagram</option><option>Facebook</option><option>TikTok</option><option>LinkedIn</option></select></div>
-            <div class="report-form-row"><label>Details</label><textarea id="alertDetail" oninput="updateAlertPreview()" placeholder="Describe what you noticed..."></textarea></div>
-            <div class="report-form-row"><label>Numbers</label><input type="text" id="alertNumbers" oninput="updateAlertPreview()" placeholder="engagement / drop % / comment count"></div>
-            <div class="report-form-row"><label>Your recommendation</label><input type="text" id="alertRec" oninput="updateAlertPreview()"></div>
-            <button class="btn-primary" onclick="copyAlert()">Copy to Clipboard</button>
+      <!-- Calendar strip -->
+      <div class="cal-strip">
+        <div class="cal-strip-head">
+          <div class="cal-strip-title">This Week</div>
+          <button class="btn btn-sm btn-ghost" onclick="navigateTo('calendar')">View Full Calendar</button>
+        </div>
+        <div class="cal-strip-days" id="week-strip"></div>
+      </div>
+
+      <!-- 7 Pillars -->
+      <div class="pillars-grid" id="pillars-grid"></div>
+
+      <!-- Daily Client Tasks -->
+      <div class="daily-tasks-card">
+        <div class="flex-between">
+          <div>
+            <div class="card-title">Daily Client Tasks</div>
+            <div class="card-sub">Stories + WhatsApp morning sweep</div>
           </div>
-          <div class="card">
-            <div class="card-title"><span class="dot"></span>Preview</div>
-            <pre id="alertPreview" style="background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);white-space:pre-wrap;min-height:200px;">Pick a type and fill details...</pre>
-            <p style="color:var(--text-mute);font-size:11px;margin-top:10px;">After copying: paste into BB Hub immediately. Do not reply to any involved comments/DMs until PM responds.</p>
+        </div>
+        <div class="daily-task-row">
+          <div class="task-mini">
+            <div class="task-mini-head">Stories Sweep</div>
+            <label class="task-mini-row"><input type="checkbox"> Check all client stories for reposts</label>
+            <label class="task-mini-row"><input type="checkbox"> Share fresh UGC to stories</label>
+            <label class="task-mini-row"><input type="checkbox"> Reply to story mentions</label>
+            <label class="task-mini-row"><input type="checkbox"> Post daily stories per client</label>
+          </div>
+          <div class="task-mini">
+            <div class="task-mini-head">WhatsApp Sweep</div>
+            <label class="task-mini-row"><input type="checkbox"> Reply to all client messages</label>
+            <label class="task-mini-row"><input type="checkbox"> Share scheduled posts for approval</label>
+            <label class="task-mini-row"><input type="checkbox"> Update shoot schedules</label>
+            <label class="task-mini-row"><input type="checkbox"> Confirm tomorrow's deliverables</label>
           </div>
         </div>
       </div>
 
-      <!-- ESCALATION -->
-      <div class="view" id="view-escalation">
-        <div class="page-header"><div><div class="page-title">Escalation Decision Helper</div><div class="page-sub">When in doubt — read this. When still in doubt — escalate.</div></div></div>
-        <div class="escalation-tree">
-          <div class="esc-row"><div class="esc-icon">✅</div><div><div class="esc-title">HANDLE INDEPENDENTLY</div><div class="esc-body">Standard comments · routine product/pricing DMs · minor scheduling tweaks · positive mentions. Reply within 2 hours (Tier 1 = 1 hour).</div></div></div>
-          <div class="esc-row warn"><div class="esc-icon">⚠️</div><div><div class="esc-title">ESCALATE TO PM (within 1 hour)</div><div class="esc-body">Negative review with reputational risk · complaint about client's product · high-engagement negative comment · legal or sensitive content · wrong content published · client expresses frustration. Screenshot first. Do not reply until PM advises.</div></div></div>
-          <div class="esc-row critical"><div class="esc-icon">🚨</div><div><div class="esc-title">ESCALATE TO CEO (immediately)</div><div class="esc-body">Client threatens to cancel · contract dispute · public complaint or PR issue · any situation where the retainer is at risk. Message CEO directly on WhatsApp.</div></div></div>
+      <!-- EOD checklist -->
+      <div class="eod-card">
+        <div class="eod-head">
+          <div class="eod-title">End of Day Checklist</div>
+          <div class="text-muted text-small" id="eod-progress">0 / 8</div>
+        </div>
+        <div class="eod-list" id="eod-list">
+          <label class="eod-item"><input type="checkbox" class="eod-check"> All posts scheduled for tomorrow</label>
+          <label class="eod-item"><input type="checkbox" class="eod-check"> All DMs replied to across clients</label>
+          <label class="eod-item"><input type="checkbox" class="eod-check"> Stories posted for every active client</label>
+          <label class="eod-item"><input type="checkbox" class="eod-check"> Pipeline updated - cards moved</label>
+          <label class="eod-item"><input type="checkbox" class="eod-check"> Any shoots confirmed for tomorrow</label>
+          <label class="eod-item"><input type="checkbox" class="eod-check"> Tomorrow's priorities drafted</label>
+          <label class="eod-item"><input type="checkbox" class="eod-check"> Any red flags flagged to PM</label>
+          <label class="eod-item"><input type="checkbox" class="eod-check"> Desk closed - zero open loops</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONTENT PIPELINE PAGE ============ -->
+    <section class="page" id="page-pipeline">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Content Pipeline</h1>
+          <div class="page-subtitle">Drag cards between columns to update status</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openModal('pipeline-add')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Card
+          </button>
         </div>
       </div>
 
-      <!-- STRIKES -->
-      <div class="view" id="view-strikes">
-        <div class="page-header">
-          <div><div class="page-title">Strike Tracker</div><div class="page-sub">Honest self-tracking · resets every Monday · 3+ = retraining conversation</div></div>
-          <button class="btn-danger" onclick="resetStrikes()">Reset Week</button>
+      <div class="pipeline-toolbar">
+        <button class="filter-chip active" data-filter-type="all">All Types</button>
+        <button class="filter-chip" data-filter-type="post">Posts</button>
+        <button class="filter-chip" data-filter-type="video">Videos</button>
+        <button class="filter-chip" data-filter-type="story">Stories</button>
+        <div style="flex: 1"></div>
+        <select id="pipeline-client-filter" style="width: auto; min-width: 180px;">
+          <option value="all">All Clients</option>
+        </select>
+      </div>
+
+      <div class="kanban-board" id="pipeline-board">
+        <div class="kanban-col" data-accent="ideas" data-status="ideas">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-purple);">Ideas</div>
+            <div class="kanban-col-count" id="count-ideas">0</div>
+          </div>
+          <div class="kanban-cards" data-drop-zone="ideas"></div>
         </div>
-        <div class="card">
-          <div class="card-title"><span class="dot"></span>This Week's Count</div>
-          <p style="color:var(--text-dim);font-size:13px;margin-bottom:4px;">Tap a number to log a strike. Hidden strikes become surprises at review time.</p>
-          <div class="strike-grid" id="strikeGrid"></div>
+        <div class="kanban-col" data-accent="brief" data-status="brief">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-cyan);">Brief</div>
+            <div class="kanban-col-count" id="count-brief">0</div>
+          </div>
+          <div class="kanban-cards" data-drop-zone="brief"></div>
+        </div>
+        <div class="kanban-col" data-accent="progress" data-status="progress">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-orange);">In Progress</div>
+            <div class="kanban-col-count" id="count-progress">0</div>
+          </div>
+          <div class="kanban-cards" data-drop-zone="progress"></div>
+        </div>
+        <div class="kanban-col" data-accent="review" data-status="review">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-pink);">In Review</div>
+            <div class="kanban-col-count" id="count-review">0</div>
+          </div>
+          <div class="kanban-cards" data-drop-zone="review"></div>
+        </div>
+        <div class="kanban-col" data-accent="live" data-status="live">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-green);">Live</div>
+            <div class="kanban-col-count" id="count-live">0</div>
+          </div>
+          <div class="kanban-cards" data-drop-zone="live"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SHOOT PIPELINE PAGE ============ -->
+    <section class="page" id="page-shoots">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Shoot Pipeline</h1>
+          <div class="page-subtitle">Schedule, confirm, and track every shoot</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openModal('shoot-add')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Schedule Shoot
+          </button>
         </div>
       </div>
 
-      <!-- RESOURCES -->
-      <div class="view" id="view-resources">
-        <div id="resourceHome">
-          <div class="page-header"><div><div class="page-title">Resources</div><div class="page-sub">Everything you need, one click away</div></div></div>
-          <div class="resource-grid" id="resourceGrid"></div>
-        </div>
-        <div class="resource-panel" id="rpanel"></div>
+      <div class="pipeline-toolbar">
+        <select id="shoot-client-filter" style="width: auto; min-width: 180px;">
+          <option value="all">All Clients</option>
+        </select>
       </div>
 
-    </div>
+      <div class="kanban-board" id="shoot-board" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="kanban-col" data-accent="ideas" data-shoot-status="requested">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-purple);">Requested</div>
+            <div class="kanban-col-count" id="scount-requested">0</div>
+          </div>
+          <div class="kanban-cards" data-shoot-drop="requested"></div>
+        </div>
+        <div class="kanban-col" data-accent="brief" data-shoot-status="scheduled">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-cyan);">Scheduled</div>
+            <div class="kanban-col-count" id="scount-scheduled">0</div>
+          </div>
+          <div class="kanban-cards" data-shoot-drop="scheduled"></div>
+        </div>
+        <div class="kanban-col" data-accent="progress" data-shoot-status="shot">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-orange);">Shot</div>
+            <div class="kanban-col-count" id="scount-shot">0</div>
+          </div>
+          <div class="kanban-cards" data-shoot-drop="shot"></div>
+        </div>
+        <div class="kanban-col" data-accent="live" data-shoot-status="delivered">
+          <div class="kanban-col-head">
+            <div class="kanban-col-name" style="color: var(--bb-green);">Delivered</div>
+            <div class="kanban-col-count" id="scount-delivered">0</div>
+          </div>
+          <div class="kanban-cards" data-shoot-drop="delivered"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CALENDAR PAGE ============ -->
+    <section class="page" id="page-calendar">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Content Calendar</h1>
+          <div class="page-subtitle">Click any day to add content for that date</div>
+        </div>
+      </div>
+      <div class="cal-month">
+        <div class="cal-month-head">
+          <div class="cal-month-title" id="cal-month-title">Month</div>
+          <div class="page-actions">
+            <button class="btn btn-sm btn-ghost" id="cal-prev">‹ Prev</button>
+            <button class="btn btn-sm btn-ghost" id="cal-today">Today</button>
+            <button class="btn btn-sm btn-ghost" id="cal-next">Next ›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-dows"></div>
+        <div class="cal-grid" id="cal-cells"></div>
+      </div>
+    </section>
+
+    <!-- ============ CLIENTS PAGE ============ -->
+    <section class="page" id="page-clients">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Clients</h1>
+          <div class="page-subtitle">Live from Supabase — synced with Command Centre</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-ghost" onclick="loadClients()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Package</th>
+              <th>MRR</th>
+              <th>Month</th>
+              <th>Health</th>
+            </tr>
+          </thead>
+          <tbody id="clients-tbody">
+            <tr><td colspan="5" class="loading-row"><span class="loading-dots">Loading clients</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ ESCALATION ============ -->
+    <section class="page" id="page-escalation">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Escalation Decision Helper</h1>
+          <div class="page-subtitle">When something goes wrong — use this before you panic</div>
+        </div>
+      </div>
+
+      <div class="escalation-card">
+        <div class="escalation-step">
+          <div class="esc-num">1</div>
+          <div class="esc-content">
+            <h4>Is the client account suspended, hacked, or deleted?</h4>
+            <p>YES → Escalate IMMEDIATELY to PM + Shiara + Thulaib in that order. Do not wait. Call, don't text.<br>
+            NO → Go to step 2.</p>
+          </div>
+        </div>
+        <div class="escalation-step">
+          <div class="esc-num">2</div>
+          <div class="esc-content">
+            <h4>Is the client actively angry or threatening to cancel?</h4>
+            <p>YES → Flag to PM within 30 minutes. Do not try to solve alone. Your job is to acknowledge, not negotiate.<br>
+            NO → Go to step 3.</p>
+          </div>
+        </div>
+        <div class="escalation-step">
+          <div class="esc-num">3</div>
+          <div class="esc-content">
+            <h4>Is it a negative public comment or review?</h4>
+            <p>YES → Screenshot it. Hide it if brand guidelines allow. Post a neutral acknowledgement publicly. DM the person. Flag to PM within 1 hour with context.<br>
+            NO → Go to step 4.</p>
+          </div>
+        </div>
+        <div class="escalation-step">
+          <div class="esc-num">4</div>
+          <div class="esc-content">
+            <h4>Is a deliverable going to miss its deadline?</h4>
+            <p>YES → Flag to PM 24 hours BEFORE the deadline, not after. Include: what's late, why, when it will be delivered, what you need to close the gap.<br>
+            NO → Go to step 5.</p>
+          </div>
+        </div>
+        <div class="escalation-step">
+          <div class="esc-num">5</div>
+          <div class="esc-content">
+            <h4>Is the client asking for something outside scope?</h4>
+            <p>YES → Do not say yes. Do not say no. Say: "Let me check with the team and get back to you today."<br>
+            Then flag to PM with: client name, exact request, your recommendation.<br>
+            NO → It's probably not an escalation. Solve it yourself and log it in the pipeline.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SOPs ============ -->
+    <section class="page" id="page-sops">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">SMM SOPs</h1>
+          <div class="page-subtitle">Your operating manual — read before you ask</div>
+        </div>
+      </div>
+      <div class="sop-grid" id="sop-grid"></div>
+    </section>
+
+    <!-- ============ IDEAS INBOX ============ -->
+    <section class="page" id="page-ideas">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Ideas Inbox</h1>
+          <div class="page-subtitle">Capture now, categorise later</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openModal('idea-add')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Capture Idea
+          </button>
+        </div>
+      </div>
+      <div class="ideas-list" id="ideas-list">
+        <div class="loading-row">No ideas yet. Click Capture Idea to add one.</div>
+      </div>
+    </section>
+
   </main>
 </div>
 
-<!-- MODALS -->
-<div class="modal" id="modal-quickAdd">
-  <div class="modal-box">
-    <div class="modal-title">Quick Add to Pipeline</div>
-    <div class="modal-sub">Add a new content card</div>
-    <div class="report-form-row"><label>Client</label><select id="qaClient"></select></div>
-    <div class="report-form-row"><label>Title</label><input type="text" id="qaTitle" placeholder="e.g. KTH | Tyre safety carousel"></div>
-    <div class="report-form-row"><label>Type</label><select id="qaType"><option value="post">📸 Post</option><option value="video">🎬 Video</option></select></div>
-    <div class="report-form-row"><label>Format</label><select id="qaFormat"><option>Reel</option><option>Carousel</option><option>Static</option><option>Story</option><option>TikTok</option></select></div>
-    <div class="report-form-row"><label>Stage</label><select id="qaStage"><option value="idea">Idea</option><option value="script">Script</option><option value="design">Design</option><option value="approval">Approval</option><option value="scheduled">Scheduled</option><option value="live">Live</option></select></div>
-    <div class="report-form-row"><label>Scheduled date (optional)</label><input type="date" id="qaDate"></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal('quickAdd')">Cancel</button>
-      <button class="btn-primary" onclick="addCard()">Add to Pipeline</button>
+<!-- ============ MODAL: QUICK ADD ============ -->
+<div class="modal-bg" id="modal-quick-add">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Quick Add</div>
+      <button class="modal-close" onclick="closeModal('quick-add')">×</button>
     </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select id="qa-type">
+        <option value="pipeline">Content Card</option>
+        <option value="shoot">Shoot</option>
+        <option value="idea">Idea</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input type="text" id="qa-title" placeholder="What's this about?">
+    </div>
+    <div class="form-group" id="qa-client-wrap">
+      <label class="form-label">Client</label>
+      <select id="qa-client"></select>
+    </div>
+    <div class="form-group" id="qa-content-type-wrap">
+      <label class="form-label">Content Type</label>
+      <select id="qa-content-type">
+        <option value="post">Post</option>
+        <option value="video">Video</option>
+        <option value="story">Story</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="submitQuickAdd()">Add</button>
   </div>
 </div>
 
-<div class="modal" id="modal-editCard">
-  <div class="modal-box wide">
-    <div class="modal-title" id="ecTitle">Edit Card</div>
-    <div class="modal-sub">Click anywhere to edit · autosaves</div>
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchMT(this,'basic')">Basics</button>
-      <button class="modal-tab" onclick="switchMT(this,'content')">Content</button>
-      <button class="modal-tab" onclick="switchMT(this,'approval')">Approval Log</button>
+<!-- ============ MODAL: PIPELINE ADD ============ -->
+<div class="modal-bg" id="modal-pipeline-add">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">New Content Card</div>
+      <button class="modal-close" onclick="closeModal('pipeline-add')">×</button>
     </div>
-    <div class="modal-pane active" data-pane="basic">
-      <div class="report-form-row"><label>Title</label><input type="text" id="ecName"></div>
-      <div class="report-form-row"><label>Client</label><select id="ecClient"></select></div>
-      <div class="report-form-row"><label>Type</label><select id="ecType"><option value="post">📸 Post</option><option value="video">🎬 Video</option></select></div>
-      <div class="report-form-row"><label>Format</label><select id="ecFormat"><option>Reel</option><option>Carousel</option><option>Static</option><option>Story</option><option>TikTok</option></select></div>
-      <div class="report-form-row"><label>Stage</label><select id="ecStage"><option value="idea">Idea</option><option value="script">Script</option><option value="design">Design</option><option value="approval">Approval</option><option value="scheduled">Scheduled</option><option value="live">Live</option></select></div>
-      <div class="report-form-row"><label>Scheduled date</label><input type="date" id="ecDate"></div>
-      <div class="report-form-row"><label>Asset links (Drive, Canva, etc)</label><input type="text" id="ecLinks"></div>
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input type="text" id="pa-title" placeholder="e.g. Friday reel - promo drop">
     </div>
-    <div class="modal-pane" data-pane="content">
-      <div class="report-form-row"><label>Caption / script draft</label><textarea id="ecCaption" style="min-height:180px;"></textarea></div>
-      <div class="report-form-row"><label>Internal notes</label><textarea id="ecNotes"></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Client</label>
+      <select id="pa-client"></select>
     </div>
-    <div class="modal-pane" data-pane="approval">
-      <div class="report-form-row"><label>Log new approval entry</label><input type="text" id="ecApprovalNew" placeholder="e.g. Approved by owner 14 Apr 9:32am via WhatsApp"><button class="btn-secondary" onclick="addApproval()" style="margin-top:6px;">+ Add Entry</button></div>
-      <div class="approval-log" id="ecApprovalLog"></div>
+    <div class="form-group">
+      <label class="form-label">Content Type</label>
+      <select id="pa-type">
+        <option value="post">Post</option>
+        <option value="video">Video</option>
+        <option value="story">Story</option>
+      </select>
     </div>
-    <div class="modal-actions">
-      <button class="btn-danger" onclick="deleteCardConfirm()">Delete</button>
-      <button class="btn-secondary" onclick="closeModal('editCard')">Close</button>
-      <button class="btn-primary" onclick="saveCardEdit()">Save Changes</button>
+    <div class="form-group">
+      <label class="form-label">Start in Column</label>
+      <select id="pa-status">
+        <option value="ideas">Ideas</option>
+        <option value="brief">Brief</option>
+        <option value="progress">In Progress</option>
+        <option value="review">In Review</option>
+        <option value="live">Live</option>
+      </select>
     </div>
+    <div class="form-group">
+      <label class="form-label">Scheduled Date</label>
+      <input type="date" id="pa-date">
+    </div>
+    <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="submitPipelineAdd()">Add Card</button>
   </div>
 </div>
 
-<div class="modal" id="modal-addClient">
-  <div class="modal-box">
-    <div class="modal-title" id="acTitle">Add Client</div>
-    <div class="modal-sub">Add or edit a client record</div>
-    <div class="report-form-row"><label>Name</label><input type="text" id="acName"></div>
-    <div class="report-form-row"><label>Short code (2 letters)</label><input type="text" id="acShort" maxlength="3"></div>
-    <div class="report-form-row"><label>Industry</label><input type="text" id="acIndustry"></div>
-    <div class="report-form-row"><label>Package</label><select id="acPackage"><option>Spark</option><option>Ignite</option><option>Blaze</option></select></div>
-    <div class="report-form-row"><label>Tier</label><select id="acTier"><option value="1">Tier 1 — 3x daily · 1hr response</option><option value="2">Tier 2 — 2x daily · 2hr response</option><option value="3">Tier 3 — 2x daily · 2hr response</option></select></div>
-    <div class="report-form-row"><label>Health</label><select id="acHealth"><option value="green">🟢 Green</option><option value="yellow">🟡 Yellow</option><option value="red">🔴 Red</option></select></div>
-    <div class="report-form-row"><label>Contract start date</label><input type="date" id="acStart"></div>
-    <div class="report-form-row"><label>Contract length (months)</label><input type="number" id="acLength" value="6"></div>
-    <div class="report-form-row"><label>ICP one-liner</label><input type="text" id="acIcp"></div>
-    <div class="report-form-row"><label>Instagram handle</label><input type="text" id="acHandle"></div>
-    <div class="report-form-row"><label>Notes</label><textarea id="acNotes"></textarea></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal('addClient')">Cancel</button>
-      <button class="btn-primary" onclick="saveClient()">Save Client</button>
+<!-- ============ MODAL: SHOOT ADD ============ -->
+<div class="modal-bg" id="modal-shoot-add">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Schedule Shoot</div>
+      <button class="modal-close" onclick="closeModal('shoot-add')">×</button>
     </div>
+    <div class="form-group">
+      <label class="form-label">Shoot Name</label>
+      <input type="text" id="sa-title" placeholder="e.g. Cherry Fish monthly reel shoot">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client</label>
+      <select id="sa-client"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Shoot Date</label>
+      <input type="date" id="sa-date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select id="sa-status">
+        <option value="requested">Requested</option>
+        <option value="scheduled">Scheduled</option>
+        <option value="shot">Shot</option>
+        <option value="delivered">Delivered</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea id="sa-notes" rows="3" placeholder="Location, team, brief"></textarea>
+    </div>
+    <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="submitShootAdd()">Schedule</button>
   </div>
 </div>
 
-<div class="modal" id="modal-day">
-  <div class="modal-box">
-    <div class="modal-title" id="dayTitle">Day Detail</div>
-    <div class="modal-sub">All cards scheduled for this date</div>
-    <div id="dayBody"></div>
-    <div class="modal-actions"><button class="btn-secondary" onclick="closeModal('day')">Close</button></div>
+<!-- ============ MODAL: IDEA ADD ============ -->
+<div class="modal-bg" id="modal-idea-add">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Capture Idea</div>
+      <button class="modal-close" onclick="closeModal('idea-add')">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Idea</label>
+      <textarea id="ia-text" rows="4" placeholder="What's the idea?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client (optional)</label>
+      <select id="ia-client">
+        <option value="">No specific client</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="submitIdeaAdd()">Capture</button>
   </div>
 </div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast"></div>
 
 <script>
-const STORAGE_KEY='bb_smm_workspace_v2';
+/* ================================================================
+   BB SMM WORKSPACE V3 — JS
+   Supabase-connected, drag-drop pipelines, calendar, pillars
+   ================================================================ */
 
-const SEED_CLIENTS=[
-  {id:'kth',name:'Kumudini Tyre House',short:'KTH',industry:'Automotive · Tyres',package:'Blaze',tier:1,health:'green',startDate:'2025-01-15',lengthMonths:12,icp:'Vehicle owners 25-55 in Western Province seeking trusted tyre retailer.',handle:'@kumudinitirehouse',notes:'Hero client. KTH proof story — 180 to 2.47M views in 13 months. Owner approves on WhatsApp only.'},
-  {id:'am',name:'AutoMuseum',short:'AM',industry:'Automotive · Service',package:'Ignite',tier:1,health:'green',startDate:'2025-11-01',lengthMonths:6,icp:'Premium car owners seeking specialist service.',handle:'@automuseum.lk',notes:'6-month progressive contract. Month 5 — renewal conversation due. Build ICP, competitor analysis and Q2 plan next.'},
-  {id:'mod',name:'ModStreet Garage',short:'MS',industry:'Automotive · Modification',package:'Ignite',tier:1,health:'yellow',startDate:'2025-11-15',lengthMonths:6,icp:'Car enthusiasts 18-35 wanting modifications.',handle:'@modstreet.garage',notes:'TRANSITIONING Spark to Ignite. Watch for renewal friction. Owner wants more reels.'},
-  {id:'lgl',name:'LGL',short:'LGL',industry:'Logistics',package:'Ignite',tier:2,health:'green',startDate:'2025-10-01',lengthMonths:6,icp:'B2B importers and exporters in Sri Lanka.',handle:'@lgl.lk',notes:'B2B focus. LinkedIn priority. ICP and Q2 plan already built.'},
-  {id:'cf',name:'Cherry Fish',short:'CF',industry:'F&B · Seafood',package:'Spark',tier:3,health:'yellow',startDate:'2025-12-01',lengthMonths:6,icp:'Home chefs and seafood lovers in Colombo.',handle:'@cherryfish.lk',notes:'Generic script error happened here — formula skills were not triggered. Make sure bb-post-formulas is active before any work.'},
-  {id:'em',name:'Excellent Mobile',short:'EM',industry:'Mobile retail',package:'Spark',tier:3,health:'green',startDate:'2025-12-15',lengthMonths:6,icp:'TBD',handle:'@excellentmobile',notes:'Industry and audience details still need to be filled in.'},
-  {id:'hd',name:'Home Depot Sri Lanka',short:'HD',industry:'Home & hardware',package:'Ignite',tier:2,health:'green',startDate:'2025-09-01',lengthMonths:6,icp:'Homeowners doing renovations.',handle:'@homedepot.lk',notes:'Stable. Steady performance.'},
-  {id:'gisc',name:'Ganegoda International',short:'GI',industry:'Education',package:'Ignite',tier:2,health:'green',startDate:'2025-10-15',lengthMonths:6,icp:'Parents of secondary school students.',handle:'@ganegoda.intl',notes:'GISC. Brand-building focus. Not lead-gen.'},
-  {id:'hp',name:'Hire Panther',short:'HP',industry:'Recruitment',package:'Blaze',tier:1,health:'yellow',startDate:'2026-04-01',lengthMonths:12,icp:'Sri Lanka job seekers and employers.',handle:'@hirepanther',notes:'Contract being finalised. 8 issues flagged. Mutual NDA requested. Do not start work until contract signed.'},
-  {id:'bswl',name:'BSWL',short:'BS',industry:'Wellness',package:'Spark',tier:3,health:'green',startDate:'2025-12-01',lengthMonths:6,icp:'Wellness-conscious adults 25-45.',handle:'@bswl.lk',notes:'Entry-level package. Low volume, steady.'},
-  {id:'ck',name:'CK',short:'CK',industry:'Retail',package:'Spark',tier:3,health:'green',startDate:'2025-12-01',lengthMonths:6,icp:'',handle:'',notes:''},
-  {id:'cct',name:'CCT',short:'CT',industry:'Services',package:'Ignite',tier:2,health:'green',startDate:'2025-11-01',lengthMonths:6,icp:'',handle:'',notes:''},
-  {id:'bu',name:'BU',short:'BU',industry:'Lifestyle',package:'Ignite',tier:2,health:'green',startDate:'2025-11-15',lengthMonths:6,icp:'',handle:'',notes:''}
-];
+// ============ SUPABASE SETUP ============
+const SUPABASE_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_RkGimnQ1rzRrU4Io5qn9xg_Fgi4LxiO';
 
-const SEED_PIPELINE=[
-  {id:'p1',client:'kth',title:'KTH | Tyre safety checklist carousel',stage:'design',type:'post',format:'Carousel',scheduled:'',caption:'',notes:'',links:'',approvals:[]},
-  {id:'p2',client:'kth',title:'KTH | Customer testimonial reel',stage:'approval',type:'video',format:'Reel',scheduled:'',caption:'',notes:'',links:'',approvals:[]},
-  {id:'p3',client:'am',title:'AM | Behind the scenes service walkthrough',stage:'script',type:'video',format:'Reel',scheduled:'',caption:'',notes:'',links:'',approvals:[]},
-  {id:'p4',client:'am',title:'AM | Owner introduction',stage:'idea',type:'video',format:'Reel',scheduled:'',caption:'',notes:'',links:'',approvals:[]},
-  {id:'p5',client:'mod',title:'MS | Build reveal — Honda Civic',stage:'scheduled',type:'video',format:'Reel',scheduled:'',caption:'',notes:'',links:'',approvals:[]},
-  {id:'p6',client:'lgl',title:'LGL | Why Sri Lanka exporters fail',stage:'design',type:'post',format:'Carousel',scheduled:'',caption:'',notes:'',links:'',approvals:[]},
-  {id:'p7',client:'cf',title:'CF | Friday market post',stage:'live',type:'post',format:'Static',scheduled:'',caption:'',notes:'',links:'',approvals:[]},
-  {id:'p8',client:'gisc',title:'GI | Student spotlight series',stage:'idea',type:'post',format:'Carousel',scheduled:'',caption:'',notes:'',links:'',approvals:[]}
-];
+let supabase = null;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (e) {
+  console.warn('Supabase not yet configured. Update SUPABASE_ANON_KEY in index.html.');
+}
 
-const SEED={
-  user:{name:'',initial:'?',loggedIn:false},
-  clients:SEED_CLIENTS,
-  pipeline:SEED_PIPELINE,
-  pillars:[
-    {text:'Inbox sweep — DMs and comments across all clients',time:'08:30',done:false},
-    {text:'Check yesterday\'s posts went live · screenshot results',time:'09:00',done:false},
-    {text:'Review today\'s scheduled posts · last QA pass',time:'09:15',done:false},
-    {text:'Reply to all overnight client WhatsApps',time:'09:30',done:false},
-    {text:'Pull yesterday\'s analytics for Tier 1 clients',time:'09:45',done:false},
-    {text:'Update content pipeline · move cards forward',time:'10:00',done:false},
-    {text:'Plan today\'s 3 priority tasks · post to Hub',time:'10:15',done:false}
-  ],
-  eod:[
-    {text:'All DMs and comments answered for the day',done:false},
-    {text:'All scheduled posts checked and live',done:false},
-    {text:'Tomorrow\'s top 3 priorities written down',done:false},
-    {text:'Insights screenshot taken for any viral content',done:false},
-    {text:'Hub updated with end-of-day status',done:false}
-  ],
-  sweep:{},
-  reports:[],
-  ideas:[],
-  strikes:{posts:0,responses:0,report:0,decline:0,alert:0,blocker:0,weekStart:''}
+// ============ STATE ============
+const state = {
+  clients: [],
+  pipeline: [],
+  shoots: [],
+  ideas: [],
+  currentPage: 'today',
+  calDate: new Date(),
+  filterType: 'all',
+  filterClient: 'all',
+  filterShootClient: 'all'
 };
 
-let DB=loadDB();
-let currentType='all';
-let calDate=new Date();
-let editingCardId=null;
-let editingClientId=null;
+// ============ SEVEN PILLARS (static) ============
+const PILLARS = [
+  { name: 'Content Production', color: 'pink', num: '01', desc: 'Posts, videos, stories for every active client',
+    tasks: ['Brief for today reviewed', 'Today\'s posts prepared', 'Tomorrow\'s content ready'] },
+  { name: 'Client Communication', color: 'cyan', num: '02', desc: 'WhatsApp, email, approval loops',
+    tasks: ['Morning check-ins sent', 'Approval links sent', 'EOD updates sent'] },
+  { name: 'Community Management', color: 'purple', num: '03', desc: 'DMs, comments, mentions, tags',
+    tasks: ['DMs answered (inbox zero)', 'Comments replied', 'Tags and mentions handled'] },
+  { name: 'Performance Review', color: 'green', num: '04', desc: 'Check what worked, what flopped',
+    tasks: ['Yesterday\'s post reviewed', 'Top 3 posts flagged', 'Underperformers noted'] },
+  { name: 'Content Planning', color: 'orange', num: '05', desc: 'Next week\'s calendar, shoot prep',
+    tasks: ['Next week calendar live', 'Shoots confirmed', 'Scripts in review'] },
+  { name: 'Reporting & Admin', color: 'pink', num: '06', desc: 'Data, screenshots, pipeline hygiene',
+    tasks: ['Pipeline updated', 'Analytics screenshots saved', 'Daily log submitted'] },
+  { name: 'Learning & Growth', color: 'cyan', num: '07', desc: 'One thing you learned today',
+    tasks: ['One new formula studied', 'One new trend saved', 'One insight shared with team'] }
+];
 
-function loadDB(){
-  try{const s=localStorage.getItem(STORAGE_KEY);if(s){const p=JSON.parse(s);const merged={...JSON.parse(JSON.stringify(SEED)),...p};if(!merged.ideas)merged.ideas=[];if(!merged.strikes)merged.strikes=SEED.strikes;return merged}}catch(e){}
-  return JSON.parse(JSON.stringify(SEED));
-}
-function saveDB(){localStorage.setItem(STORAGE_KEY,JSON.stringify(DB))}
+// ============ SOPs ============
+const SOPs = [
+  { num: 'SOP 01', name: 'Daily Start-Up', desc: 'The 7-step morning routine every SMM follows before 9:30 AM.' },
+  { num: 'SOP 02', name: 'Content Brief Handling', desc: 'How to read, interpret and action a brief from PM.' },
+  { num: 'SOP 03', name: 'Caption Writing', desc: 'When to use which formula. Tone, structure, hashtags.' },
+  { num: 'SOP 04', name: 'Graphic Direction', desc: 'How to brief GD with zero revisions.' },
+  { num: 'SOP 05', name: 'Friday Reporting', desc: 'What goes into the weekly client recap.' },
+  { num: 'SOP 06', name: 'Scheduling & QA', desc: 'Pre-publish checklist before a post goes live.' },
+  { num: 'SOP 07', name: 'Shoot Preparation', desc: 'Brief to the Video Head, location scouting, shot list.' },
+  { num: 'SOP 08', name: 'Community Management', desc: 'Response times, tone rules, when to escalate.' },
+  { num: 'SOP 09', name: 'Approval Workflow', desc: 'WhatsApp handoff → client approval → scheduled.' },
+  { num: 'SOP 10', name: 'End of Day Close-Out', desc: 'What to check before you leave your desk.' }
+];
 
-// LOGIN
-function doLogin(){
-  const name=document.getElementById('loginName').value.trim();
-  const pass=document.getElementById('loginPass').value.trim();
-  if(!name)return alert('Enter your name');
-  if(pass!=='bb2026')return alert('Wrong password. Hint: bb2026');
-  DB.user={name,initial:name.charAt(0).toUpperCase(),loggedIn:true};
-  saveDB();showApp();
-}
-function doLogout(){
-  DB.user={name:'',initial:'?',loggedIn:false};saveDB();
-  document.getElementById('login').classList.remove('hidden');
-  document.getElementById('app').style.display='none';
-}
-function showApp(){
-  var loginEl=document.getElementById('login');loginEl.style.display='none';loginEl.style.pointerEvents='none';loginEl.style.zIndex='-1';loginEl.classList.add('hidden');
-  document.getElementById('app').style.display='flex';
-  document.getElementById('userName').textContent=DB.user.name;
-  document.getElementById('userInitial').textContent=DB.user.initial;
-  document.getElementById('heroName').textContent=DB.user.name;
-  initApp();
-}
-if(DB.user&&DB.user.loggedIn)showApp();
+// ============ NAVIGATION ============
+document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+});
 
-// NAV
-function navTo(view){
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  var el=document.querySelector('.nav-item[data-view="'+view+'"]');
-  if(el)el.classList.add('active');
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  var target=document.getElementById('view-'+view);
-  if(target)target.classList.add('active');
-  document.getElementById('pageTitle').textContent=el?el.textContent.trim().replace(/\d+$/,'').trim():'';
-  if(view==='pipeline')renderKanban();
-  if(view==='calendar')renderCalendar();
-  if(view==='inbox')renderSweep();
-  if(view==='reports')renderReports();
-  if(view==='clients')renderClients();
-  if(view==='today')renderToday();
-  if(view==='ideas')renderIdeas();
-  if(view==='strikes')renderStrikes();
-  if(view==='resources')renderResources();
-  if(view==='alerts'){populateSelects();updateAlertPreview();}
-}
-
-function initApp(){
-  renderTopDate();
-  populateSelects();
-  resetDailyIfNewDay();
-  resetStrikesIfNewWeek();
-  renderToday();
-  renderClients();
-  renderResources();
-  document.getElementById('clientCount').textContent=DB.clients.length;
-  document.getElementById('ideasCount').textContent=DB.ideas.length;
-  updateStrikeBadge();
-}
-
-function renderTopDate(){
-  const d=new Date();
-  const days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
-  const months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  document.getElementById('topDate').textContent=`${days[d.getDay()]} · ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function populateSelects(){
-  const opts=DB.clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  ['qaClient','ecClient','repClient','alertClient'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.innerHTML=opts;
+function navigateTo(page) {
+  state.currentPage = page;
+  document.querySelectorAll('.nav-item[data-page]').forEach(n => {
+    n.classList.toggle('active', n.dataset.page === page);
   });
-  const cf=document.getElementById('clientFilter');
-  if(cf)cf.innerHTML='<option value="all">All Clients</option>'+opts;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+
+  if (page === 'calendar') renderCalendar();
+  if (page === 'clients') loadClients();
+  if (page === 'pipeline') renderPipeline();
+  if (page === 'shoots') renderShoots();
+  if (page === 'today') renderToday();
+  if (page === 'sops') renderSOPs();
+  if (page === 'ideas') renderIdeas();
 }
 
-function resetDailyIfNewDay(){
-  const today=new Date().toDateString();
-  if(localStorage.getItem('bb_smm_last_day')!==today){
-    DB.pillars.forEach(p=>p.done=false);
-    DB.eod.forEach(p=>p.done=false);
-    localStorage.setItem('bb_smm_last_day',today);
-    saveDB();
-  }
-}
+// ============ TODAY PAGE ============
+function renderToday() {
+  const now = new Date();
+  const hour = now.getHours();
+  let greet = 'Good morning';
+  if (hour >= 12 && hour < 17) greet = 'Good afternoon';
+  else if (hour >= 17) greet = 'Good evening';
+  document.getElementById('today-greeting').textContent = greet;
+  document.getElementById('today-date').textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  document.getElementById('today-header-sub').textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
 
-function resetStrikesIfNewWeek(){
-  const now=new Date();
-  const monday=new Date(now);
-  const day=monday.getDay()||7;
-  if(day!==1)monday.setDate(monday.getDate()-(day-1));
-  monday.setHours(0,0,0,0);
-  const weekKey=monday.toDateString();
-  if(DB.strikes.weekStart!==weekKey){
-    DB.strikes={posts:0,responses:0,report:0,decline:0,alert:0,blocker:0,weekStart:weekKey};
-    saveDB();
-  }
-}
-
-// TODAY
-function renderToday(){
-  const hour=new Date().getHours();
-  document.getElementById('greeting').textContent=hour<12?'GOOD MORNING':hour<17?'GOOD AFTERNOON':'GOOD EVENING';
-  const day=new Date().getDay();
-  const focus=['● Sunday — rest day','● Monday Focus — Week setup · review all calendars · brief creative team','● Tuesday Focus — Video ideas and hook research · 3 concepts per client','● Wednesday Focus — Strategy and growth · competitor scan','● Thursday Focus — Copy and production push · all captions written','● Friday Focus — Reporting · weekly snapshots due by 12pm','● Saturday Focus — 2 hours development · trend brief by 12pm'];
-  document.getElementById('heroFocus').textContent=focus[day];
-
-  const pl=document.getElementById('pillarsList');
-  pl.innerHTML=DB.pillars.map((p,i)=>`<div class="pillar ${p.done?'done':''}" onclick="togglePillar(${i})"><div class="pillar-check">${p.done?'✓':''}</div><div class="pillar-text">${p.text}</div><div class="pillar-time">${p.time}</div></div>`).join('');
-  const eod=document.getElementById('eodList');
-  eod.innerHTML=DB.eod.map((p,i)=>`<div class="pillar ${p.done?'done':''}" onclick="toggleEod(${i})"><div class="pillar-check">${p.done?'✓':''}</div><div class="pillar-text">${p.text}</div></div>`).join('');
-
-  // Priorities — approval/scheduled cards
-  const pri=DB.pipeline.filter(p=>p.stage==='approval'||p.stage==='scheduled').slice(0,3);
-  const priList=document.getElementById('prioritiesList');
-  if(pri.length===0){
-    priList.innerHTML='<div style="color:var(--text-mute);font-size:13px;padding:14px;text-align:center;">No urgent priorities. Plan tomorrow ahead.</div>';
-  }else{
-    priList.innerHTML=pri.map((p,i)=>{const c=DB.clients.find(c=>c.id===p.client);return `<div class="priority-item" onclick="openCardEdit('${p.id}')"><div class="priority-num">0${i+1}</div><div><div class="priority-text">${p.title}</div><div class="priority-client">${c?c.name:''} · ${p.stage}</div></div></div>`}).join('');
+  // Week strip
+  const strip = document.getElementById('week-strip');
+  strip.innerHTML = '';
+  const start = new Date(now);
+  start.setDate(start.getDate() - start.getDay() + 1);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const isToday = d.toDateString() === now.toDateString();
+    const postsOnDay = state.pipeline.filter(p => p.scheduled_date === toDateStr(d)).length;
+    const dow = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (isToday ? ' today' : '');
+    el.innerHTML = `
+      <div class="cal-day-dow">${dow}</div>
+      <div class="cal-day-num">${d.getDate()}</div>
+      <div class="cal-day-count">${postsOnDay > 0 ? postsOnDay + ' ITEM' + (postsOnDay > 1 ? 'S' : '') : '—'}</div>
+    `;
+    el.addEventListener('click', () => {
+      state.calDate = new Date(d);
+      navigateTo('calendar');
+    });
+    strip.appendChild(el);
   }
 
-  // Posts today — prefer those scheduled for today, fallback to approval/scheduled
-  const todayStr=new Date().toISOString().slice(0,10);
-  let posts=DB.pipeline.filter(p=>p.scheduled===todayStr);
-  if(posts.length===0)posts=DB.pipeline.filter(p=>p.stage==='scheduled'||p.stage==='approval'||p.stage==='live').slice(0,6);
-  const pt=document.getElementById('postsToday');
-  if(posts.length===0){
-    pt.innerHTML='<div style="color:var(--text-mute);font-size:13px;padding:14px;grid-column:1/-1;text-align:center;">No posts going live today.</div>';
-  }else{
-    pt.innerHTML=posts.map(p=>{const c=DB.clients.find(c=>c.id===p.client);return `<div class="post-today" onclick="openCardEdit('${p.id}')"><div class="post-today-client">${c?c.short:''} · ${p.format}</div><div class="post-today-title">${p.title}</div><div class="post-today-status status-${p.stage}">${p.stage}</div></div>`}).join('');
-  }
+  // Pillars
+  const pillarGrid = document.getElementById('pillars-grid');
+  pillarGrid.innerHTML = '';
+  PILLARS.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = `pillar-card p-${p.color}`;
+    card.innerHTML = `
+      <div class="pillar-head">
+        <div class="pillar-name">${p.name}</div>
+        <div class="pillar-num">${p.num}</div>
+      </div>
+      <div class="pillar-desc">${p.desc}</div>
+      <ul class="pillar-task-list">
+        ${p.tasks.map((t, i) => `
+          <li class="pillar-task" data-pillar="${idx}" data-task="${i}">
+            <input type="checkbox" class="pillar-check">
+            <span>${t}</span>
+          </li>
+        `).join('')}
+      </ul>
+    `;
+    pillarGrid.appendChild(card);
+  });
 
-  // Quick sweep strip — just stories + whatsapp
-  const todayKey=new Date().toDateString();
-  if(!DB.sweep[todayKey])DB.sweep[todayKey]={};
-  const qs=document.getElementById('quickStrip');
-  qs.innerHTML=DB.clients.map(c=>{
-    const s=DB.sweep[todayKey][c.id]||{};
-    return `<div class="quick-check"><div class="quick-check-name">${c.short} · ${c.name.substring(0,18)}</div><div class="quick-check-icons"><div class="quick-check-icon ${s.stories?'done':''}" onclick="toggleSweep('${c.id}','stories');renderToday();" title="Story posted">S</div><div class="quick-check-icon ${s.whatsapp?'done':''}" onclick="toggleSweep('${c.id}','whatsapp');renderToday();" title="WhatsApp checked">W</div></div></div>`;
-  }).join('');
+  // Wire up pillar checkboxes (local state — daily only)
+  document.querySelectorAll('.pillar-check').forEach(cb => {
+    const key = cb.closest('.pillar-task').dataset.pillar + '-' + cb.closest('.pillar-task').dataset.task + '-' + toDateStr(now);
+    if (localStorage.getItem('pillar-' + key) === '1') {
+      cb.checked = true;
+      cb.closest('.pillar-task').classList.add('done');
+    }
+    cb.addEventListener('change', () => {
+      const checked = cb.checked;
+      localStorage.setItem('pillar-' + key, checked ? '1' : '0');
+      cb.closest('.pillar-task').classList.toggle('done', checked);
+    });
+  });
+
+  // EOD list state
+  document.querySelectorAll('.eod-check').forEach((cb, i) => {
+    const key = 'eod-' + i + '-' + toDateStr(now);
+    if (localStorage.getItem(key) === '1') {
+      cb.checked = true;
+      cb.closest('.eod-item').classList.add('done');
+    }
+    cb.addEventListener('change', () => {
+      localStorage.setItem(key, cb.checked ? '1' : '0');
+      cb.closest('.eod-item').classList.toggle('done', cb.checked);
+      updateEodProgress();
+    });
+  });
+  updateEodProgress();
 
   // Stats
-  document.getElementById('statClients').textContent=DB.clients.length;
-  document.getElementById('statPosts').textContent=posts.length;
-  document.getElementById('statTasks').textContent=DB.pipeline.filter(p=>p.stage!=='live').length;
-  // Sweep %
-  let done=0,total=0;
-  DB.clients.forEach(c=>{const s=DB.sweep[todayKey]&&DB.sweep[todayKey][c.id]||{};['comments','dms','mentions','engagements','stories','whatsapp'].forEach(k=>{total++;if(s[k])done++});});
-  document.getElementById('statSweep').textContent=total?Math.round(done/total*100)+'%':'0%';
-  // Renewals
-  const renewing=DB.clients.filter(c=>monthsRemaining(c)<=2&&monthsRemaining(c)>=0).length;
-  document.getElementById('statRenewals').textContent=renewing;
+  const todayStr = toDateStr(now);
+  document.getElementById('stat-posts').textContent = state.pipeline.filter(p => p.scheduled_date === todayStr).length;
+  document.getElementById('stat-review').textContent = state.pipeline.filter(p => p.status === 'review').length;
+
+  // Shoots this week
+  const weekEnd = new Date(start);
+  weekEnd.setDate(start.getDate() + 6);
+  const shootsThisWeek = state.shoots.filter(s => {
+    if (!s.shoot_date) return false;
+    const sd = new Date(s.shoot_date);
+    return sd >= start && sd <= weekEnd;
+  }).length;
+  document.getElementById('stat-shoots').textContent = shootsThisWeek;
 }
 
-function togglePillar(i){DB.pillars[i].done=!DB.pillars[i].done;saveDB();renderToday();}
-function toggleEod(i){DB.eod[i].done=!DB.eod[i].done;saveDB();renderToday();}
-
-function monthsRemaining(c){
-  if(!c.startDate)return 99;
-  const start=new Date(c.startDate);
-  const end=new Date(start);end.setMonth(end.getMonth()+(c.lengthMonths||6));
-  const now=new Date();
-  return Math.round((end-now)/(1000*60*60*24*30));
+function updateEodProgress() {
+  const boxes = document.querySelectorAll('.eod-check');
+  const done = Array.from(boxes).filter(b => b.checked).length;
+  document.getElementById('eod-progress').textContent = done + ' / ' + boxes.length;
 }
 
-// CLIENTS
-function renderClients(){
-  document.getElementById('clientsOverview').style.display='block';
-  document.getElementById('clientDetail').classList.remove('active');
-  const grid=document.getElementById('clientsGrid');
-  grid.innerHTML=DB.clients.map(c=>{
-    const posts=DB.pipeline.filter(p=>p.client===c.id);
-    const live=posts.filter(p=>p.stage==='live').length;
-    const pending=posts.filter(p=>p.stage!=='live').length;
-    const mr=monthsRemaining(c);
-    let renewalClass='',renewalTxt='';
-    if(mr<=1&&mr>=0){renewalClass='critical';renewalTxt=`RENEWAL DUE — ${mr} MONTH LEFT`;}
-    else if(mr<=2&&mr>=0){renewalClass='urgent';renewalTxt=`RENEWAL SOON — ${mr} MONTHS LEFT`;}
-    else if(mr<0)renewalTxt='CONTRACT ENDED';
-    else renewalTxt=`${mr} MONTHS LEFT`;
-    return `<div class="client-card health-${c.health}" onclick="openClient('${c.id}')"><div class="client-tier tier-${c.tier}">Tier ${c.tier}</div><div class="client-header"><div class="client-avatar">${c.short}</div><div><div class="client-name">${c.name}</div><div class="client-meta">${c.package} · ${c.industry}</div></div></div><div class="client-stats"><div class="client-stat"><div class="client-stat-num">${pending}</div><div class="client-stat-label">In Pipeline</div></div><div class="client-stat"><div class="client-stat-num">${live}</div><div class="client-stat-label">Live</div></div></div><div class="client-renewal ${renewalClass}">${renewalTxt}</div></div>`;
-  }).join('');
+function toDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
 }
 
-function openClient(id){
-  const c=DB.clients.find(cl=>cl.id===id);if(!c)return;
-  document.getElementById('clientsOverview').style.display='none';
-  const detail=document.getElementById('clientDetail');
-  detail.classList.add('active');
-  const mr=monthsRemaining(c);
-  const posts=DB.pipeline.filter(p=>p.client===c.id);
-  detail.innerHTML=`
-    <button class="back-btn" onclick="renderClients()">← Back to Clients</button>
-    <div class="detail-header">
-      <div class="detail-title-row">
-        <div class="detail-avatar">${c.short}</div>
-        <div><div class="detail-name">${c.name}</div><div class="detail-meta">${c.package} · ${c.industry} · TIER ${c.tier}</div></div>
-        <div class="detail-actions"><button class="btn-secondary" onclick="openEditClient('${c.id}')">Edit</button><button class="btn-danger" onclick="deleteClient('${c.id}')">Delete</button></div>
-      </div>
-      <div class="detail-tabs">
-        <button class="detail-tab active" onclick="switchPane(this,'snap')">Snapshot</button>
-        <button class="detail-tab" onclick="switchPane(this,'pipe')">Pipeline</button>
-        <button class="detail-tab" onclick="switchPane(this,'notes')">Notes</button>
-      </div>
-      <div class="detail-pane active" data-pane="snap">
-        <div class="info-grid">
-          <div class="info-cell"><div class="info-cell-label">Package</div><div class="info-cell-value">${c.package}</div></div>
-          <div class="info-cell"><div class="info-cell-label">Tier</div><div class="info-cell-value">Tier ${c.tier}</div></div>
-          <div class="info-cell"><div class="info-cell-label">Health</div><div class="info-cell-value">${c.health==='green'?'🟢 Green':c.health==='yellow'?'🟡 Yellow':'🔴 Red'}</div></div>
-          <div class="info-cell"><div class="info-cell-label">Renewal</div><div class="info-cell-value">${mr<0?'Ended':mr+' months left'}</div></div>
-          <div class="info-cell"><div class="info-cell-label">Handle</div><div class="info-cell-value">${c.handle||'Not set'}</div></div>
-          <div class="info-cell"><div class="info-cell-label">Started</div><div class="info-cell-value">${c.startDate||'Not set'}</div></div>
-        </div>
-        <div class="info-cell" style="margin-bottom:14px;"><div class="info-cell-label">ICP One-liner</div><div class="info-cell-value">${c.icp||'Not set'}</div></div>
-        <div class="info-cell"><div class="info-cell-label">Response Targets (Tier ${c.tier})</div><div class="info-cell-value" style="font-size:12px;line-height:1.6;">${c.tier===1?'3x daily sweeps · 1hr response · 15+ engagements/day':c.tier===2?'2x daily sweeps · 2hr response · 10+ engagements/day':'2x daily sweeps · 2hr response · 5+ engagements/day'}</div></div>
-      </div>
-      <div class="detail-pane" data-pane="pipe">
-        ${posts.length===0?'<div style="color:var(--text-mute);padding:20px;text-align:center;">No content yet. Use Quick Add.</div>':posts.map(p=>`<div class="kanban-card" style="margin-bottom:8px;" onclick="openCardEdit('${p.id}')"><div class="kanban-card-title">${p.title}</div><div class="kanban-card-footer"><span class="kanban-card-tag ${p.type}">${p.format}</span><span class="status-${p.stage}" style="text-transform:uppercase;font-size:10px;font-weight:600;padding:2px 8px;border-radius:100px;">${p.stage}</span></div></div>`).join('')}
-      </div>
-      <div class="detail-pane" data-pane="notes">
-        <textarea class="notes-area" id="notes-${c.id}" oninput="saveNotes('${c.id}')">${c.notes||''}</textarea>
-      </div>
-    </div>`;
-}
+// ============ CLIENTS ============
+async function loadClients() {
+  const tbody = document.getElementById('clients-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="loading-row"><span class="loading-dots">Loading clients</span></td></tr>';
 
-function switchPane(btn,pane){
-  btn.parentElement.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.detail-pane').forEach(p=>p.classList.remove('active'));
-  document.querySelector(`[data-pane="${pane}"]`).classList.add('active');
-}
-
-function saveNotes(id){const c=DB.clients.find(cl=>cl.id===id);if(c){c.notes=document.getElementById('notes-'+id).value;saveDB();}}
-
-function openAddClient(){
-  editingClientId=null;
-  document.getElementById('acTitle').textContent='Add Client';
-  ['acName','acShort','acIndustry','acIcp','acHandle','acNotes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('acPackage').value='Spark';
-  document.getElementById('acTier').value='3';
-  document.getElementById('acHealth').value='green';
-  document.getElementById('acStart').value=new Date().toISOString().slice(0,10);
-  document.getElementById('acLength').value=6;
-  openModal('addClient');
-}
-
-function openEditClient(id){
-  const c=DB.clients.find(cl=>cl.id===id);if(!c)return;
-  editingClientId=id;
-  document.getElementById('acTitle').textContent='Edit Client';
-  document.getElementById('acName').value=c.name;
-  document.getElementById('acShort').value=c.short;
-  document.getElementById('acIndustry').value=c.industry;
-  document.getElementById('acPackage').value=c.package;
-  document.getElementById('acTier').value=c.tier;
-  document.getElementById('acHealth').value=c.health;
-  document.getElementById('acStart').value=c.startDate||'';
-  document.getElementById('acLength').value=c.lengthMonths||6;
-  document.getElementById('acIcp').value=c.icp||'';
-  document.getElementById('acHandle').value=c.handle||'';
-  document.getElementById('acNotes').value=c.notes||'';
-  openModal('addClient');
-}
-
-function saveClient(){
-  const data={
-    name:document.getElementById('acName').value.trim(),
-    short:document.getElementById('acShort').value.trim().toUpperCase(),
-    industry:document.getElementById('acIndustry').value.trim(),
-    package:document.getElementById('acPackage').value,
-    tier:parseInt(document.getElementById('acTier').value),
-    health:document.getElementById('acHealth').value,
-    startDate:document.getElementById('acStart').value,
-    lengthMonths:parseInt(document.getElementById('acLength').value)||6,
-    icp:document.getElementById('acIcp').value.trim(),
-    handle:document.getElementById('acHandle').value.trim(),
-    notes:document.getElementById('acNotes').value.trim()
-  };
-  if(!data.name)return alert('Name required');
-  if(!data.short)data.short=data.name.substring(0,2).toUpperCase();
-  if(editingClientId){
-    const c=DB.clients.find(cl=>cl.id===editingClientId);
-    Object.assign(c,data);
-  }else{
-    data.id='c'+Date.now();
-    DB.clients.push(data);
-  }
-  saveDB();closeModal('addClient');populateSelects();renderClients();
-  document.getElementById('clientCount').textContent=DB.clients.length;
-}
-
-function deleteClient(id){
-  if(!confirm('Delete this client? Their pipeline cards will stay but become orphaned.'))return;
-  DB.clients=DB.clients.filter(c=>c.id!==id);
-  saveDB();populateSelects();renderClients();
-  document.getElementById('clientCount').textContent=DB.clients.length;
-}
-
-// PIPELINE
-const STAGES=[
-  {id:'idea',label:'Idea',color:'#8aa39d'},
-  {id:'script',label:'Script',color:'#60a5fa'},
-  {id:'design',label:'Design',color:'#c084fc'},
-  {id:'approval',label:'Approval',color:'#fbbf24'},
-  {id:'scheduled',label:'Scheduled',color:'#2dd4bf'},
-  {id:'live',label:'Live',color:'#4ade80'}
-];
-
-function setTypeFilter(t){
-  currentType=t;
-  document.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type===t));
-  renderKanban();
-}
-
-function renderKanban(){
-  const k=document.getElementById('kanban');
-  const clientFilter=document.getElementById('clientFilter').value;
-  let filtered=DB.pipeline.slice();
-  if(currentType!=='all')filtered=filtered.filter(p=>p.type===currentType);
-  if(clientFilter!=='all')filtered=filtered.filter(p=>p.client===clientFilter);
-  k.innerHTML=STAGES.map(s=>{
-    const cards=filtered.filter(p=>p.stage===s.id);
-    return `<div class="kanban-col" data-stage="${s.id}" ondragover="event.preventDefault();this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="dropCard(event,'${s.id}')">
-      <div class="kanban-col-header"><div class="kanban-col-dot" style="background:${s.color}"></div><div class="kanban-col-title">${s.label}</div><div class="kanban-col-count">${cards.length}</div></div>
-      <div class="kanban-col-body">
-        ${cards.map(c=>{const cl=DB.clients.find(x=>x.id===c.client);const approved=(c.approvals||[]).length>0;return `<div class="kanban-card" draggable="true" data-id="${c.id}" ondragstart="this.classList.add('dragging');event.dataTransfer.setData('text',this.dataset.id);" ondragend="this.classList.remove('dragging');" onclick="openCardEdit('${c.id}')"><div class="kanban-card-client"><span>${cl?cl.short:'?'} · ${cl?cl.name.substring(0,18):''}</span>${approved?'<span class="kanban-card-approved">✓</span>':''}</div><div class="kanban-card-title">${c.title}</div><div class="kanban-card-footer"><span class="kanban-card-tag ${c.type}">${c.type==='video'?'🎬':'📸'} ${c.format}</span>${c.scheduled?`<span>${c.scheduled}</span>`:''}</div></div>`}).join('')}
-        <button class="kanban-add" onclick="openModal('quickAdd')">+ Add card</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function dropCard(e,stage){
-  e.preventDefault();
-  document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drag-over'));
-  const id=e.dataTransfer.getData('text');
-  const card=DB.pipeline.find(p=>p.id===id);
-  if(card){card.stage=stage;saveDB();renderKanban();}
-}
-
-function addCard(){
-  const title=document.getElementById('qaTitle').value.trim();
-  if(!title)return alert('Enter a title');
-  DB.pipeline.push({
-    id:'p'+Date.now(),
-    client:document.getElementById('qaClient').value,
-    title,
-    type:document.getElementById('qaType').value,
-    format:document.getElementById('qaFormat').value,
-    stage:document.getElementById('qaStage').value,
-    scheduled:document.getElementById('qaDate').value,
-    caption:'',notes:'',links:'',approvals:[]
-  });
-  saveDB();closeModal('quickAdd');
-  ['qaTitle','qaDate'].forEach(id=>document.getElementById(id).value='');
-  if(document.getElementById('view-pipeline').classList.contains('active'))renderKanban();
-  if(document.getElementById('view-today').classList.contains('active'))renderToday();
-  if(document.getElementById('view-calendar').classList.contains('active'))renderCalendar();
-}
-
-function openCardEdit(id){
-  const c=DB.pipeline.find(p=>p.id===id);if(!c)return;
-  editingCardId=id;
-  document.getElementById('ecName').value=c.title;
-  document.getElementById('ecClient').value=c.client;
-  document.getElementById('ecType').value=c.type||'post';
-  document.getElementById('ecFormat').value=c.format||'Reel';
-  document.getElementById('ecStage').value=c.stage;
-  document.getElementById('ecDate').value=c.scheduled||'';
-  document.getElementById('ecLinks').value=c.links||'';
-  document.getElementById('ecCaption').value=c.caption||'';
-  document.getElementById('ecNotes').value=c.notes||'';
-  renderApprovalLog();
-  // reset tabs
-  document.querySelectorAll('#modal-editCard .modal-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  document.querySelectorAll('#modal-editCard .modal-pane').forEach((p,i)=>p.classList.toggle('active',i===0));
-  openModal('editCard');
-}
-
-function switchMT(btn,pane){
-  btn.parentElement.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('#modal-editCard .modal-pane').forEach(p=>p.classList.remove('active'));
-  document.querySelector(`#modal-editCard [data-pane="${pane}"]`).classList.add('active');
-}
-
-function renderApprovalLog(){
-  const c=DB.pipeline.find(p=>p.id===editingCardId);if(!c)return;
-  const log=document.getElementById('ecApprovalLog');
-  if(!c.approvals||c.approvals.length===0){
-    log.innerHTML='<div style="color:var(--text-mute);font-size:11px;text-align:center;padding:10px;">No approval entries yet</div>';
+  if (!supabase) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading-row">Add your Supabase anon key to connect.</td></tr>';
     return;
   }
-  log.innerHTML=c.approvals.map(a=>`<div class="approval-entry approved">✓ ${a}</div>`).join('');
-}
 
-function addApproval(){
-  const c=DB.pipeline.find(p=>p.id===editingCardId);if(!c)return;
-  const txt=document.getElementById('ecApprovalNew').value.trim();
-  if(!txt)return;
-  if(!c.approvals)c.approvals=[];
-  const stamp=new Date().toLocaleString();
-  c.approvals.push(`${stamp} — ${txt}`);
-  saveDB();
-  document.getElementById('ecApprovalNew').value='';
-  renderApprovalLog();
-}
-
-function saveCardEdit(){
-  const c=DB.pipeline.find(p=>p.id===editingCardId);if(!c)return;
-  c.title=document.getElementById('ecName').value;
-  c.client=document.getElementById('ecClient').value;
-  c.type=document.getElementById('ecType').value;
-  c.format=document.getElementById('ecFormat').value;
-  c.stage=document.getElementById('ecStage').value;
-  c.scheduled=document.getElementById('ecDate').value;
-  c.links=document.getElementById('ecLinks').value;
-  c.caption=document.getElementById('ecCaption').value;
-  c.notes=document.getElementById('ecNotes').value;
-  saveDB();closeModal('editCard');
-  if(document.getElementById('view-pipeline').classList.contains('active'))renderKanban();
-  if(document.getElementById('view-today').classList.contains('active'))renderToday();
-  if(document.getElementById('view-calendar').classList.contains('active'))renderCalendar();
-}
-
-function deleteCardConfirm(){
-  if(!confirm('Delete this card?'))return;
-  DB.pipeline=DB.pipeline.filter(p=>p.id!==editingCardId);
-  saveDB();closeModal('editCard');
-  if(document.getElementById('view-pipeline').classList.contains('active'))renderKanban();
-  if(document.getElementById('view-today').classList.contains('active'))renderToday();
-  if(document.getElementById('view-calendar').classList.contains('active'))renderCalendar();
-}
-
-// CALENDAR
-function renderCalendar(){
-  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('calMonth').textContent=`${months[calDate.getMonth()]} ${calDate.getFullYear()}`;
-  const first=new Date(calDate.getFullYear(),calDate.getMonth(),1);
-  const last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0);
-  const startDay=first.getDay();
-  const daysIn=last.getDate();
-  const today=new Date();
-  const g=document.getElementById('calGrid');
-  let html=['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d=>`<div class="cal-day-label">${d}</div>`).join('');
-  for(let i=0;i<startDay;i++)html+='<div class="cal-day empty"></div>';
-  for(let d=1;d<=daysIn;d++){
-    const dateStr=`${calDate.getFullYear()}-${String(calDate.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=today.getFullYear()===calDate.getFullYear()&&today.getMonth()===calDate.getMonth()&&today.getDate()===d;
-    const events=DB.pipeline.filter(p=>p.scheduled===dateStr).slice(0,4);
-    html+=`<div class="cal-day ${isToday?'today':''}" onclick="openDay('${dateStr}')"><div class="cal-day-num">${d}</div>${events.map(e=>{const c=DB.clients.find(cl=>cl.id===e.client);return `<div class="cal-event ${e.type} ${e.stage}">${c?c.short:'?'} · ${e.format}</div>`}).join('')}</div>`;
+  try {
+    const { data, error } = await supabase.from('clients').select('*').order('name');
+    if (error) throw error;
+    state.clients = data || [];
+    document.getElementById('client-count').textContent = state.clients.length;
+    renderClientsTable();
+    populateClientDropdowns();
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = '<tr><td colspan="5" class="loading-row">Error loading clients. Check Supabase connection.</td></tr>';
+    toast('Could not load clients', 'error');
   }
-  g.innerHTML=html;
 }
 
-function openDay(dateStr){
-  const events=DB.pipeline.filter(p=>p.scheduled===dateStr);
-  document.getElementById('dayTitle').textContent='Scheduled for '+dateStr;
-  const body=document.getElementById('dayBody');
-  if(events.length===0){
-    body.innerHTML='<div style="color:var(--text-mute);padding:20px;text-align:center;">Nothing scheduled. Use Quick Add and set this date.</div>';
-  }else{
-    body.innerHTML=events.map(e=>{const c=DB.clients.find(cl=>cl.id===e.client);return `<div class="kanban-card" style="margin-bottom:8px;" onclick="closeModal('day');openCardEdit('${e.id}')"><div class="kanban-card-client">${c?c.short:'?'} · ${c?c.name:''}</div><div class="kanban-card-title">${e.title}</div><div class="kanban-card-footer"><span class="kanban-card-tag ${e.type}">${e.format}</span><span class="status-${e.stage}" style="text-transform:uppercase;font-size:10px;font-weight:600;padding:2px 8px;border-radius:100px;">${e.stage}</span></div></div>`}).join('');
+function renderClientsTable() {
+  const tbody = document.getElementById('clients-tbody');
+  if (state.clients.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading-row">No clients yet.</td></tr>';
+    return;
   }
-  openModal('day');
-}
-
-function calNav(dir){calDate.setMonth(calDate.getMonth()+dir);renderCalendar();}
-function calToday(){calDate=new Date();renderCalendar();}
-
-// SWEEP
-function renderSweep(){
-  const today=new Date().toDateString();
-  if(!DB.sweep[today])DB.sweep[today]={};
-  const list=document.getElementById('sweepList');
-  const keys=[{k:'comments',l:'Comments'},{k:'dms',l:'DMs'},{k:'mentions',l:'Mentions'},{k:'engagements',l:'Engage'},{k:'stories',l:'Stories'},{k:'whatsapp',l:'WApp'}];
-  list.innerHTML=DB.clients.map(c=>{
-    const s=DB.sweep[today][c.id]||{};
-    return `<div class="sweep-row"><div><div class="sweep-client">${c.name}</div><div class="sweep-tier">TIER ${c.tier} · ${c.package}</div></div>${keys.map(k=>`<div class="sweep-check"><div class="sweep-check-label">${k.l}</div><div class="sweep-check-box ${s[k.k]?'done':''}" onclick="toggleSweep('${c.id}','${k.k}');renderSweep();">${s[k.k]?'✓':''}</div></div>`).join('')}</div>`;
+  tbody.innerHTML = state.clients.map(c => {
+    const pkg = (c.package || '').toLowerCase();
+    const pkgClass = pkg.includes('spark') ? 'pkg-spark' :
+                     pkg.includes('ignite') ? 'pkg-ignite' :
+                     pkg.includes('blaze') ? 'pkg-blaze' : 'pkg-custom';
+    const health = (c.health || 'green').toLowerCase();
+    const healthClass = health === 'green' ? 'health-green' :
+                        health === 'amber' ? 'health-amber' : 'health-red';
+    const mrr = c.mrr ? 'LKR ' + c.mrr.toLocaleString() : '—';
+    return `
+      <tr>
+        <td><strong>${c.name || '—'}</strong></td>
+        <td><span class="pkg-pill ${pkgClass}">${c.package || '—'}</span></td>
+        <td>${mrr}</td>
+        <td>Month ${c.month || '—'}</td>
+        <td><span class="health-dot ${healthClass}">${c.health || '—'}</span></td>
+      </tr>
+    `;
   }).join('');
 }
-function toggleSweep(client,key){
-  const today=new Date().toDateString();
-  if(!DB.sweep[today])DB.sweep[today]={};
-  if(!DB.sweep[today][client])DB.sweep[today][client]={};
-  DB.sweep[today][client][key]=!DB.sweep[today][client][key];
-  saveDB();
+
+function populateClientDropdowns() {
+  const opts = '<option value="all">All Clients</option>' +
+               state.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('pipeline-client-filter').innerHTML = opts;
+  document.getElementById('shoot-client-filter').innerHTML = opts;
+
+  const optsNoAll = state.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  ['qa-client', 'pa-client', 'sa-client'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = optsNoAll;
+  });
+  const ia = document.getElementById('ia-client');
+  if (ia) ia.innerHTML = '<option value="">No specific client</option>' + optsNoAll;
 }
 
-// IDEAS
-function addIdea(){
-  const txt=document.getElementById('newIdea').value.trim();
-  if(!txt)return;
-  DB.ideas.unshift({id:'i'+Date.now(),text:txt,created:new Date().toLocaleDateString()});
-  saveDB();
-  document.getElementById('newIdea').value='';
-  document.getElementById('ideasCount').textContent=DB.ideas.length;
+// ============ PIPELINE ============
+async function loadPipeline() {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from('smm_content').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    state.pipeline = data || [];
+    renderPipeline();
+  } catch (e) {
+    console.error('Pipeline load:', e);
+  }
+}
+
+function renderPipeline() {
+  const statuses = ['ideas', 'brief', 'progress', 'review', 'live'];
+  statuses.forEach(s => {
+    const zone = document.querySelector(`[data-drop-zone="${s}"]`);
+    if (!zone) return;
+    zone.innerHTML = '';
+
+    const items = state.pipeline.filter(p => {
+      if (p.status !== s) return false;
+      if (state.filterType !== 'all' && p.content_type !== state.filterType) return false;
+      if (state.filterClient !== 'all' && String(p.client_id) !== String(state.filterClient)) return false;
+      return true;
+    });
+
+    document.getElementById('count-' + s).textContent = items.length;
+
+    items.forEach(item => {
+      zone.appendChild(buildPipelineCard(item));
+    });
+  });
+}
+
+function buildPipelineCard(item) {
+  const card = document.createElement('div');
+  card.className = 'kanban-card';
+  card.draggable = true;
+  card.dataset.id = item.id;
+
+  const client = state.clients.find(c => String(c.id) === String(item.client_id));
+  const clientName = client ? client.name : '—';
+  const typeClass = 'type-' + (item.content_type || 'post');
+  const typeLabel = (item.content_type || 'post').toUpperCase();
+  const statusClass = 'status-' + item.status;
+  const statusLabel = {
+    ideas: 'IDEAS',
+    brief: 'BRIEF',
+    progress: 'IN PROGRESS',
+    review: 'IN REVIEW',
+    live: 'LIVE'
+  }[item.status] || item.status.toUpperCase();
+
+  const dateStr = item.scheduled_date ?
+    new Date(item.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+
+  card.innerHTML = `
+    <div class="card-status-header">
+      <span class="card-status-label ${statusClass}">${statusLabel}</span>
+      <span class="card-type-badge ${typeClass}">${typeLabel}</span>
+    </div>
+    <div class="kanban-card-client">${clientName}</div>
+    <div class="kanban-card-title">${escapeHtml(item.title || 'Untitled')}</div>
+    <div class="kanban-card-foot">
+      <span class="card-date">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+        ${dateStr}
+      </span>
+    </div>
+  `;
+
+  // Drag events
+  card.addEventListener('dragstart', e => {
+    card.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', item.id);
+    e.dataTransfer.setData('card-type', 'pipeline');
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+  return card;
+}
+
+// Drop zones for pipeline
+document.querySelectorAll('[data-drop-zone]').forEach(zone => {
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    zone.style.background = 'rgba(0, 229, 255, 0.05)';
+  });
+  zone.addEventListener('dragleave', () => zone.style.background = '');
+  zone.addEventListener('drop', async e => {
+    e.preventDefault();
+    zone.style.background = '';
+    const id = e.dataTransfer.getData('text/plain');
+    const cardType = e.dataTransfer.getData('card-type');
+    if (cardType !== 'pipeline') return;
+    const newStatus = zone.dataset.dropZone;
+    await updatePipelineStatus(id, newStatus);
+  });
+});
+
+async function updatePipelineStatus(id, newStatus) {
+  const item = state.pipeline.find(p => String(p.id) === String(id));
+  if (!item) return;
+  const oldStatus = item.status;
+  item.status = newStatus;
+  renderPipeline();
+
+  if (!supabase) return;
+  try {
+    const { error } = await supabase.from('smm_content').update({ status: newStatus }).eq('id', id);
+    if (error) throw error;
+    toast('Moved to ' + newStatus.toUpperCase(), 'success');
+  } catch (e) {
+    console.error(e);
+    item.status = oldStatus;
+    renderPipeline();
+    toast('Failed to update', 'error');
+  }
+}
+
+// Pipeline filters
+document.querySelectorAll('[data-filter-type]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter-type]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.filterType = btn.dataset.filterType;
+    renderPipeline();
+  });
+});
+
+document.getElementById('pipeline-client-filter').addEventListener('change', e => {
+  state.filterClient = e.target.value;
+  renderPipeline();
+});
+
+// ============ SHOOTS ============
+async function loadShoots() {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from('smm_shoots').select('*').order('shoot_date', { ascending: true });
+    if (error) throw error;
+    state.shoots = data || [];
+    renderShoots();
+  } catch (e) {
+    console.error('Shoots load:', e);
+  }
+}
+
+function renderShoots() {
+  const statuses = ['requested', 'scheduled', 'shot', 'delivered'];
+  statuses.forEach(s => {
+    const zone = document.querySelector(`[data-shoot-drop="${s}"]`);
+    if (!zone) return;
+    zone.innerHTML = '';
+
+    const items = state.shoots.filter(sh => {
+      if (sh.status !== s) return false;
+      if (state.filterShootClient !== 'all' && String(sh.client_id) !== String(state.filterShootClient)) return false;
+      return true;
+    });
+
+    document.getElementById('scount-' + s).textContent = items.length;
+    items.forEach(sh => zone.appendChild(buildShootCard(sh)));
+  });
+}
+
+function buildShootCard(sh) {
+  const card = document.createElement('div');
+  card.className = 'kanban-card';
+  card.draggable = true;
+  card.dataset.id = sh.id;
+
+  const client = state.clients.find(c => String(c.id) === String(sh.client_id));
+  const clientName = client ? client.name : '—';
+  const statusClass = 'status-' + {
+    requested: 'ideas', scheduled: 'brief', shot: 'progress', delivered: 'live'
+  }[sh.status];
+  const statusLabel = sh.status.toUpperCase();
+
+  const dateStr = sh.shoot_date ?
+    new Date(sh.shoot_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD';
+
+  card.innerHTML = `
+    <div class="card-status-header">
+      <span class="card-status-label ${statusClass}">${statusLabel}</span>
+      <span class="card-type-badge" style="background: rgba(168,85,247,0.15); color: var(--bb-purple);">SHOOT</span>
+    </div>
+    <div class="kanban-card-client">${clientName}</div>
+    <div class="kanban-card-title">${escapeHtml(sh.title || 'Untitled shoot')}</div>
+    <div class="kanban-card-foot">
+      <span class="card-date">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+        ${dateStr}
+      </span>
+    </div>
+  `;
+
+  card.addEventListener('dragstart', e => {
+    card.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', sh.id);
+    e.dataTransfer.setData('card-type', 'shoot');
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  return card;
+}
+
+document.querySelectorAll('[data-shoot-drop]').forEach(zone => {
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    zone.style.background = 'rgba(0, 229, 255, 0.05)';
+  });
+  zone.addEventListener('dragleave', () => zone.style.background = '');
+  zone.addEventListener('drop', async e => {
+    e.preventDefault();
+    zone.style.background = '';
+    const id = e.dataTransfer.getData('text/plain');
+    const cardType = e.dataTransfer.getData('card-type');
+    if (cardType !== 'shoot') return;
+    const newStatus = zone.dataset.shootDrop;
+    await updateShootStatus(id, newStatus);
+  });
+});
+
+async function updateShootStatus(id, newStatus) {
+  const sh = state.shoots.find(s => String(s.id) === String(id));
+  if (!sh) return;
+  const old = sh.status;
+  sh.status = newStatus;
+  renderShoots();
+
+  if (!supabase) return;
+  try {
+    const { error } = await supabase.from('smm_shoots').update({ status: newStatus }).eq('id', id);
+    if (error) throw error;
+    toast('Shoot moved to ' + newStatus.toUpperCase(), 'success');
+  } catch (e) {
+    console.error(e);
+    sh.status = old;
+    renderShoots();
+    toast('Failed to update', 'error');
+  }
+}
+
+document.getElementById('shoot-client-filter').addEventListener('change', e => {
+  state.filterShootClient = e.target.value;
+  renderShoots();
+});
+
+// ============ CALENDAR PAGE ============
+function renderCalendar() {
+  const d = new Date(state.calDate);
+  d.setDate(1);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  document.getElementById('cal-month-title').textContent =
+    d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // Day of week headers
+  const dows = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  document.getElementById('cal-dows').innerHTML = dows.map(day => `<div class="cal-dow">${day}</div>`).join('');
+
+  // First day of month (0=Sun) converted to Mon-start
+  let startDay = d.getDay();
+  startDay = startDay === 0 ? 6 : startDay - 1;
+
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const prevLastDay = new Date(year, month, 0).getDate();
+  const today = new Date();
+
+  const cells = document.getElementById('cal-cells');
+  cells.innerHTML = '';
+
+  // Previous month fill
+  for (let i = startDay - 1; i >= 0; i--) {
+    const dayNum = prevLastDay - i;
+    cells.appendChild(buildCell(new Date(year, month - 1, dayNum), true, today));
+  }
+
+  // Current month
+  for (let i = 1; i <= lastDay; i++) {
+    cells.appendChild(buildCell(new Date(year, month, i), false, today));
+  }
+
+  // Next month fill to complete grid
+  const totalCells = startDay + lastDay;
+  const fill = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= fill; i++) {
+    cells.appendChild(buildCell(new Date(year, month + 1, i), true, today));
+  }
+}
+
+function buildCell(date, muted, today) {
+  const isToday = date.toDateString() === today.toDateString();
+  const ds = toDateStr(date);
+  const items = state.pipeline.filter(p => p.scheduled_date === ds);
+  const shoots = state.shoots.filter(s => s.shoot_date === ds);
+
+  const cell = document.createElement('div');
+  cell.className = 'cal-cell' + (muted ? ' muted' : '') + (isToday ? ' today' : '');
+
+  const dotColors = {
+    post: 'var(--bb-cyan)',
+    video: 'var(--bb-pink)',
+    story: 'var(--bb-purple)'
+  };
+
+  const dots = items.slice(0, 6).map(i =>
+    `<div class="cal-dot" style="background: ${dotColors[i.content_type] || 'var(--bb-green)'}"></div>`
+  ).join('') + shoots.slice(0, 2).map(() =>
+    `<div class="cal-dot" style="background: var(--bb-orange)"></div>`
+  ).join('');
+
+  cell.innerHTML = `
+    <div class="cal-cell-num">${date.getDate()}</div>
+    <div class="cal-cell-dots">${dots}</div>
+  `;
+
+  cell.addEventListener('click', () => {
+    document.getElementById('pa-date').value = ds;
+    openModal('pipeline-add');
+  });
+
+  return cell;
+}
+
+document.getElementById('cal-prev').addEventListener('click', () => {
+  state.calDate.setMonth(state.calDate.getMonth() - 1);
+  renderCalendar();
+});
+document.getElementById('cal-next').addEventListener('click', () => {
+  state.calDate.setMonth(state.calDate.getMonth() + 1);
+  renderCalendar();
+});
+document.getElementById('cal-today').addEventListener('click', () => {
+  state.calDate = new Date();
+  renderCalendar();
+});
+
+// ============ SOPs ============
+function renderSOPs() {
+  const grid = document.getElementById('sop-grid');
+  grid.innerHTML = SOPs.map(s => `
+    <div class="sop-card">
+      <div class="sop-num">${s.num}</div>
+      <div class="sop-name">${s.name}</div>
+      <div class="sop-desc">${s.desc}</div>
+    </div>
+  `).join('');
+}
+
+// ============ IDEAS ============
+function loadIdeas() {
+  try {
+    const stored = localStorage.getItem('bb-smm-ideas');
+    state.ideas = stored ? JSON.parse(stored) : [];
+    document.getElementById('ideas-count').textContent = state.ideas.length;
+    renderIdeas();
+  } catch (e) {
+    state.ideas = [];
+  }
+}
+
+function saveIdeas() {
+  localStorage.setItem('bb-smm-ideas', JSON.stringify(state.ideas));
+  document.getElementById('ideas-count').textContent = state.ideas.length;
+}
+
+function renderIdeas() {
+  const list = document.getElementById('ideas-list');
+  if (state.ideas.length === 0) {
+    list.innerHTML = '<div class="loading-row">No ideas yet. Click Capture Idea to add one.</div>';
+    return;
+  }
+  list.innerHTML = state.ideas.map((idea, i) => {
+    const client = idea.client_id ? state.clients.find(c => String(c.id) === String(idea.client_id)) : null;
+    const clientName = client ? client.name : 'General';
+    return `
+      <div class="idea-row">
+        <div style="flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--bb-purple);"></div>
+        <div class="idea-text">${escapeHtml(idea.text)}</div>
+        <div class="text-muted text-small">${clientName}</div>
+        <button class="btn btn-sm btn-ghost" onclick="deleteIdea(${i})">×</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteIdea(i) {
+  state.ideas.splice(i, 1);
+  saveIdeas();
   renderIdeas();
 }
-function renderIdeas(){
-  const g=document.getElementById('ideasGrid');
-  if(DB.ideas.length===0){
-    g.innerHTML='<div style="color:var(--text-mute);padding:20px;text-align:center;grid-column:1/-1;">No ideas yet. Dump one in the box above.</div>';
+
+// ============ MODALS ============
+function openModal(name) {
+  document.getElementById('modal-' + name).classList.add('open');
+  // Toggle client-type fields based on qa-type
+  if (name === 'quick-add') toggleQuickAddFields();
+}
+
+function closeModal(name) {
+  document.getElementById('modal-' + name).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => {
+    if (e.target === bg) bg.classList.remove('open');
+  });
+});
+
+document.getElementById('qa-type').addEventListener('change', toggleQuickAddFields);
+function toggleQuickAddFields() {
+  const t = document.getElementById('qa-type').value;
+  document.getElementById('qa-content-type-wrap').style.display = t === 'pipeline' ? 'block' : 'none';
+}
+
+async function submitQuickAdd() {
+  const type = document.getElementById('qa-type').value;
+  const title = document.getElementById('qa-title').value.trim();
+  const clientId = document.getElementById('qa-client').value;
+  if (!title) { toast('Enter a title', 'error'); return; }
+
+  if (type === 'pipeline') {
+    const ct = document.getElementById('qa-content-type').value;
+    await createPipelineItem({ title, client_id: clientId, content_type: ct, status: 'ideas' });
+  } else if (type === 'shoot') {
+    await createShoot({ title, client_id: clientId, status: 'requested' });
+  } else {
+    state.ideas.unshift({ text: title, client_id: clientId, created: new Date().toISOString() });
+    saveIdeas();
+    if (state.currentPage === 'ideas') renderIdeas();
+  }
+
+  document.getElementById('qa-title').value = '';
+  closeModal('quick-add');
+  toast('Added', 'success');
+}
+
+async function submitPipelineAdd() {
+  const title = document.getElementById('pa-title').value.trim();
+  const client_id = document.getElementById('pa-client').value;
+  const content_type = document.getElementById('pa-type').value;
+  const status = document.getElementById('pa-status').value;
+  const scheduled_date = document.getElementById('pa-date').value || null;
+  if (!title) { toast('Enter a title', 'error'); return; }
+
+  await createPipelineItem({ title, client_id, content_type, status, scheduled_date });
+  document.getElementById('pa-title').value = '';
+  closeModal('pipeline-add');
+}
+
+async function submitShootAdd() {
+  const title = document.getElementById('sa-title').value.trim();
+  const client_id = document.getElementById('sa-client').value;
+  const shoot_date = document.getElementById('sa-date').value || null;
+  const status = document.getElementById('sa-status').value;
+  const notes = document.getElementById('sa-notes').value.trim();
+  if (!title) { toast('Enter a title', 'error'); return; }
+
+  await createShoot({ title, client_id, shoot_date, status, notes });
+  document.getElementById('sa-title').value = '';
+  document.getElementById('sa-notes').value = '';
+  closeModal('shoot-add');
+}
+
+function submitIdeaAdd() {
+  const text = document.getElementById('ia-text').value.trim();
+  const client_id = document.getElementById('ia-client').value;
+  if (!text) { toast('Enter an idea', 'error'); return; }
+  state.ideas.unshift({ text, client_id, created: new Date().toISOString() });
+  saveIdeas();
+  renderIdeas();
+  document.getElementById('ia-text').value = '';
+  closeModal('idea-add');
+  toast('Idea captured', 'success');
+}
+
+async function createPipelineItem(item) {
+  if (!supabase) {
+    // Offline fallback — add locally only
+    item.id = 'local-' + Date.now();
+    state.pipeline.unshift(item);
+    renderPipeline();
+    toast('Added locally (offline)', 'success');
     return;
   }
-  g.innerHTML=DB.ideas.map(i=>`<div class="idea-card"><div class="idea-text">${i.text}</div><div class="idea-meta"><span>${i.created}</span></div><div class="idea-actions"><button onclick="promoteIdea('${i.id}')">→ Pipeline</button><button class="del" onclick="deleteIdea('${i.id}')">Delete</button></div></div>`).join('');
-}
-function promoteIdea(id){
-  const i=DB.ideas.find(x=>x.id===id);if(!i)return;
-  document.getElementById('qaTitle').value=i.text;
-  deleteIdea(id,true);
-  openModal('quickAdd');
-}
-function deleteIdea(id,silent){
-  DB.ideas=DB.ideas.filter(x=>x.id!==id);
-  saveDB();
-  document.getElementById('ideasCount').textContent=DB.ideas.length;
-  if(!silent)renderIdeas();
+  try {
+    const { data, error } = await supabase.from('smm_content').insert([item]).select();
+    if (error) throw error;
+    state.pipeline.unshift(data[0]);
+    renderPipeline();
+    toast('Card added', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('Could not save. Check pipeline table columns.', 'error');
+  }
 }
 
-// REPORTS
-function saveReport(){
-  const cId=document.getElementById('repClient').value;
-  const c=DB.clients.find(x=>x.id===cId);
-  const r={client:c?c.name:'',week:document.getElementById('repWeek').value,reach:document.getElementById('repReach').value,eng:document.getElementById('repEng').value,top:document.getElementById('repTop').value,worst:document.getElementById('repWorst').value,status:document.getElementById('repStatus').value,flag:document.getElementById('repFlag').value,saved:Date.now()};
-  if(!r.client||!r.week)return alert('Pick client and week');
-  DB.reports.push(r);saveDB();
-  ['repReach','repEng','repTop','repWorst','repFlag'].forEach(id=>document.getElementById(id).value='');
-  renderReports();
-}
-function renderReports(){
-  const sr=document.getElementById('savedReports');
-  if(!DB.reports||DB.reports.length===0){sr.innerHTML='<div style="color:var(--text-mute);padding:14px;text-align:center;">No reports yet.</div>';return}
-  sr.innerHTML=DB.reports.slice().reverse().map(r=>`<div class="info-cell" style="margin-bottom:10px;"><div class="info-cell-label">${r.client} · ${r.week}</div><div style="font-size:12px;line-height:1.6;color:var(--text-dim);margin-top:6px;">Reach: ${r.reach||'—'}<br>Engagement: ${r.eng||'—'}<br>Status: ${r.status}<br>${r.flag?'⚠ '+r.flag:''}</div></div>`).join('');
-}
-
-// ALERTS
-function updateAlertPreview(){
-  const type=document.getElementById('alertType').value;
-  const cId=document.getElementById('alertClient').value;
-  const c=DB.clients.find(x=>x.id===cId);
-  const cName=c?c.name:'[Client]';
-  const platform=document.getElementById('alertPlatform').value;
-  const detail=document.getElementById('alertDetail').value||'[description]';
-  const numbers=document.getElementById('alertNumbers').value||'[numbers]';
-  const rec=document.getElementById('alertRec').value||'[recommendation]';
-  let out='';
-  if(type==='viral')out=`🔥 VIRAL ALERT — ${cName}\nPlatform: ${platform}\nDetails: ${detail}\nEngagement: ${numbers}\nRecommendation: ${rec}\nPlease advise on next steps.`;
-  else if(type==='decline')out=`📉 DECLINE ALERT — ${cName}\nPlatform: ${platform}\nDetails: ${detail}\nDrop: ${numbers}\nLikely cause: ${detail}\nSuggested fix: ${rec}\nPlease discuss.`;
-  else out=`⚠️ SENTIMENT ALERT — ${cName}\nPlatform: ${platform}\nIssue: ${detail}\nVolume: ${numbers}\nAction taken: screenshotted, not responded to yet.\nAwaiting instruction before responding.`;
-  document.getElementById('alertPreview').textContent=out;
-}
-function copyAlert(){
-  navigator.clipboard.writeText(document.getElementById('alertPreview').textContent).then(()=>alert('Copied. Paste into Hub now.'));
+async function createShoot(sh) {
+  if (!supabase) {
+    sh.id = 'local-' + Date.now();
+    state.shoots.unshift(sh);
+    renderShoots();
+    toast('Added locally (offline)', 'success');
+    return;
+  }
+  try {
+    const { data, error } = await supabase.from('smm_shoots').insert([sh]).select();
+    if (error) throw error;
+    state.shoots.unshift(data[0]);
+    renderShoots();
+    toast('Shoot scheduled', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('Could not save. Check shoots table columns.', 'error');
+  }
 }
 
-// STRIKES
-const STRIKE_TRIGGERS=[
-  {k:'posts',l:'Post missed or late without flagging'},
-  {k:'responses',l:'DM or comment unanswered 2hr+'},
-  {k:'report',l:'Weekly report late'},
-  {k:'decline',l:'Declining account not flagged'},
-  {k:'alert',l:'Alert not raised in time'},
-  {k:'blocker',l:'Blocker not flagged before 12pm'}
-];
-function renderStrikes(){
-  const g=document.getElementById('strikeGrid');
-  g.innerHTML=STRIKE_TRIGGERS.map(t=>{
-    const n=DB.strikes[t.k]||0;
-    const cls=n===0?'green':n===1?'amber':'red';
-    return `<div class="strike-row" onclick="logStrike('${t.k}')"><div class="strike-num ${cls}">${n}</div><div class="strike-label">${t.l}</div></div>`;
-  }).join('');
-  updateStrikeBadge();
-}
-function logStrike(k){
-  if(!confirm('Log a strike for this? This is honest tracking — be truthful.'))return;
-  DB.strikes[k]=(DB.strikes[k]||0)+1;saveDB();renderStrikes();
-}
-function resetStrikes(){
-  if(!confirm('Reset all strike counts to 0 for this week?'))return;
-  STRIKE_TRIGGERS.forEach(t=>DB.strikes[t.k]=0);
-  saveDB();renderStrikes();
-}
-function updateStrikeBadge(){
-  const total=STRIKE_TRIGGERS.reduce((s,t)=>s+(DB.strikes[t.k]||0),0);
-  const b=document.getElementById('strikeBadge');
-  b.textContent=total;
-  b.classList.toggle('red',total>=3);
+// ============ UTILITIES ============
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
 }
 
-// RESOURCES
-const RESOURCES=[
-  {id:'kth',icon:'🏆',title:'KTH Proof Story',desc:'Memorise this. Deploy in every pitch.',type:'panel'},
-  {id:'hooks',icon:'🎯',title:'Hook Bank',desc:'Proven scroll-stoppers by category',type:'panel'},
-  {id:'whatsapp',icon:'💬',title:'WhatsApp Templates',desc:'Copy. Personalise. Send.',type:'panel'},
-  {id:'strikes',icon:'⚠️',title:'Strike Triggers',desc:'The 6 things to never do',type:'panel'},
-  {id:'kpi',icon:'📊',title:'KPI Targets',desc:'What good looks like',type:'panel'},
-  {id:'voice',icon:'📘',title:'BB Brand Voice',desc:'Expert · Relentless · Collaborative',type:'panel'},
-  {id:'formulas-v',icon:'🎬',title:'Video Formula Library',desc:'F01–F12 — ask Thulaib for access',type:'link',url:'#'},
-  {id:'formulas-p',icon:'📝',title:'Post Formula Library',desc:'PF01–PF08 — ask Thulaib for access',type:'link',url:'#'},
-  {id:'agent',icon:'🤖',title:'BB SMM Agent (Claude)',desc:'Chat with your senior SMM',type:'link',url:'https://claude.ai'}
-];
-
-function renderResources(){
-  const g=document.getElementById('resourceGrid');
-  g.innerHTML=RESOURCES.map(r=>`<button class="resource-card" onclick="openResource('${r.id}','${r.type}','${r.url||''}')"><div class="resource-icon-sq">${r.icon}</div><div class="resource-title">${r.title}</div><div class="resource-desc">${r.desc}</div></button>`).join('');
-  document.getElementById('resourceHome').style.display='block';
-  document.getElementById('rpanel').classList.remove('active');
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function openResource(id,type,url){
-  if(type==='link'){window.open(url,'_blank');return;}
-  document.getElementById('resourceHome').style.display='none';
-  const p=document.getElementById('rpanel');
-  p.classList.add('active');
-  p.innerHTML=PANELS[id]||'<p>Content coming soon.</p>';
+// ============ INIT ============
+async function init() {
+  renderToday();
+  renderSOPs();
+  loadIdeas();
+
+  if (supabase && SUPABASE_ANON_KEY !== 'REPLACE_WITH_YOUR_ANON_KEY') {
+    await loadClients();
+    await loadPipeline();
+    await loadShoots();
+    renderToday();
+  } else {
+    // DEMO MODE — seed demo data so the workspace is usable without Supabase
+    loadDemoData();
+    document.getElementById('clients-tbody').innerHTML = state.clients.map(c => `
+      <tr>
+        <td><strong>${c.name}</strong></td>
+        <td><span class="pkg-pill pkg-${(c.package||'').toLowerCase().includes('spark')?'spark':(c.package||'').toLowerCase().includes('ignite')?'ignite':(c.package||'').toLowerCase().includes('blaze')?'blaze':'custom'}">${c.package}</span></td>
+        <td>LKR ${c.mrr.toLocaleString()}</td>
+        <td>Month ${c.month}</td>
+        <td><span class="health-dot health-green">green</span></td>
+      </tr>
+    `).join('');
+    document.getElementById('client-count').textContent = state.clients.length;
+    populateClientDropdowns();
+    renderPipeline();
+    renderShoots();
+    renderToday();
+    toast('Demo mode — add Supabase key to connect live data', 'success');
+  }
 }
 
-function closeResourcePanel(){
-  document.getElementById('resourceHome').style.display='block';
-  document.getElementById('rpanel').classList.remove('active');
+function loadDemoData() {
+  state.clients = [
+    { id: 3, name: 'HOMEDEPOT', package: 'Custom', mrr: 184000, month: 6, health: 'green' },
+    { id: 4, name: 'LGL', package: 'Custom', mrr: 134000, month: 6, health: 'green' },
+    { id: 5, name: 'CHERRY FISH', package: 'Custom', mrr: 75000, month: 6, health: 'green' },
+    { id: 6, name: 'CHERRY KITCHEN', package: 'Spark', mrr: 90000, month: 6, health: 'green' },
+    { id: 7, name: 'FUSION', package: 'Custom', mrr: 100000, month: 6, health: 'green' },
+    { id: 8, name: 'EXCELLENT', package: 'Ignite', mrr: 130000, month: 6, health: 'green' },
+    { id: 10, name: 'AUTO MUSEUM', package: 'Spark', mrr: 70000, month: 6, health: 'green' }
+  ];
+
+  const today = new Date();
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const in3 = new Date(today); in3.setDate(today.getDate() + 3);
+
+  state.pipeline = [
+    { id: 'd1', title: 'Weekend combo meal reel', client_id: 5, content_type: 'video', status: 'ideas', scheduled_date: toDateStr(in3) },
+    { id: 'd2', title: 'Customer testimonial carousel', client_id: 10, content_type: 'post', status: 'brief', scheduled_date: toDateStr(tomorrow) },
+    { id: 'd3', title: 'Behind the scenes — kitchen prep', client_id: 6, content_type: 'video', status: 'progress', scheduled_date: toDateStr(today) },
+    { id: 'd4', title: 'Price drop announcement', client_id: 4, content_type: 'post', status: 'review', scheduled_date: toDateStr(today) },
+    { id: 'd5', title: 'Friday story thread', client_id: 7, content_type: 'story', status: 'live', scheduled_date: toDateStr(today) },
+    { id: 'd6', title: 'Team culture POV reel', client_id: 3, content_type: 'video', status: 'ideas', scheduled_date: null },
+    { id: 'd7', title: 'Myth buster about warranties', client_id: 10, content_type: 'video', status: 'brief', scheduled_date: toDateStr(in3) },
+    { id: 'd8', title: 'Monthly offer announcement', client_id: 8, content_type: 'post', status: 'progress', scheduled_date: toDateStr(tomorrow) }
+  ];
+
+  state.shoots = [
+    { id: 's1', title: 'Cherry Fish monthly reel shoot', client_id: 5, shoot_date: toDateStr(in3), status: 'scheduled' },
+    { id: 's2', title: 'Auto Museum product showcase', client_id: 10, shoot_date: toDateStr(tomorrow), status: 'scheduled' },
+    { id: 's3', title: 'LGL behind-the-scenes content', client_id: 4, shoot_date: null, status: 'requested' },
+    { id: 's4', title: 'Cherry Kitchen menu shoot', client_id: 6, shoot_date: toDateStr(today), status: 'shot' }
+  ];
 }
 
-const PANELS={
-  kth:`<button class="back-btn" onclick="closeResourcePanel()">← Back to Resources</button>
-<div class="resource-panel-header"><div class="resource-icon-sq" style="width:48px;height:48px;font-size:22px;">🏆</div><div><div class="resource-panel-title">KTH Proof Story</div><div class="page-sub">Memorise this. Deploy in every pitch.</div></div></div>
-<div class="resource-block"><h3>The One-Line Version</h3><p>We took Kumudini Tyre House from 180 followers and near-zero engagement to 2.47 million views and significant monthly revenue growth in 13 months — on a minimal ad budget.</p></div>
-<div class="resource-block"><h3>The Numbers That Matter</h3><ul><li>Starting point: 180 followers · no strategy · zero revenue attribution from social</li><li>13 months later: 2.47M views · thousands of followers · measurable monthly revenue</li><li>Ad spend: minimal — growth driven by organic formula-based reels</li><li>Content mix: 70% video · 20% carousels · 10% stories</li><li>Retention: still on Blaze · 100% retention since day one</li></ul></div>
-<div class="resource-block"><h3>Deploy It In Conversation</h3><p>When a prospect asks "can this actually work for me" — you say: "Let me tell you about Kumudini Tyre House. 180 followers when we started. 13 months later, 2.47 million views and actual revenue from social. We didn't throw ad budget at it either. We built a system around what their audience wanted to watch. We can do the same for you."</p></div>`,
+init();
 
-  hooks:`<button class="back-btn" onclick="closeResourcePanel()">← Back to Resources</button>
-<div class="resource-panel-header"><div class="resource-icon-sq" style="width:48px;height:48px;font-size:22px;">🎯</div><div><div class="resource-panel-title">Hook Bank</div><div class="page-sub">Swipe, adapt, use.</div></div></div>
-<div class="resource-block"><h3>Curiosity Hooks</h3><ul><li>Most people in [industry] don't know this...</li><li>Here's what nobody tells you about [topic]...</li><li>I wish I knew this before I bought my first [product]...</li><li>Watch this before you spend another rupee on [thing]...</li><li>The truth about [topic] that [industry] hides...</li></ul></div>
-<div class="resource-block"><h3>Problem / Pain Hooks</h3><ul><li>If your [pain point] is happening, here's why...</li><li>Stop doing this to your [thing] — here's what to do instead...</li><li>Are you making this mistake with your [thing]?</li><li>This is why your [result] isn't working...</li></ul></div>
-<div class="resource-block"><h3>Social Proof Hooks</h3><ul><li>Our client went from [X] to [Y] in [timeframe]...</li><li>[Number] people came to us this week for the same reason...</li><li>Watch what happened when [customer] walked in...</li><li>Real story. Real customer. Watch to the end.</li></ul></div>
-<div class="resource-block"><h3>Question Hooks</h3><ul><li>Would you pay [price] for [thing]?</li><li>Can you guess what's wrong with this [thing]?</li><li>What would you do if [scenario]?</li><li>Why does [thing] happen? Here's the real reason...</li></ul></div>`,
-
-  whatsapp:`<button class="back-btn" onclick="closeResourcePanel()">← Back to Resources</button>
-<div class="resource-panel-header"><div class="resource-icon-sq" style="width:48px;height:48px;font-size:22px;">💬</div><div><div class="resource-panel-title">WhatsApp Templates</div><div class="page-sub">Copy. Personalise. Send.</div></div></div>
-<div class="resource-block"><h3>Content Batch Approval Request</h3><pre>Hi [Client name], hope you're doing well.
-
-This week's content batch is ready for your review — [X] posts and [Y] videos planned for [date range].
-
-Could you take a look and approve by [deadline]? Any changes, just reply here and we'll adjust.
-
-Looking forward to another strong week.
-
-— [Your name], BB Team</pre></div>
-<div class="resource-block"><h3>48-Hour Follow-Up</h3><pre>Hi [Client name], just a gentle reminder on the content batch sent over on [day].
-
-We're aiming to publish on [scheduled day], so need your approval by [time] to stay on schedule.
-
-Let me know if anything needs adjusting — happy to jump on a quick call if easier.</pre></div>
-<div class="resource-block"><h3>Weekly Update (Monday)</h3><pre>Good morning [Client name]!
-
-Last week's highlights for [brand]:
-- [Top post] — [reach/engagement]
-- Total reach: [number]
-- [Notable win]
-
-This week we're focused on [theme]. Full batch coming your way by [day].
-
-Have a great week ahead.</pre></div>
-<div class="resource-block"><h3>Lead Alert Handoff</h3><pre>🚨 LEAD ALERT — [Client name]
-
-Platform: [Instagram/Facebook] DM
-From: [@handle]
-Interested in: [product/service]
-Timeline: [ASAP / this week / browsing]
-
-Full conversation screenshotted below. Please follow up directly.</pre></div>
-<div class="resource-block"><h3>Post Live Confirmation</h3><pre>Hi [Client name], quick note — today's post is live on [platform] as of [time].
-
-Link: [URL]
-
-Monitoring engagement — will share early numbers by [time].</pre></div>`,
-
-  strikes:`<button class="back-btn" onclick="closeResourcePanel()">← Back to Resources</button>
-<div class="resource-panel-header"><div class="resource-icon-sq" style="width:48px;height:48px;font-size:22px;">⚠️</div><div><div class="resource-panel-title">Strike Triggers</div><div class="page-sub">Six things that never happen.</div></div></div>
-<div class="resource-block"><h3>The Six</h3><ul><li><strong>Post missed or late without flagging first.</strong> If something will be late, flag it before the deadline. Being late is survivable. Hiding it is not.</li><li><strong>DM or comment unanswered beyond 2 hours.</strong> Tier 1 = 1 hour. This is the #1 reason clients churn.</li><li><strong>Weekly report not submitted by 12pm Friday.</strong> No exceptions. Submit a rough version rather than nothing.</li><li><strong>Declining account not flagged within the same week of spotting.</strong> You see it, you say it. Same week.</li><li><strong>Alert not raised within required response time.</strong> Viral, decline and sentiment alerts have time windows. Miss the window, miss the opportunity or the save.</li><li><strong>Blocker not flagged before 12pm.</strong> If you're stuck, say so by noon. Not at 5pm.</li></ul></div>
-<div class="resource-block"><h3>The Principle</h3><p>Strikes are not about punishment. They're about trust. A transparent SMM who flags problems early is infinitely more valuable than a silent SMM who hides them. Log your strikes honestly in the Strike Tracker. Three or more in a week triggers a retraining conversation — not a termination. It's a chance to fix what's not working.</p></div>`,
-
-  kpi:`<button class="back-btn" onclick="closeResourcePanel()">← Back to Resources</button>
-<div class="resource-panel-header"><div class="resource-icon-sq" style="width:48px;height:48px;font-size:22px;">📊</div><div><div class="resource-panel-title">KPI Targets</div><div class="page-sub">What good looks like.</div></div></div>
-<div class="resource-block"><h3>Response Times</h3><ul><li>Comment response: 100% within 2 hours · Tier 1 = 1 hour</li><li>DM response: 100% within 2 hours</li><li>Lead DM handoff to client: same day, 100%</li></ul></div>
-<div class="resource-block"><h3>Proactivity</h3><ul><li>Community sweeps: minimum 2 per day · Tier 1 = 3 per day</li><li>Proactive engagements: minimum 5 per client per day · Tier 1 = 15</li></ul></div>
-<div class="resource-block"><h3>Growth</h3><ul><li>Follower growth: minimum +2% month on month per client</li><li>Engagement rate: minimum 3% average across feed</li></ul></div>
-<div class="resource-block"><h3>Delivery</h3><ul><li>Scheduling on-time rate: 100%</li><li>Weekly report submission: by 12pm Friday, every Friday</li><li>Report approval rate first submission: 85%+</li></ul></div>`,
-
-  voice:`<button class="back-btn" onclick="closeResourcePanel()">← Back to Resources</button>
-<div class="resource-panel-header"><div class="resource-icon-sq" style="width:48px;height:48px;font-size:22px;">📘</div><div><div class="resource-panel-title">BB Brand Voice</div><div class="page-sub">Expert · Relentless · Collaborative</div></div></div>
-<div class="resource-block"><h3>Expert</h3><p>We speak with authority because we know what we're doing. We don't hedge. We don't over-apologise. When we make a claim, we back it up with work. When a client asks a question, we answer clearly and move forward.</p><ul><li>Use definite language. "This works" not "this might work"</li><li>Cite proof. KTH. Numbers. Case studies. Never abstract</li><li>Don't pad with qualifiers. Say the thing.</li></ul></div>
-<div class="resource-block"><h3>Relentless</h3><p>We don't stop at "good enough". We push past the first draft. We rework the hook. We re-shoot the clip. We follow up when the client goes quiet. We raise the bar every month.</p><ul><li>First draft is never the final draft</li><li>Silence from a client is a follow-up trigger, not a dead lead</li><li>Yesterday's win is today's baseline</li></ul></div>
-<div class="resource-block"><h3>Collaborative</h3><p>The client is our partner, not our buyer. We share what we know. We make them look good. We celebrate their wins publicly and fix their problems privately. We never throw a client under the bus.</p><ul><li>Lead with "we" not "you"</li><li>Explain the thinking, not just the action</li><li>Wins belong to the client, problems belong to us</li></ul></div>`
-};
-
-// SEARCH
-function doSearch(){
-  const q=document.getElementById('globalSearch').value.toLowerCase().trim();
-  if(!q)return;
-  // Simple alert-based jump for now
-  const hits=[];
-  DB.clients.forEach(c=>{if(c.name.toLowerCase().includes(q)||c.industry.toLowerCase().includes(q))hits.push('Client: '+c.name)});
-  DB.pipeline.forEach(p=>{if(p.title.toLowerCase().includes(q))hits.push('Card: '+p.title)});
-  DB.ideas.forEach(i=>{if(i.text.toLowerCase().includes(q))hits.push('Idea: '+i.text)});
-  // Don't spam alerts — just show match count in topbar for now
-  // Future: proper dropdown
-}
-
-// EXPORT
-function exportData(){
-  const data=JSON.stringify(DB,null,2);
-  const blob=new Blob([data],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='bb-smm-workspace-backup-'+new Date().toISOString().slice(0,10)+'.json';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// MODAL
-function openModal(id){document.getElementById('modal-'+id).classList.add('active')}
-function closeModal(id){document.getElementById('modal-'+id).classList.remove('active')}
-
-// LOGIN ENTER
-document.getElementById('loginPass').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin()});
-document.getElementById('loginName').addEventListener('keypress',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus()});
-
-// ESC closes modals
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')document.querySelectorAll('.modal.active').forEach(m=>m.classList.remove('active'));
-});
 </script>
 </body>
 </html>
