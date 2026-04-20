@@ -1155,6 +1155,9 @@ tr:last-child td { border-bottom: none; }
       </div>
     </div>
 
+    <!-- BB INTELLIGENCE PANEL -->
+    <div id="intel-panel" style="margin-bottom:18px"></div>
+
     <div class="today-hero">
       <div>
         <div class="today-greeting" id="today-greeting">Good morning</div>
@@ -1171,8 +1174,17 @@ tr:last-child td { border-bottom: none; }
     <div class="stitle" id="focus-title" style="display:none">Today's Focus</div>
     <div class="focus-panel" id="focus-panel"></div>
 
-    <!-- TODAY'S FOCUS PANEL -->
-    <div class="focus-panel" id="focus-panel"></div>
+    <!-- TOP 3 PRIORITIES + CLIENTS NEEDING ATTENTION SIDE BY SIDE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+      <div class="card" style="padding:16px 18px">
+        <div class="stitle" style="margin-bottom:10px">Top 3 Priorities</div>
+        <div id="top3-list"></div>
+      </div>
+      <div class="card" style="padding:16px 18px">
+        <div class="stitle" style="margin-bottom:10px">Clients Needing Attention</div>
+        <div id="cna-list"></div>
+      </div>
+    </div>
 
     <div class="stitle">This Week <a onclick="nav('calendar')" style="margin-left:auto;font-size:10px;color:var(--cyan);cursor:pointer;text-transform:none;letter-spacing:0">View Calendar →</a></div>
     <div class="week-strip" id="week-strip"></div>
@@ -1306,6 +1318,7 @@ tr:last-child td { border-bottom: none; }
       </select>
       <select class="filter-select" id="cal-filter-type">
         <option value="all">All Types</option>
+        <option value="event">Events</option>
         <option value="post">Posts</option>
         <option value="video">Videos</option>
         <option value="story">Stories</option>
@@ -1317,11 +1330,12 @@ tr:last-child td { border-bottom: none; }
 
     <!-- LEGEND -->
     <div class="cal-legend">
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--orange)"></div>Event</div>
       <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--cyan)"></div>Post</div>
       <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--pink)"></div>Video</div>
       <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--purple)"></div>Story</div>
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--orange)"></div>Shoot</div>
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--yellow)"></div>Task</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>Shoot</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--yellow,#FBBF24)"></div>Task</div>
     </div>
 
     <div class="cal-month">
@@ -1335,6 +1349,12 @@ tr:last-child td { border-bottom: none; }
       </div>
       <div class="cal-grid" id="cal-dows"></div>
       <div class="cal-grid" id="cal-cells" style="margin-top:4px"></div>
+    </div>
+
+    <!-- UPCOMING SECTION -->
+    <div class="card" style="padding:16px 20px;margin-top:16px">
+      <div class="stitle" style="margin-bottom:14px">Upcoming — Next 30 Days</div>
+      <div id="cal-upcoming" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
     </div>
   </section>
 
@@ -1585,6 +1605,34 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<!-- DAY DETAIL MODAL -->
+<div class="modal-bg" id="modal-day-detail">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title" id="dd-title">Day Detail</div>
+      <button class="modal-close" onclick="closeModal('day-detail')">×</button>
+    </div>
+    <div id="dd-content"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="dayDetailAddContent()">+ Content</button>
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="dayDetailAddShoot()">+ Shoot</button>
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="dayDetailAddTask()">+ Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP 3 EDITOR MODAL -->
+<div class="modal-bg" id="modal-top3">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Set Your Top 3 Priorities</div><button class="modal-close" onclick="closeModal('top3')">×</button></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">The 3 things that MUST happen today. Be ruthless.</div>
+    <div class="fg"><label class="fl">Priority 01</label><input class="fi" id="top3-1" placeholder="What's #1 today?"></div>
+    <div class="fg"><label class="fl">Priority 02</label><input class="fi" id="top3-2" placeholder="What's #2 today?"></div>
+    <div class="fg"><label class="fl">Priority 03</label><input class="fi" id="top3-3" placeholder="What's #3 today?"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveTop3Submit()">Save Top 3</button>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-idea-add">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Capture Idea</div><button class="modal-close" onclick="closeModal('idea-add')">×</button></div>
@@ -1640,6 +1688,7 @@ const S = {
   tasks: [],
   content: [],
   shoots: [],
+  events: [],
   ideas: [],
   currentPage: 'today',
   calDate: new Date(),
@@ -1651,7 +1700,12 @@ const S = {
   currentUser: null,
   // Per-user persisted filters
   calFilters: { assignee: 'all', client: 'all', type: 'all' },
-  mtFilters: { client: 'all', priority: 'all', category: 'all' }
+  mtFilters: { client: 'all', priority: 'all', category: 'all' },
+  // BB Intelligence
+  intelIndex: 0,
+  intelTimer: null,
+  // Top 3
+  top3: []
 };
 
 // ============ USER ROLES ============
@@ -1932,7 +1986,7 @@ function nav(page, data) {
   if (el) el.classList.add('active');
 
   if (page === 'today') renderToday();
-  if (page === 'calendar') { renderCalendar(); wireCalFilters(); populateCalFilterDropdowns(); }
+  if (page === 'calendar') { renderCalendar(); renderUpcoming(); wireCalFilters(); populateCalFilterDropdowns(); }
   if (page === 'content-pipeline') renderContent();
   if (page === 'shoot-pipeline') renderShoots();
   if (page === 'clients') renderClients();
@@ -2033,6 +2087,12 @@ function renderToday() {
   
   // Focus Panel
   renderFocusPanel();
+  // Top 3
+  renderTop3();
+  // Clients Needing Attention
+  renderClientsNeedingAttention();
+  // BB Intelligence
+  renderIntel();
 }
 
 function updateEod() {
@@ -2084,6 +2144,15 @@ async function loadShoots() {
     if (error) throw error;
     S.shoots = data || [];
   } catch (e) { console.error(e); }
+}
+
+async function loadEvents() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from('events').select('*').order('date', { ascending: true });
+    if (error) throw error;
+    S.events = data || [];
+  } catch (e) { console.error('Events load failed (events table may not exist yet):', e); S.events = []; }
 }
 
 function populateClientDropdowns() {
@@ -2560,7 +2629,6 @@ function buildCell(date, muted, today) {
   const ds = toDateStr(date);
   const f = S.calFilters;
   
-  // Get all events on this date, apply filters
   const content = S.content.filter(c => {
     if (c.scheduled_date !== ds) return false;
     if (f.client !== 'all' && String(c.client_id) !== String(f.client)) return false;
@@ -2584,25 +2652,29 @@ function buildCell(date, muted, today) {
     return true;
   });
 
+  const events = (S.events || []).filter(e => {
+    if (e.date !== ds) return false;
+    if (f.client !== 'all' && String(e.client_id) !== String(f.client)) return false;
+    if (f.type !== 'all' && f.type !== 'event') return false;
+    return true;
+  });
+
   const cell = document.createElement('div');
   cell.className = 'cal-cell' + (muted ? ' muted' : '') + (date.toDateString() === today.toDateString() ? ' today' : '');
   const colors = { post: 'var(--cyan)', video: 'var(--pink)', story: 'var(--purple)' };
   
   const dots = [
-    ...content.slice(0, 4).map(i => `<div class="cal-dot" style="background:${colors[i.content_type] || 'var(--green)'}" title="${escHtml(i.title)}"></div>`),
-    ...shoots.slice(0, 2).map(s => `<div class="cal-dot" style="background:var(--orange)" title="Shoot: ${escHtml(s.title)}"></div>`),
-    ...tasks.slice(0, 3).map(t => `<div class="cal-dot" style="background:var(--yellow)" title="Task: ${escHtml(t.title)}"></div>`)
+    ...events.slice(0, 2).map(e => `<div class="cal-dot" style="background:var(--orange)" title="Event: ${escHtml(e.title)}"></div>`),
+    ...content.slice(0, 3).map(i => `<div class="cal-dot" style="background:${colors[i.content_type] || 'var(--green)'}" title="${escHtml(i.title)}"></div>`),
+    ...shoots.slice(0, 2).map(s => `<div class="cal-dot" style="background:var(--green)" title="Shoot: ${escHtml(s.title)}"></div>`),
+    ...tasks.slice(0, 3).map(t => `<div class="cal-dot" style="background:var(--yellow,#FBBF24)" title="Task: ${escHtml(t.title)}"></div>`)
   ].join('');
   
-  const totalEvents = content.length + shoots.length + tasks.length;
-  const moreIndicator = totalEvents > 9 ? `<div style="font-size:8px;color:var(--text3);margin-top:2px">+${totalEvents - 9}</div>` : '';
+  const totalEvents = content.length + shoots.length + tasks.length + events.length;
+  const moreIndicator = totalEvents > 10 ? `<div style="font-size:8px;color:var(--text3);margin-top:2px">+${totalEvents - 10}</div>` : '';
   
   cell.innerHTML = `<div class="cal-cell-num">${date.getDate()}</div><div class="cal-cell-dots">${dots}</div>${moreIndicator}`;
-  cell.addEventListener('click', () => { 
-    const caDate = document.getElementById('ca-date');
-    if (caDate) caDate.value = ds;
-    openModal('content-add');
-  });
+  cell.addEventListener('click', () => openDayDetail(ds));
   return cell;
 }
 
@@ -3156,6 +3228,380 @@ async function createShoot(sh) {
   } catch (e) { console.error(e); toast('Failed: ' + (e.message || ''), 'error'); }
 }
 
+// ============ UPCOMING SECTION ============
+function renderUpcoming() {
+  const el = document.getElementById('cal-upcoming');
+  if (!el) return;
+  
+  const now = new Date();
+  const days30 = new Date(now); days30.setDate(now.getDate() + 30);
+  const f = S.calFilters;
+  
+  const items = [];
+  
+  // Events
+  (S.events || []).forEach(e => {
+    if (!e.date) return;
+    const d = new Date(e.date);
+    if (d < now || d > days30) return;
+    if (f.client !== 'all' && String(e.client_id) !== String(f.client)) return;
+    if (f.type !== 'all' && f.type !== 'event') return;
+    items.push({ date: e.date, kind: 'event', title: e.title, client_id: e.client_id, id: e.id, time: e.time || '' });
+  });
+  
+  // Content
+  S.content.forEach(c => {
+    if (!c.scheduled_date) return;
+    const d = new Date(c.scheduled_date);
+    if (d < now || d > days30) return;
+    if (f.client !== 'all' && String(c.client_id) !== String(f.client)) return;
+    if (f.type !== 'all' && f.type !== c.content_type) return;
+    items.push({ date: c.scheduled_date, kind: c.content_type || 'post', title: c.title, client_id: c.client_id, id: c.id });
+  });
+  
+  // Shoots
+  S.shoots.forEach(s => {
+    if (!s.shoot_date) return;
+    const d = new Date(s.shoot_date);
+    if (d < now || d > days30) return;
+    if (f.client !== 'all' && String(s.client_id) !== String(f.client)) return;
+    if (f.type !== 'all' && f.type !== 'shoot') return;
+    items.push({ date: s.shoot_date, kind: 'shoot', title: s.title, client_id: s.client_id, id: s.id });
+  });
+  
+  // Tasks
+  S.tasks.forEach(t => {
+    if (t.done || !t.due) return;
+    const d = new Date(t.due);
+    if (d < now || d > days30) return;
+    if (f.assignee !== 'all' && t.assign !== f.assignee) return;
+    if (f.client !== 'all' && String(t.client_id) !== String(f.client)) return;
+    if (f.type !== 'all' && f.type !== 'task') return;
+    items.push({ date: t.due, kind: 'task', title: t.title, client_id: t.client_id, id: t.id, assign: t.assign });
+  });
+  
+  items.sort((a, b) => a.date.localeCompare(b.date));
+  
+  if (!items.length) {
+    el.style.display = 'block';
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px">Nothing upcoming in the next 30 days.</div>';
+    return;
+  }
+  
+  el.style.display = 'grid';
+  const colorMap = { event: 'var(--orange)', post: 'var(--cyan)', video: 'var(--pink)', story: 'var(--purple)', shoot: 'var(--green)', task: 'var(--yellow,#FBBF24)' };
+  const iconMap = { event: '📅', post: '📄', video: '🎬', story: '📸', shoot: '📷', task: '📋' };
+  
+  el.innerHTML = items.slice(0, 30).map(i => {
+    const client = i.client_id ? S.clients.find(c => c.id == i.client_id) : null;
+    const clientName = client ? client.name : '';
+    const d = new Date(i.date);
+    const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const color = colorMap[i.kind] || 'var(--text2)';
+    const icon = iconMap[i.kind] || '•';
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${color};border-radius:var(--rs);padding:10px 12px;cursor:pointer;transition:all 0.12s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'" onclick="openDayDetail('${i.date}')">
+      <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${color};margin-bottom:4px">${icon} ${dateStr}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(i.title)}</div>
+      ${clientName ? `<div style="font-size:10px;color:var(--text3)">${escHtml(clientName)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ============ DAY DETAIL MODAL ============
+let currentDayDetail = null;
+
+function openDayDetail(dateStr) {
+  currentDayDetail = dateStr;
+  const d = new Date(dateStr);
+  const title = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  document.getElementById('dd-title').textContent = title;
+  
+  const events = (S.events || []).filter(e => e.date === dateStr);
+  const content = S.content.filter(c => c.scheduled_date === dateStr);
+  const shoots = S.shoots.filter(s => s.shoot_date === dateStr);
+  const tasks = S.tasks.filter(t => t.due && new Date(t.due).toDateString() === d.toDateString());
+  
+  const wrap = document.getElementById('dd-content');
+  const sections = [];
+  
+  const renderGroup = (title, items, color, renderer) => {
+    if (!items.length) return '';
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:${color};margin-bottom:8px">${title} · ${items.length}</div>
+      ${items.map(renderer).join('')}
+    </div>`;
+  };
+  
+  sections.push(renderGroup('Events', events, 'var(--orange)', e => {
+    const c = e.client_id ? S.clients.find(x => x.id == e.client_id) : null;
+    return `<div style="background:var(--bg3);border-left:3px solid var(--orange);border-radius:6px;padding:10px 12px;margin-bottom:6px">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(e.title)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${e.time ? e.time + ' · ' : ''}${c ? escHtml(c.name) : 'All BB'}${e.type ? ' · ' + escHtml(e.type) : ''}</div>
+      ${e.notes ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">${escHtml(e.notes)}</div>` : ''}
+    </div>`;
+  }));
+  
+  sections.push(renderGroup('Content', content, 'var(--cyan)', c => {
+    const cl = c.client_id ? S.clients.find(x => x.id == c.client_id) : null;
+    const typeColor = { post: 'var(--cyan)', video: 'var(--pink)', story: 'var(--purple)' }[c.content_type] || 'var(--cyan)';
+    const typeIcon = { post: '📄', video: '🎬', story: '📸' }[c.content_type] || '📄';
+    return `<div style="background:var(--bg3);border-left:3px solid ${typeColor};border-radius:6px;padding:10px 12px;margin-bottom:6px;cursor:pointer" onclick="closeModal('day-detail');nav('content-pipeline')">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">${typeIcon} ${escHtml(c.title)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${cl ? escHtml(cl.name) : 'General'} · ${escHtml(c.status || 'ideas')}</div>
+    </div>`;
+  }));
+  
+  sections.push(renderGroup('Shoots', shoots, 'var(--green)', s => {
+    const cl = s.client_id ? S.clients.find(x => x.id == s.client_id) : null;
+    return `<div style="background:var(--bg3);border-left:3px solid var(--green);border-radius:6px;padding:10px 12px;margin-bottom:6px;cursor:pointer" onclick="closeModal('day-detail');nav('shoot-pipeline')">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">📷 ${escHtml(s.title)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${cl ? escHtml(cl.name) : 'General'} · ${escHtml(s.status || 'requested')}</div>
+      ${s.notes ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">${escHtml(s.notes)}</div>` : ''}
+    </div>`;
+  }));
+  
+  sections.push(renderGroup('Tasks', tasks, 'var(--yellow,#FBBF24)', t => {
+    const cl = t.client_id ? S.clients.find(x => x.id == t.client_id) : null;
+    const done = t.done ? 'text-decoration:line-through;opacity:0.55' : '';
+    return `<div style="background:var(--bg3);border-left:3px solid var(--yellow,#FBBF24);border-radius:6px;padding:10px 12px;margin-bottom:6px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);${done}">📋 ${escHtml(t.title)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${cl ? escHtml(cl.name) : 'General'} · ${t.priority || 'MEDIUM'} · Assigned ${t.assign || '—'}</div>
+    </div>`;
+  }));
+  
+  const combined = sections.filter(x => x).join('');
+  wrap.innerHTML = combined || '<div style="text-align:center;color:var(--text3);padding:24px;font-size:12px">Nothing scheduled for this day yet. Use the buttons below to add something.</div>';
+  
+  openModal('day-detail');
+}
+
+function dayDetailAddContent() {
+  closeModal('day-detail');
+  setTimeout(() => {
+    const d = document.getElementById('ca-date');
+    if (d) d.value = currentDayDetail;
+    openModal('content-add');
+  }, 200);
+}
+
+function dayDetailAddShoot() {
+  closeModal('day-detail');
+  setTimeout(() => {
+    const d = document.getElementById('sa-date');
+    if (d) d.value = currentDayDetail;
+    openModal('shoot-add');
+  }, 200);
+}
+
+function dayDetailAddTask() {
+  toast('Open a client to add a task', 'success');
+  closeModal('day-detail');
+  setTimeout(() => nav('clients'), 200);
+}
+
+// ============ TOP 3 PRIORITIES ============
+function loadTop3FromStorage() {
+  if (!S.currentUser) return;
+  try {
+    const saved = localStorage.getItem('top3-' + S.currentUser);
+    if (saved) S.top3 = JSON.parse(saved);
+  } catch { S.top3 = []; }
+}
+
+function saveTop3() {
+  if (!S.currentUser) return;
+  try { localStorage.setItem('top3-' + S.currentUser, JSON.stringify(S.top3)); } catch {}
+}
+
+function renderTop3() {
+  const el = document.getElementById('top3-list');
+  if (!el) return;
+  if (!S.top3 || !S.top3.length) {
+    el.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">No Top 3 set. <button class="btn btn-ghost btn-sm" onclick="openTop3Editor()" style="padding:4px 10px;margin-left:6px">+ Set Top 3</button></div>`;
+    return;
+  }
+  el.innerHTML = S.top3.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;margin-bottom:6px">
+      <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:800;color:var(--accent);min-width:24px">0${i+1}</div>
+      <div style="flex:1;font-size:13px;color:var(--text)">${escHtml(t)}</div>
+    </div>
+  `).join('') + `<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="openTop3Editor()">Edit Top 3</button>`;
+}
+
+function openTop3Editor() {
+  const current = S.top3 || [];
+  document.getElementById('top3-1').value = current[0] || '';
+  document.getElementById('top3-2').value = current[1] || '';
+  document.getElementById('top3-3').value = current[2] || '';
+  openModal('top3');
+}
+
+function saveTop3Submit() {
+  S.top3 = [
+    document.getElementById('top3-1').value.trim(),
+    document.getElementById('top3-2').value.trim(),
+    document.getElementById('top3-3').value.trim()
+  ].filter(x => x);
+  saveTop3();
+  closeModal('top3');
+  renderTop3();
+  toast('Top 3 saved', 'success');
+}
+
+// ============ CLIENTS NEEDING ATTENTION ============
+function renderClientsNeedingAttention() {
+  const el = document.getElementById('cna-list');
+  if (!el) return;
+  const now = new Date();
+  const todayStr = toDateStr(now);
+  
+  const list = S.clients.map(c => {
+    const health = calcClientHealth(c);
+    const postsToday = S.content.filter(x => x.client_id == c.id && x.scheduled_date === todayStr).length;
+    const overdue = S.tasks.filter(t => t.client_id == c.id && !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
+    return { client: c, health, postsToday, overdue, score: (health.auto === 'red' ? 3 : health.auto === 'amber' ? 2 : 0) + (overdue * 2) + postsToday };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+  
+  if (!list.length) {
+    el.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">All clients healthy. Nothing urgent.</div>';
+    return;
+  }
+  
+  el.innerHTML = list.map(x => {
+    const healthColor = x.health.auto === 'red' ? 'var(--red)' : x.health.auto === 'amber' ? 'var(--orange)' : 'var(--green)';
+    const parts = [];
+    if (x.postsToday) parts.push(`${x.postsToday} post${x.postsToday > 1 ? 's' : ''} today`);
+    if (x.overdue) parts.push(`${x.overdue} overdue`);
+    if (!parts.length) parts.push(x.health.reason);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border-left:3px solid ${healthColor};border-radius:6px;margin-bottom:6px;cursor:pointer" onclick="nav('client-profile',${x.client.id})">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(x.client.name)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${parts.join(' · ')}</div>
+      </div>
+      <div style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:${healthColor}22;color:${healthColor};text-transform:uppercase">${x.health.auto}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============ BB INTELLIGENCE ============
+function buildIntelCards() {
+  if (!S.currentUser) return [];
+  const userCode = USER_ROLES[S.currentUser].code;
+  const now = new Date();
+  const todayStr = toDateStr(now);
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  const tomorrowStr = toDateStr(tomorrow);
+  
+  const cards = [];
+  
+  // Overdue tasks
+  const overdue = S.tasks.filter(t => t.assign === userCode && !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
+  if (overdue > 0) cards.push({ cls: 'alert', num: overdue, lbl: 'Overdue Tasks', sub: 'Past their due date — clear these first', page: 'my-tasks' });
+  
+  // HIGH priority tasks
+  const highPriority = S.tasks.filter(t => t.assign === userCode && !t.done && t.priority === 'HIGH').length;
+  if (highPriority > 0) cards.push({ cls: 'alert', num: highPriority, lbl: 'Flagged For You', sub: 'High priority — from Thulaib or Shiara', page: 'my-tasks' });
+  
+  // Posts today
+  const postsToday = S.content.filter(c => c.scheduled_date === todayStr).length;
+  if (postsToday > 0) cards.push({ cls: 'neutral', num: postsToday, lbl: 'Posts Going Live Today', sub: 'Confirm all scheduled & ready', page: 'calendar' });
+  
+  // In review
+  const inReview = S.content.filter(c => c.status === 'review').length;
+  if (inReview > 0) cards.push({ cls: 'warn', num: inReview, lbl: 'Awaiting Approval', sub: 'Chase clients for sign-off', page: 'content-pipeline' });
+  
+  // Shoots tomorrow
+  const shootsTomorrow = S.shoots.filter(s => s.shoot_date === tomorrowStr).length;
+  if (shootsTomorrow > 0) cards.push({ cls: 'warn', num: shootsTomorrow, lbl: 'Shoot Tomorrow', sub: 'Prep gear · confirm with client', page: 'shoot-pipeline' });
+  
+  // Amber/Red clients
+  let amberRed = 0;
+  S.clients.forEach(c => { const h = calcClientHealth(c); if (h.auto === 'amber' || h.auto === 'red') amberRed++; });
+  if (amberRed > 0) cards.push({ cls: 'warn', num: amberRed, lbl: 'Clients Need Attention', sub: 'Health dropped — chase posts & tasks', page: 'clients' });
+  
+  // Open ideas
+  const openIdeas = S.ideas.filter(i => i.status === 'open').length;
+  if (openIdeas > 0) cards.push({ cls: 'good', num: openIdeas, lbl: 'Open Ideas', sub: 'Convert to content or tasks', page: 'ideas' });
+  
+  // Events today
+  const eventsToday = (S.events || []).filter(e => e.date === todayStr).length;
+  if (eventsToday > 0) cards.push({ cls: 'neutral', num: eventsToday, lbl: 'Events Today', sub: 'Meetings · deadlines · check-ins', page: 'calendar' });
+  
+  // If nothing to show — a positive card
+  if (!cards.length) {
+    cards.push({ cls: 'good', num: '✓', lbl: 'All Clear', sub: 'No urgent items. Keep executing.', page: 'today' });
+  }
+  
+  return cards;
+}
+
+function renderIntel() {
+  const wrap = document.getElementById('intel-panel');
+  if (!wrap) return;
+  const cards = buildIntelCards();
+  
+  if (S.intelIndex >= cards.length) S.intelIndex = 0;
+  const c = cards[S.intelIndex];
+  const total = cards.length;
+  
+  const colorMap = {
+    alert: { bg: 'rgba(248,113,113,0.08)', border: 'var(--red)', accent: 'var(--red)' },
+    warn: { bg: 'rgba(255,107,43,0.08)', border: 'var(--orange)', accent: 'var(--orange)' },
+    neutral: { bg: 'rgba(0,229,255,0.06)', border: 'var(--cyan)', accent: 'var(--cyan)' },
+    good: { bg: 'rgba(0,255,133,0.08)', border: 'var(--green)', accent: 'var(--green)' }
+  };
+  const col = colorMap[c.cls];
+  
+  wrap.innerHTML = `
+    <div style="background:${col.bg};border:1px solid ${col.border}22;border-left:4px solid ${col.border};border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;gap:20px;cursor:pointer" onclick="nav('${c.page}')">
+      <div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:0.18em;color:${col.accent};text-transform:uppercase;margin-bottom:4px">BB INTELLIGENCE</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="font-family:'Poppins',sans-serif;font-size:42px;font-weight:800;letter-spacing:-0.03em;color:${col.accent};line-height:1">${c.num}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.04em">${c.lbl}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">${c.sub}</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();intelPrev()" style="padding:6px 10px;font-size:14px">‹</button>
+        <div style="font-size:10px;color:var(--text3);font-weight:600;min-width:40px;text-align:center">${S.intelIndex + 1} / ${total}</div>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();intelNext()" style="padding:6px 10px;font-size:14px">›</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:5px;justify-content:center;margin-top:8px">
+      ${cards.map((_, i) => `<div style="width:5px;height:5px;border-radius:50%;background:${i === S.intelIndex ? 'var(--accent)' : 'var(--border2)'};transition:background 0.15s"></div>`).join('')}
+    </div>
+  `;
+  
+  // Hover pause / auto-advance
+  if (S.intelTimer) clearTimeout(S.intelTimer);
+  const panelEl = document.getElementById('intel-panel');
+  if (panelEl) {
+    panelEl.onmouseenter = () => { if (S.intelTimer) clearTimeout(S.intelTimer); };
+    panelEl.onmouseleave = () => { startIntelTimer(); };
+  }
+  startIntelTimer();
+}
+
+function startIntelTimer() {
+  if (S.intelTimer) clearTimeout(S.intelTimer);
+  S.intelTimer = setTimeout(() => { intelNext(); }, 8000);
+}
+
+function intelNext() {
+  const cards = buildIntelCards();
+  S.intelIndex = (S.intelIndex + 1) % cards.length;
+  renderIntel();
+}
+
+function intelPrev() {
+  const cards = buildIntelCards();
+  S.intelIndex = (S.intelIndex - 1 + cards.length) % cards.length;
+  renderIntel();
+}
+
 // ============ TOAST ============
 function toast(msg, type) {
   const t = document.getElementById('toast');
@@ -3168,10 +3614,12 @@ function toast(msg, type) {
 async function init() {
   loadCalFiltersFromStorage();
   loadMyTasksFiltersFromStorage();
+  loadTop3FromStorage();
   await loadClients();
   await loadTasks();
   await loadContent();
   await loadShoots();
+  await loadEvents();
   await loadIdeas();
   renderToday();
   renderSOPs();
