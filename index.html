@@ -1401,41 +1401,46 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ SHOOT PIPELINE ============ -->
   <section class="page" id="page-shoot-pipeline">
     <div class="ph">
-      <div><div class="ph-title">Shoot Pipeline</div><div class="ph-sub">Schedule, confirm, track every shoot</div></div>
+      <div><div class="ph-title">Shoot Pipeline</div><div class="ph-sub">Drag cards between columns to update stage</div></div>
       <div class="ph-right">
+        <select class="filter-select" id="sp-q-filter" style="min-width:90px">
+          <option value="all">All Q</option>
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3">Q3</option>
+          <option value="Q4">Q4</option>
+        </select>
+        <select class="filter-select" id="sp-client-filter" style="min-width:140px"><option value="all">All Clients</option></select>
         <button class="btn btn-primary" onclick="openModal('shoot-add')">+ Schedule Shoot</button>
       </div>
     </div>
-    <div class="kanban-toolbar">
-      <select class="fi" id="sp-client-filter" style="width:auto;min-width:180px"><option value="all">All Clients</option></select>
-    </div>
-    <div class="kanban-board" id="shoot-board" style="grid-template-columns:repeat(7,minmax(150px,1fr));overflow-x:auto">
-      <div class="kanban-col" data-accent="ideas">
-        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#60A5FA">Videos Confirmed</div><div class="kanban-col-cnt" id="sc-videos-confirmed">0</div></div>
+    <div class="kanban-board" id="shoot-board" style="grid-template-columns:repeat(7,minmax(160px,1fr));overflow-x:auto;gap:8px">
+      <div class="kanban-col" style="border-top:2px solid #60A5FA">
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#60A5FA;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#60A5FA">Videos Confirmed</div><div class="kanban-col-cnt" id="sc-videos-confirmed">0</div></div>
         <div class="kanban-cards" data-sdrop="videos-confirmed"></div>
       </div>
-      <div class="kanban-col" data-accent="brief">
-        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#FBBF24">Script Made</div><div class="kanban-col-cnt" id="sc-script-made">0</div></div>
+      <div class="kanban-col" style="border-top:2px solid #FBBF24">
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#FBBF24;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#FBBF24">Script Made</div><div class="kanban-col-cnt" id="sc-script-made">0</div></div>
         <div class="kanban-cards" data-sdrop="script-made"></div>
       </div>
-      <div class="kanban-col" data-accent="progress">
-        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#FF6B2B">Script Changes</div><div class="kanban-col-cnt" id="sc-script-changes">0</div></div>
+      <div class="kanban-col" style="border-top:2px solid #FF6B2B">
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#FF6B2B;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#FF6B2B">Script Changes</div><div class="kanban-col-cnt" id="sc-script-changes">0</div></div>
         <div class="kanban-cards" data-sdrop="script-changes"></div>
       </div>
-      <div class="kanban-col" data-accent="review">
-        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#A855F7">Final Script</div><div class="kanban-col-cnt" id="sc-final-script">0</div></div>
+      <div class="kanban-col" style="border-top:2px solid #A855F7">
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#A855F7;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#A855F7">Final Script</div><div class="kanban-col-cnt" id="sc-final-script">0</div></div>
         <div class="kanban-cards" data-sdrop="final-script"></div>
       </div>
-      <div class="kanban-col" data-accent="ideas">
-        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#00E5FF">Get Shoot Date</div><div class="kanban-col-cnt" id="sc-get-shoot-date">0</div></div>
+      <div class="kanban-col" style="border-top:2px solid #00E5FF">
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#00E5FF;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#00E5FF">Get Shoot Date</div><div class="kanban-col-cnt" id="sc-get-shoot-date">0</div></div>
         <div class="kanban-cards" data-sdrop="get-shoot-date"></div>
       </div>
-      <div class="kanban-col" data-accent="progress">
-        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#FF2D78">Shoot Date Set</div><div class="kanban-col-cnt" id="sc-shoot-date-set">0</div></div>
+      <div class="kanban-col" style="border-top:2px solid #FF2D78">
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#FF2D78;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#FF2D78">Shoot Date Set</div><div class="kanban-col-cnt" id="sc-shoot-date-set">0</div></div>
         <div class="kanban-cards" data-sdrop="shoot-date-set"></div>
       </div>
-      <div class="kanban-col" data-accent="live">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-green">Shot</div><div class="kanban-col-cnt" id="sc-shot">0</div></div>
+      <div class="kanban-col" style="border-top:2px solid #00FF85">
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#00FF85;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title c-green">Shot</div><div class="kanban-col-cnt" id="sc-shot">0</div></div>
         <div class="kanban-cards" data-sdrop="shot"></div>
       </div>
     </div>
@@ -1445,6 +1450,12 @@ tr:last-child td { border-bottom: none; }
   <section class="page" id="page-clients">
     <div class="ph">
       <div><div class="ph-title">Clients</div><div class="ph-sub">Click a client name to open their dashboard</div></div>
+    </div>
+    <!-- Tabs matching CC -->
+    <div class="tab-bar" style="margin-bottom:16px">
+      <button class="tab-btn active" id="cli-tab-sm" onclick="switchCliTab('sm')">Social Media</button>
+      <button class="tab-btn" id="cli-tab-web" onclick="switchCliTab('web')">Website &amp; SEO</button>
+      <button class="tab-btn" id="cli-tab-all" onclick="switchCliTab('all')">All Clients</button>
     </div>
     <div class="card">
       <div class="t-wrap">
@@ -1715,6 +1726,7 @@ const S = {
   filterType: 'all',
   filterClient: 'all',
   filterShootClient: 'all',
+  filterShootQ: 'all',
   currentClientId: null,
   taskFilter: 'all',
   currentUser: null,
@@ -2187,6 +2199,17 @@ function populateClientDropdowns() {
   if (spf) spf.innerHTML = allOpts;
 }
 
+// ============ CLIENT TABS ============
+let cliActiveTab = 'sm';
+function switchCliTab(tab) {
+  cliActiveTab = tab;
+  ['sm','web','all'].forEach(t => {
+    const b = document.getElementById('cli-tab-' + t);
+    if (b) b.classList.toggle('active', t === tab);
+  });
+  renderClients();
+}
+
 // ============ CLIENTS LIST ============
 function calcClientHealth(client) {
   // Auto-calculate health based on activity
@@ -2221,21 +2244,46 @@ function renderClients() {
     tbody.innerHTML = '<tr><td colspan="6" class="loading-row">No clients</td></tr>';
     return;
   }
-  tbody.innerHTML = S.clients.map(c => {
+
+  // Tab filtering
+  let filtered = S.clients;
+  if (cliActiveTab === 'sm') {
+    filtered = S.clients.filter(c => {
+      const t = (c.type || '').toLowerCase();
+      return !t.includes('web') && !t.includes('seo');
+    });
+  } else if (cliActiveTab === 'web') {
+    filtered = S.clients.filter(c => {
+      const t = (c.type || '').toLowerCase();
+      return t.includes('web') || t.includes('seo');
+    });
+  }
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-row">No clients in this category</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(c => {
     const pkg = (c.package || '').toLowerCase();
-    const pkgClass = pkg.includes('spark') ? 'pill-c' : pkg.includes('ignite') ? 'pill-o' : pkg.includes('blaze') ? 'pill-p' : 'pill-pu';
+    const pkgClass = pkg.includes('spark') ? 'pill-c' : pkg.includes('ignite') ? 'pill-o' : pkg.includes('blaze') ? 'pill-p' : 'pill-grey';
     const health = calcClientHealth(c);
     const healthClass = health.auto === 'green' ? 'pill-g' : health.auto === 'amber' ? 'pill-y' : 'pill-r';
     const open = S.tasks.filter(t => (t.client_id == c.id) && !t.done).length;
     const overdue = S.tasks.filter(t => (t.client_id == c.id) && !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString()).length;
-    const openTxt = open ? `${open} open${overdue ? ' · ' + overdue + ' overdue' : ''}` : '—';
+    const openTxt = open ? `<span style="color:var(--text)">${open} open</span>${overdue ? ` · <span style="color:var(--red)">${overdue} overdue</span>` : ''}` : '—';
+    // Type badge — match CC style
+    const cType = (c.type || '').toLowerCase();
+    const typeBadge = (cType.includes('web') || cType.includes('seo'))
+      ? '<span class="pill pill-o" style="font-size:10px">SM + Web</span>'
+      : '<span class="pill pill-pu" style="font-size:10px">Social Media</span>';
     return `<tr onclick="nav('client-profile', ${c.id})">
       <td><div class="td-name">${escHtml(c.name)}</div></td>
-      <td><span class="pill pill-pu">Social Media</span></td>
+      <td>${typeBadge}</td>
       <td><span class="pill ${pkgClass}">${escHtml(c.package || '—')}</span></td>
-      <td><span class="c-cyan" style="font-weight:600">M${c.month || '—'}</span></td>
-      <td><span class="pill ${healthClass}" title="${escHtml(health.reason)}">${health.auto.toUpperCase()}</span></td>
-      <td>${openTxt}</td>
+      <td><span style="color:var(--cyan);font-weight:700">M${c.month || '—'}</span></td>
+      <td><span class="pill ${healthClass}" title="${escHtml(health.reason)}">${health.auto === 'green' ? 'Green' : health.auto === 'amber' ? 'Amber' : 'Red'}</span></td>
+      <td style="font-size:12px">${openTxt}</td>
     </tr>`;
   }).join('');
 }
@@ -2512,6 +2560,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (ctf) ctf.addEventListener('change', e => { S.filterClient = e.target.value; renderContent(); });
   const spf = document.getElementById('sp-client-filter');
   if (spf) spf.addEventListener('change', e => { S.filterShootClient = e.target.value; renderShoots(); });
+  const spq = document.getElementById('sp-q-filter');
+  if (spq) spq.addEventListener('change', e => { S.filterShootQ = e.target.value; renderShoots(); });
 });
 
 async function updateContentStatus(id, status) {
@@ -2545,6 +2595,7 @@ function renderShoots() {
       if (shootStage === 'delivered') shootStage = 'Shot';
       if (shootStage !== s) return false;
       if (S.filterShootClient !== 'all' && String(sh.client_id) !== String(S.filterShootClient)) return false;
+      if (S.filterShootQ !== 'all' && sh.quarter !== S.filterShootQ) return false;
       return true;
     });
     const counter = document.getElementById('sc-' + key);
