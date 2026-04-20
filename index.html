@@ -1409,22 +1409,34 @@ tr:last-child td { border-bottom: none; }
     <div class="kanban-toolbar">
       <select class="fi" id="sp-client-filter" style="width:auto;min-width:180px"><option value="all">All Clients</option></select>
     </div>
-    <div class="kanban-board" id="shoot-board" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kanban-board" id="shoot-board" style="grid-template-columns:repeat(7,minmax(150px,1fr));overflow-x:auto">
       <div class="kanban-col" data-accent="ideas">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-purple">Requested</div><div class="kanban-col-cnt" id="sc-requested">0</div></div>
-        <div class="kanban-cards" data-sdrop="requested"></div>
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#60A5FA">Videos Confirmed</div><div class="kanban-col-cnt" id="sc-videos-confirmed">0</div></div>
+        <div class="kanban-cards" data-sdrop="videos-confirmed"></div>
       </div>
       <div class="kanban-col" data-accent="brief">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-cyan">Scheduled</div><div class="kanban-col-cnt" id="sc-scheduled">0</div></div>
-        <div class="kanban-cards" data-sdrop="scheduled"></div>
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#FBBF24">Script Made</div><div class="kanban-col-cnt" id="sc-script-made">0</div></div>
+        <div class="kanban-cards" data-sdrop="script-made"></div>
       </div>
       <div class="kanban-col" data-accent="progress">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-orange">Shot</div><div class="kanban-col-cnt" id="sc-shot">0</div></div>
-        <div class="kanban-cards" data-sdrop="shot"></div>
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#FF6B2B">Script Changes</div><div class="kanban-col-cnt" id="sc-script-changes">0</div></div>
+        <div class="kanban-cards" data-sdrop="script-changes"></div>
+      </div>
+      <div class="kanban-col" data-accent="review">
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#A855F7">Final Script</div><div class="kanban-col-cnt" id="sc-final-script">0</div></div>
+        <div class="kanban-cards" data-sdrop="final-script"></div>
+      </div>
+      <div class="kanban-col" data-accent="ideas">
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#00E5FF">Get Shoot Date</div><div class="kanban-col-cnt" id="sc-get-shoot-date">0</div></div>
+        <div class="kanban-cards" data-sdrop="get-shoot-date"></div>
+      </div>
+      <div class="kanban-col" data-accent="progress">
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#FF2D78">Shoot Date Set</div><div class="kanban-col-cnt" id="sc-shoot-date-set">0</div></div>
+        <div class="kanban-cards" data-sdrop="shoot-date-set"></div>
       </div>
       <div class="kanban-col" data-accent="live">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-green">Delivered</div><div class="kanban-col-cnt" id="sc-delivered">0</div></div>
-        <div class="kanban-cards" data-sdrop="delivered"></div>
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-green">Shot</div><div class="kanban-col-cnt" id="sc-shot">0</div></div>
+        <div class="kanban-cards" data-sdrop="shot"></div>
       </div>
     </div>
   </section>
@@ -1599,7 +1611,15 @@ tr:last-child td { border-bottom: none; }
     <div class="fg"><label class="fl">Shoot Name</label><input class="fi" id="sa-title" placeholder="e.g. Monthly reel shoot"></div>
     <div class="fg"><label class="fl">Client</label><select class="fi" id="sa-client"></select></div>
     <div class="fg"><label class="fl">Shoot Date</label><input class="fi" type="date" id="sa-date"></div>
-    <div class="fg"><label class="fl">Status</label><select class="fi" id="sa-status"><option value="requested">Requested</option><option value="scheduled">Scheduled</option><option value="shot">Shot</option><option value="delivered">Delivered</option></select></div>
+    <div class="fg"><label class="fl">Stage</label><select class="fi" id="sa-status">
+      <option value="Videos Confirmed">Videos Confirmed</option>
+      <option value="Script Made">Script Made</option>
+      <option value="Script Changes">Script Changes</option>
+      <option value="Final Script">Final Script</option>
+      <option value="Get Shoot Date">Get Shoot Date</option>
+      <option value="Shoot Date Set">Shoot Date Set</option>
+      <option value="Shot">Shot</option>
+    </select></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="sa-notes" rows="3" placeholder="Location, team, brief"></textarea></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitShootAdd()">Schedule</button>
   </div>
@@ -2474,7 +2494,10 @@ document.addEventListener('DOMContentLoaded', () => {
     z.addEventListener('drop', async e => {
       e.preventDefault(); z.style.background = '';
       if (e.dataTransfer.getData('kind') !== 'shoot') return;
-      await updateShootStatus(e.dataTransfer.getData('id'), z.dataset.sdrop);
+      // Map stage key back to full stage name
+      const keyToStage = { 'videos-confirmed': 'Videos Confirmed', 'script-made': 'Script Made', 'script-changes': 'Script Changes', 'final-script': 'Final Script', 'get-shoot-date': 'Get Shoot Date', 'shoot-date-set': 'Shoot Date Set', 'shot': 'Shot' };
+      const fullStage = keyToStage[z.dataset.sdrop] || z.dataset.sdrop;
+      await updateShootStatus(e.dataTransfer.getData('id'), fullStage);
     });
   });
   document.querySelectorAll('[data-filter-type]').forEach(b => {
@@ -2505,17 +2528,27 @@ async function updateContentStatus(id, status) {
 }
 
 // ============ SHOOTS PIPELINE ============
+const SMM_SHOOT_STAGES = ['Videos Confirmed', 'Script Made', 'Script Changes', 'Final Script', 'Get Shoot Date', 'Shoot Date Set', 'Shot'];
+const SMM_STAGE_KEY = { 'Videos Confirmed': 'videos-confirmed', 'Script Made': 'script-made', 'Script Changes': 'script-changes', 'Final Script': 'final-script', 'Get Shoot Date': 'get-shoot-date', 'Shoot Date Set': 'shoot-date-set', 'Shot': 'shot' };
+
 function renderShoots() {
-  ['requested', 'scheduled', 'shot', 'delivered'].forEach(s => {
-    const zone = document.querySelector(`[data-sdrop="${s}"]`);
+  SMM_SHOOT_STAGES.forEach(s => {
+    const key = SMM_STAGE_KEY[s];
+    const zone = document.querySelector(`[data-sdrop="${key}"]`);
     if (!zone) return;
     zone.innerHTML = '';
     const items = S.shoots.filter(sh => {
-      if (sh.status !== s) return false;
+      // Back-compat: map legacy statuses to new stages
+      let shootStage = sh.status || sh.stage || 'Videos Confirmed';
+      if (shootStage === 'requested') shootStage = 'Videos Confirmed';
+      if (shootStage === 'scheduled') shootStage = 'Shoot Date Set';
+      if (shootStage === 'delivered') shootStage = 'Shot';
+      if (shootStage !== s) return false;
       if (S.filterShootClient !== 'all' && String(sh.client_id) !== String(S.filterShootClient)) return false;
       return true;
     });
-    document.getElementById('sc-' + s).textContent = items.length;
+    const counter = document.getElementById('sc-' + key);
+    if (counter) counter.textContent = items.length;
     items.forEach(sh => zone.appendChild(buildShootCard(sh)));
   });
 }
@@ -2527,11 +2560,16 @@ function buildShootCard(sh) {
   card.dataset.id = sh.id;
   const client = S.clients.find(c => c.id == sh.client_id);
   const clientName = client ? client.name : '—';
-  const statusClass = 'status-' + ({ requested: 'ideas', scheduled: 'brief', shot: 'progress', delivered: 'live' }[sh.status]);
+  let shootStage = sh.status || sh.stage || 'Videos Confirmed';
+  if (shootStage === 'requested') shootStage = 'Videos Confirmed';
+  if (shootStage === 'scheduled') shootStage = 'Shoot Date Set';
+  if (shootStage === 'delivered') shootStage = 'Shot';
+  const stageColors = { 'Videos Confirmed': '#60A5FA', 'Script Made': '#FBBF24', 'Script Changes': '#FF6B2B', 'Final Script': '#A855F7', 'Get Shoot Date': '#00E5FF', 'Shoot Date Set': '#FF2D78', 'Shot': '#00FF85' };
+  const stageColor = stageColors[shootStage] || '#7B8099';
   const dateStr = sh.shoot_date ? new Date(sh.shoot_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD';
   card.innerHTML = `
     <div class="card-status-header">
-      <span class="${statusClass}">${sh.status.toUpperCase()}</span>
+      <span style="background:${stageColor}22;color:${stageColor};border:1px solid ${stageColor}44;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase">${shootStage}</span>
       <span class="card-type-badge type-shoot">SHOOT</span>
     </div>
     <div class="kanban-card-body">
@@ -3149,7 +3187,7 @@ async function submitQuickAdd() {
   if (type === 'content') {
     await createContent({ title, client_id, content_type: document.getElementById('qa-content-type').value, status: 'ideas' });
   } else if (type === 'shoot') {
-    await createShoot({ title, client_id, status: 'requested' });
+    await createShoot({ title, client_id, status: 'Videos Confirmed' });
   } else {
     // Idea — insert into shared_ideas table
     try {
