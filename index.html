@@ -306,7 +306,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .cp-fields {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--r); padding: 0; margin-bottom: 14px;
-  display: grid; grid-template-columns: repeat(6, 1fr); overflow: hidden;
+  display: grid; grid-template-columns: repeat(5, 1fr); overflow: hidden;
 }
 .cp-field { padding: 14px 16px; border-right: 1px solid var(--border); }
 .cp-field:last-child { border-right: none; }
@@ -488,6 +488,175 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   font-size: 9px; letter-spacing: 0.1em; color: var(--text3);
   text-transform: uppercase; margin-top: 2px; font-weight: 600;
 }
+
+/* ============ FOCUS PANEL ============ */
+.focus-panel {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px; margin-bottom: 20px;
+}
+.focus-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+  cursor: pointer; transition: all 0.15s;
+  border-left: 3px solid var(--cyan);
+}
+.focus-card:hover { background: var(--bg3); transform: translateY(-1px); }
+.focus-card.alert { border-left-color: var(--red); }
+.focus-card.warn  { border-left-color: var(--orange); }
+.focus-card.good  { border-left-color: var(--green); }
+.focus-num {
+  font-family: 'Poppins', sans-serif; font-size: 26px;
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+}
+.focus-lbl {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--text2); text-transform: uppercase; margin-top: 6px;
+}
+.focus-sub {
+  font-size: 11px; color: var(--text3); margin-top: 3px;
+}
+
+/* ============ FILTER BAR ============ */
+.filter-bar {
+  display: flex; gap: 8px; align-items: center;
+  flex-wrap: wrap; margin-bottom: 14px;
+  padding: 10px 14px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: var(--rs);
+}
+.filter-bar-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--text3); margin-right: 4px;
+}
+.filter-select {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 6px 10px; color: var(--text);
+  font-size: 11px; font-family: inherit; outline: none;
+  min-width: 130px; cursor: pointer;
+}
+.filter-select:focus { border-color: var(--accent); }
+.filter-clear {
+  background: none; border: none; color: var(--text3);
+  font-size: 11px; cursor: pointer; padding: 4px 8px;
+  font-family: inherit;
+}
+.filter-clear:hover { color: var(--accent); }
+
+/* ============ UNIFIED CALENDAR ============ */
+.cal-legend {
+  display: flex; gap: 14px; margin-bottom: 12px;
+  flex-wrap: wrap; align-items: center;
+}
+.cal-legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; color: var(--text2);
+  font-weight: 600; letter-spacing: 0.04em;
+}
+.cal-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+
+/* ============ MY TASKS PAGE ============ */
+.my-tasks-section {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.my-tasks-section-hdr {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.my-tasks-section-title {
+  font-family: 'Poppins', sans-serif; font-size: 12px;
+  font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.my-tasks-section-cnt {
+  margin-left: auto; background: var(--bg4);
+  color: var(--text2); font-size: 10px;
+  font-weight: 700; padding: 2px 8px; border-radius: 10px;
+}
+.my-task-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.my-task-row:hover { background: var(--bg3); border-radius: 4px; padding-left: 6px; }
+.my-task-row:last-child { border-bottom: none; }
+.my-task-client-pill {
+  font-size: 9px; font-weight: 700; padding: 2px 7px;
+  border-radius: 3px; background: var(--pu10);
+  color: var(--purple); border: 1px solid var(--pu20);
+  flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+/* ============ FOCUS PANEL ============ */
+.focus-panel {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px; margin-bottom: 20px;
+}
+.focus-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+  cursor: pointer; transition: all 0.15s;
+  border-left: 3px solid var(--cyan);
+}
+.focus-card:hover { background: var(--bg3); }
+.focus-card.alert { border-left-color: var(--red); }
+.focus-card.warn { border-left-color: var(--orange); }
+.focus-card.good { border-left-color: var(--green); }
+.focus-card.neutral { border-left-color: var(--cyan); }
+.focus-num {
+  font-family: 'Poppins', sans-serif; font-size: 26px;
+  font-weight: 800; letter-spacing: -0.02em;
+  line-height: 1;
+}
+.focus-lbl {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--text2); text-transform: uppercase; margin-top: 6px;
+}
+.focus-sub {
+  font-size: 11px; color: var(--text3); margin-top: 3px;
+}
+
+/* ============ UNIFIED CALENDAR ============ */
+.cal-legend {
+  display: flex; gap: 14px; margin-bottom: 12px;
+  flex-wrap: wrap; align-items: center;
+}
+.cal-legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; color: var(--text2);
+  font-weight: 600; letter-spacing: 0.04em;
+}
+.cal-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+
+/* ============ FILTER BAR ============ */
+.filter-bar {
+  display: flex; gap: 8px; align-items: center;
+  flex-wrap: wrap; margin-bottom: 14px;
+  padding: 10px 14px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: var(--rs);
+}
+.filter-bar-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--text3); margin-right: 4px;
+}
+.filter-select {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 6px 10px; color: var(--text);
+  font-size: 11px; font-family: inherit; outline: none;
+  min-width: 130px; cursor: pointer;
+}
+.filter-select:focus { border-color: var(--accent); }
+.filter-clear {
+  background: none; border: none; color: var(--text3);
+  font-size: 11px; cursor: pointer; padding: 4px 8px;
+  font-family: inherit;
+}
+.filter-clear:hover { color: var(--accent); }
 
 /* ============ WEEK STRIP ============ */
 .week-strip {
@@ -914,6 +1083,11 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
       Calendar
     </button>
+    <button class="sb-item" data-page="my-tasks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      My Tasks
+      <span class="sb-badge" id="sb-mytasks-count">0</span>
+    </button>
 
     <div class="sb-grp">Pipelines</div>
     <button class="sb-item" data-page="content-pipeline">
@@ -955,7 +1129,7 @@ tr:last-child td { border-bottom: none; }
     <div class="sb-grp">Capture</div>
     <button class="sb-item" data-page="ideas">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-      Ideas Inbox
+      Idea Hub
       <span class="sb-badge" id="sb-ideas-count">0</span>
     </button>
   </nav>
@@ -988,6 +1162,13 @@ tr:last-child td { border-bottom: none; }
         <div class="today-stat"><div class="today-stat-num" id="stat-shoots">0</div><div class="today-stat-lbl">Shoots This Week</div></div>
       </div>
     </div>
+
+    <!-- TODAY'S FOCUS PANEL -->
+    <div class="stitle" id="focus-title" style="display:none">Today's Focus</div>
+    <div class="focus-panel" id="focus-panel"></div>
+
+    <!-- TODAY'S FOCUS PANEL -->
+    <div class="focus-panel" id="focus-panel"></div>
 
     <div class="stitle">This Week <a onclick="nav('calendar')" style="margin-left:auto;font-size:10px;color:var(--cyan);cursor:pointer;text-transform:none;letter-spacing:0">View Calendar →</a></div>
     <div class="week-strip" id="week-strip"></div>
@@ -1030,11 +1211,115 @@ tr:last-child td { border-bottom: none; }
     </div>
   </section>
 
+  <!-- ============ MY TASKS ============ -->
+  <section class="page" id="page-my-tasks">
+    <div class="ph">
+      <div><div class="ph-title">My Tasks</div><div class="ph-sub" id="mytasks-sub">All tasks assigned to you across every client</div></div>
+      <div class="ph-right">
+        <button class="btn btn-primary btn-sm" onclick="openTaskModalGlobal()">+ Add Task</button>
+      </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <span class="filter-bar-label">Filter</span>
+      <select class="filter-select" id="mt-filter-client">
+        <option value="all">All Clients</option>
+      </select>
+      <select class="filter-select" id="mt-filter-priority">
+        <option value="all">All Priorities</option>
+        <option value="HIGH">High</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="LOW">Low</option>
+      </select>
+      <select class="filter-select" id="mt-filter-category">
+        <option value="all">All Categories</option>
+        <option value="Content Creation">Content Creation</option>
+        <option value="Community">Community</option>
+        <option value="Reporting">Reporting</option>
+        <option value="Shoots">Shoots</option>
+        <option value="Payment">Payment</option>
+        <option value="Other">Other</option>
+      </select>
+      <button class="filter-clear" onclick="clearMyTasksFilters()">Clear</button>
+    </div>
+
+    <div id="my-tasks-content"></div>
+  </section>
+
+  <!-- ============ MY TASKS ============ -->
+  <section class="page" id="page-my-tasks">
+    <div class="ph">
+      <div><div class="ph-title">My Tasks</div><div class="ph-sub" id="mytasks-sub">All tasks assigned to you across every client</div></div>
+    </div>
+
+    <div class="filter-bar">
+      <span class="filter-bar-label">Filter</span>
+      <select class="filter-select" id="mt-filter-client">
+        <option value="all">All Clients</option>
+      </select>
+      <select class="filter-select" id="mt-filter-priority">
+        <option value="all">All Priorities</option>
+        <option value="HIGH">High</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="LOW">Low</option>
+      </select>
+      <select class="filter-select" id="mt-filter-category">
+        <option value="all">All Categories</option>
+        <option value="Content Creation">Content Creation</option>
+        <option value="Community">Community</option>
+        <option value="Reporting">Reporting</option>
+        <option value="Shoots">Shoots</option>
+        <option value="Payment">Payment</option>
+        <option value="Other">Other</option>
+      </select>
+      <button class="filter-clear" onclick="clearMyTasksFilters()">Clear</button>
+    </div>
+
+    <div id="my-tasks-content"></div>
+  </section>
+
   <!-- ============ CALENDAR ============ -->
   <section class="page" id="page-calendar">
     <div class="ph">
-      <div><div class="ph-title">Content Calendar</div><div class="ph-sub">Click any day to add content</div></div>
+      <div><div class="ph-title">Unified Calendar</div><div class="ph-sub">All content, shoots, and tasks across every client</div></div>
+      <div class="ph-right">
+        <button class="btn btn-primary btn-sm" onclick="openModal('quick-add')">+ Quick Add</button>
+      </div>
     </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <span class="filter-bar-label">Filter</span>
+      <select class="filter-select" id="cal-filter-assignee">
+        <option value="all">All Assignees</option>
+        <option value="TH">Thulaib</option>
+        <option value="SH">Shiara</option>
+        <option value="KE">Kenuli</option>
+      </select>
+      <select class="filter-select" id="cal-filter-client">
+        <option value="all">All Clients</option>
+      </select>
+      <select class="filter-select" id="cal-filter-type">
+        <option value="all">All Types</option>
+        <option value="post">Posts</option>
+        <option value="video">Videos</option>
+        <option value="story">Stories</option>
+        <option value="shoot">Shoots</option>
+        <option value="task">Tasks</option>
+      </select>
+      <button class="filter-clear" onclick="clearCalFilters()">Clear</button>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="cal-legend">
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--cyan)"></div>Post</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--pink)"></div>Video</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--purple)"></div>Story</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--orange)"></div>Shoot</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--yellow)"></div>Task</div>
+    </div>
+
     <div class="cal-month">
       <div class="cal-month-head">
         <div class="cal-month-title" id="cal-month-title">—</div>
@@ -1129,9 +1414,9 @@ tr:last-child td { border-bottom: none; }
       <div class="t-wrap">
         <table>
           <thead><tr>
-            <th>Client</th><th>Type</th><th>Package</th><th>Month</th><th>MRR</th><th>Health</th><th>Open Tasks</th>
+            <th>Client</th><th>Type</th><th>Package</th><th>Month</th><th>Health</th><th>Open Tasks</th>
           </tr></thead>
-          <tbody id="clients-tbody"><tr><td colspan="7" class="loading-row"><span class="loading-dots">Loading clients</span></td></tr></tbody>
+          <tbody id="clients-tbody"><tr><td colspan="6" class="loading-row"><span class="loading-dots">Loading clients</span></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1158,7 +1443,6 @@ tr:last-child td { border-bottom: none; }
 
     <div class="cp-fields">
       <div class="cp-field"><div class="cp-field-lbl">Month</div><input id="cpf-month" type="number" min="1" max="12" placeholder="—" readonly></div>
-      <div class="cp-field"><div class="cp-field-lbl">Retainer (LKR)</div><input id="cpf-mrr" type="number" placeholder="—" readonly></div>
       <div class="cp-field"><div class="cp-field-lbl">Package</div><input id="cpf-package" placeholder="—" readonly></div>
       <div class="cp-field"><div class="cp-field-lbl">Industry</div><input id="cpf-industry" placeholder="—" readonly></div>
       <div class="cp-field"><div class="cp-field-lbl">Contact Person</div><input id="cpf-contact" placeholder="—" readonly></div>
@@ -1253,7 +1537,7 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ IDEAS ============ -->
   <section class="page" id="page-ideas">
     <div class="ph">
-      <div><div class="ph-title">Ideas Inbox</div><div class="ph-sub">Capture now, categorise later</div></div>
+      <div><div class="ph-title">Idea Hub</div><div class="ph-sub">Shared across all BB systems — capture, convert, or dismiss</div></div>
       <div class="ph-right"><button class="btn btn-primary" onclick="openModal('idea-add')">+ Capture Idea</button></div>
     </div>
     <div class="ideas-list" id="ideas-list"><div class="loading-row">No ideas yet. Click Capture Idea.</div></div>
@@ -1360,7 +1644,17 @@ const S = {
   filterShootClient: 'all',
   currentClientId: null,
   taskFilter: 'all',
-  currentUser: null
+  currentUser: null,
+  // Per-user persisted filters
+  calFilters: { assignee: 'all', client: 'all', type: 'all' },
+  mtFilters: { client: 'all', priority: 'all', category: 'all' }
+};
+
+// ============ USER ROLES ============
+const USER_ROLES = {
+  THULAIB: { code: 'TH', role: 'CEO', name: 'Thulaib' },
+  SHIARA:  { code: 'SH', role: 'Co-founder', name: 'Shiara' },
+  KENULI:  { code: 'KE', role: 'SMM', name: 'Kenuli' }
 };
 
 // ============ PILLARS ============
@@ -1634,13 +1928,23 @@ function nav(page, data) {
   if (el) el.classList.add('active');
 
   if (page === 'today') renderToday();
-  if (page === 'calendar') renderCalendar();
+  if (page === 'calendar') { renderCalendar(); wireCalFilters(); populateCalFilterDropdowns(); }
   if (page === 'content-pipeline') renderContent();
   if (page === 'shoot-pipeline') renderShoots();
   if (page === 'clients') renderClients();
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
   if (page === 'ideas') renderIdeas();
+  if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
+}
+
+function populateCalFilterDropdowns() {
+  const clientFilter = document.getElementById('cal-filter-client');
+  if (clientFilter && clientFilter.options.length <= 1) {
+    const opts = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    clientFilter.innerHTML = '<option value="all">All Clients</option>' + opts;
+    clientFilter.value = S.calFilters.client;
+  }
 }
 
 // ============ TODAY ============
@@ -1722,6 +2026,9 @@ function renderToday() {
     const sd = new Date(s.shoot_date);
     return sd >= start && sd <= weekEnd;
   }).length;
+  
+  // Focus Panel
+  renderFocusPanel();
 }
 
 function updateEod() {
@@ -1788,17 +2095,44 @@ function populateClientDropdowns() {
 }
 
 // ============ CLIENTS LIST ============
+function calcClientHealth(client) {
+  // Auto-calculate health based on activity
+  const clientTasks = S.tasks.filter(t => t.client_id == client.id);
+  const now = new Date();
+  const overdue = clientTasks.filter(t => !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
+  
+  const clientContent = S.content.filter(c => c.client_id == client.id && c.status === 'live');
+  // Find most recent live content
+  let daysSinceLastPost = 999;
+  if (clientContent.length) {
+    const mostRecent = clientContent.reduce((latest, c) => {
+      const d = c.scheduled_date ? new Date(c.scheduled_date) : null;
+      return (d && (!latest || d > latest)) ? d : latest;
+    }, null);
+    if (mostRecent) {
+      daysSinceLastPost = Math.floor((now - mostRecent) / (1000 * 60 * 60 * 24));
+    }
+  }
+  
+  // Red: 3+ overdue OR 14+ days no post
+  if (overdue >= 3 || daysSinceLastPost >= 14) return { auto: 'red', reason: overdue >= 3 ? `${overdue} overdue tasks` : `${daysSinceLastPost}d no post` };
+  // Amber: 1-2 overdue OR 7-13 days no post
+  if (overdue >= 1 || daysSinceLastPost >= 7) return { auto: 'amber', reason: overdue >= 1 ? `${overdue} overdue` : `${daysSinceLastPost}d no post` };
+  // Green: healthy
+  return { auto: 'green', reason: 'On track' };
+}
+
 function renderClients() {
   const tbody = document.getElementById('clients-tbody');
   if (!S.clients.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-row">No clients</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-row">No clients</td></tr>';
     return;
   }
   tbody.innerHTML = S.clients.map(c => {
     const pkg = (c.package || '').toLowerCase();
     const pkgClass = pkg.includes('spark') ? 'pill-c' : pkg.includes('ignite') ? 'pill-o' : pkg.includes('blaze') ? 'pill-p' : 'pill-pu';
-    const health = (c.health || 'green').toLowerCase();
-    const healthClass = health === 'green' ? 'pill-g' : health === 'amber' || health === 'yellow' ? 'pill-y' : 'pill-r';
+    const health = calcClientHealth(c);
+    const healthClass = health.auto === 'green' ? 'pill-g' : health.auto === 'amber' ? 'pill-y' : 'pill-r';
     const open = S.tasks.filter(t => (t.client_id == c.id) && !t.done).length;
     const overdue = S.tasks.filter(t => (t.client_id == c.id) && !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString()).length;
     const openTxt = open ? `${open} open${overdue ? ' · ' + overdue + ' overdue' : ''}` : '—';
@@ -1807,8 +2141,7 @@ function renderClients() {
       <td><span class="pill pill-pu">Social Media</span></td>
       <td><span class="pill ${pkgClass}">${escHtml(c.package || '—')}</span></td>
       <td><span class="c-cyan" style="font-weight:600">M${c.month || '—'}</span></td>
-      <td><span class="c-cyan" style="font-weight:600">LKR ${c.mrr ? c.mrr.toLocaleString() : '—'}</span></td>
-      <td><span class="pill ${healthClass}">${escHtml(c.health || '—')}</span></td>
+      <td><span class="pill ${healthClass}" title="${escHtml(health.reason)}">${health.auto.toUpperCase()}</span></td>
       <td>${openTxt}</td>
     </tr>`;
   }).join('');
@@ -1827,17 +2160,17 @@ function openClientProfile(id) {
 
   // Pills
   const pills = document.getElementById('cp-header-pills');
-  const health = (c.health || 'green').toLowerCase();
-  const healthClass = health === 'green' ? 'pill-g' : health === 'amber' || health === 'yellow' ? 'pill-y' : 'pill-r';
-  pills.innerHTML = `<span class="pill ${healthClass}">${c.health || 'green'}</span><span class="pill pill-c">${c.package || '—'}</span>`;
+  const autoHealth = calcClientHealth(c);
+  const healthClass = autoHealth.auto === 'green' ? 'pill-g' : autoHealth.auto === 'amber' ? 'pill-y' : 'pill-r';
+  pills.innerHTML = `<span class="pill ${healthClass}" title="${escHtml(autoHealth.reason)}">${autoHealth.auto.toUpperCase()}</span><span class="pill pill-c">${c.package || '—'}</span>`;
 
   // Fields
   document.getElementById('cpf-month').value = c.month || '';
-  document.getElementById('cpf-mrr').value = c.mrr || '';
   document.getElementById('cpf-package').value = c.package || '';
   document.getElementById('cpf-industry').value = c.industry || '';
   document.getElementById('cpf-contact').value = c.contact || '';
-  document.getElementById('cpf-health').value = c.health || '';
+  const health = calcClientHealth(c);
+  document.getElementById('cpf-health').value = health.auto.toUpperCase() + ' · ' + health.reason;
 
   // Stats
   const clientTasks = S.tasks.filter(t => t.client_id == id);
@@ -2158,6 +2491,43 @@ function calNav(dir) {
   renderCalendar();
 }
 
+function clearCalFilters() {
+  S.calFilters = { assignee: 'all', client: 'all', type: 'all' };
+  saveCalFilters();
+  const a = document.getElementById('cal-filter-assignee');
+  const c = document.getElementById('cal-filter-client');
+  const t = document.getElementById('cal-filter-type');
+  if (a) a.value = 'all';
+  if (c) c.value = 'all';
+  if (t) t.value = 'all';
+  renderCalendar();
+}
+
+function saveCalFilters() {
+  if (!S.currentUser) return;
+  try { localStorage.setItem('cal-filters-' + S.currentUser, JSON.stringify(S.calFilters)); } catch {}
+}
+
+function loadCalFiltersFromStorage() {
+  if (!S.currentUser) return;
+  try {
+    const saved = localStorage.getItem('cal-filters-' + S.currentUser);
+    if (saved) S.calFilters = JSON.parse(saved);
+  } catch {}
+}
+
+function wireCalFilters() {
+  const wire = (id, key) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = S.calFilters[key] || 'all';
+    el.onchange = () => { S.calFilters[key] = el.value; saveCalFilters(); renderCalendar(); };
+  };
+  wire('cal-filter-assignee', 'assignee');
+  wire('cal-filter-client', 'client');
+  wire('cal-filter-type', 'type');
+}
+
 function renderCalendar() {
   const d = new Date(S.calDate);
   d.setDate(1);
@@ -2184,16 +2554,297 @@ function renderCalendar() {
 
 function buildCell(date, muted, today) {
   const ds = toDateStr(date);
-  const items = S.content.filter(c => c.scheduled_date === ds);
-  const shoots = S.shoots.filter(s => s.shoot_date === ds);
+  const f = S.calFilters;
+  
+  // Get all events on this date, apply filters
+  const content = S.content.filter(c => {
+    if (c.scheduled_date !== ds) return false;
+    if (f.client !== 'all' && String(c.client_id) !== String(f.client)) return false;
+    if (f.type !== 'all' && f.type !== c.content_type) return false;
+    return true;
+  });
+  
+  const shoots = S.shoots.filter(s => {
+    if (s.shoot_date !== ds) return false;
+    if (f.client !== 'all' && String(s.client_id) !== String(f.client)) return false;
+    if (f.type !== 'all' && f.type !== 'shoot') return false;
+    return true;
+  });
+  
+  const tasks = S.tasks.filter(t => {
+    if (!t.due) return false;
+    if (new Date(t.due).toDateString() !== date.toDateString()) return false;
+    if (f.assignee !== 'all' && t.assign !== f.assignee) return false;
+    if (f.client !== 'all' && String(t.client_id) !== String(f.client)) return false;
+    if (f.type !== 'all' && f.type !== 'task') return false;
+    return true;
+  });
+
   const cell = document.createElement('div');
   cell.className = 'cal-cell' + (muted ? ' muted' : '') + (date.toDateString() === today.toDateString() ? ' today' : '');
   const colors = { post: 'var(--cyan)', video: 'var(--pink)', story: 'var(--purple)' };
-  const dots = items.slice(0, 6).map(i => `<div class="cal-dot" style="background:${colors[i.content_type] || 'var(--green)'}"></div>`).join('') +
-               shoots.slice(0, 2).map(() => `<div class="cal-dot" style="background:var(--orange)"></div>`).join('');
-  cell.innerHTML = `<div class="cal-cell-num">${date.getDate()}</div><div class="cal-cell-dots">${dots}</div>`;
-  cell.addEventListener('click', () => { document.getElementById('ca-date').value = ds; openModal('content-add'); });
+  
+  const dots = [
+    ...content.slice(0, 4).map(i => `<div class="cal-dot" style="background:${colors[i.content_type] || 'var(--green)'}" title="${escHtml(i.title)}"></div>`),
+    ...shoots.slice(0, 2).map(s => `<div class="cal-dot" style="background:var(--orange)" title="Shoot: ${escHtml(s.title)}"></div>`),
+    ...tasks.slice(0, 3).map(t => `<div class="cal-dot" style="background:var(--yellow)" title="Task: ${escHtml(t.title)}"></div>`)
+  ].join('');
+  
+  const totalEvents = content.length + shoots.length + tasks.length;
+  const moreIndicator = totalEvents > 9 ? `<div style="font-size:8px;color:var(--text3);margin-top:2px">+${totalEvents - 9}</div>` : '';
+  
+  cell.innerHTML = `<div class="cal-cell-num">${date.getDate()}</div><div class="cal-cell-dots">${dots}</div>${moreIndicator}`;
+  cell.addEventListener('click', () => { 
+    const caDate = document.getElementById('ca-date');
+    if (caDate) caDate.value = ds;
+    openModal('content-add');
+  });
   return cell;
+}
+
+// ============ MY TASKS ============
+function clearMyTasksFilters() {
+  S.mtFilters = { client: 'all', priority: 'all', category: 'all' };
+  saveMyTasksFilters();
+  const c = document.getElementById('mt-filter-client');
+  const p = document.getElementById('mt-filter-priority');
+  const cat = document.getElementById('mt-filter-category');
+  if (c) c.value = 'all';
+  if (p) p.value = 'all';
+  if (cat) cat.value = 'all';
+  renderMyTasks();
+}
+
+function saveMyTasksFilters() {
+  if (!S.currentUser) return;
+  try { localStorage.setItem('mt-filters-' + S.currentUser, JSON.stringify(S.mtFilters)); } catch {}
+}
+
+function loadMyTasksFiltersFromStorage() {
+  if (!S.currentUser) return;
+  try {
+    const saved = localStorage.getItem('mt-filters-' + S.currentUser);
+    if (saved) S.mtFilters = JSON.parse(saved);
+  } catch {}
+}
+
+function wireMyTasksFilters() {
+  const wire = (id, key) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = S.mtFilters[key] || 'all';
+    el.onchange = () => { S.mtFilters[key] = el.value; saveMyTasksFilters(); renderMyTasks(); };
+  };
+  wire('mt-filter-client', 'client');
+  wire('mt-filter-priority', 'priority');
+  wire('mt-filter-category', 'category');
+}
+
+function renderMyTasks() {
+  if (!S.currentUser) return;
+  const userCode = USER_ROLES[S.currentUser].code;
+  const f = S.mtFilters;
+  
+  // Filter tasks assigned to current user
+  let myTasks = S.tasks.filter(t => t.assign === userCode);
+  if (f.client !== 'all') myTasks = myTasks.filter(t => String(t.client_id) === String(f.client));
+  if (f.priority !== 'all') myTasks = myTasks.filter(t => t.priority === f.priority);
+  if (f.category !== 'all') myTasks = myTasks.filter(t => t.category === f.category);
+  
+  // Update sidebar count (only OPEN tasks)
+  const openCount = S.tasks.filter(t => t.assign === userCode && !t.done).length;
+  const badge = document.getElementById('sb-mytasks-count');
+  if (badge) badge.textContent = openCount;
+  
+  // Group
+  const now = new Date();
+  const endOfToday = new Date(now); endOfToday.setHours(23,59,59,999);
+  const endOfWeek = new Date(now); endOfWeek.setDate(now.getDate() + (7 - (now.getDay() || 7)));
+  endOfWeek.setHours(23,59,59,999);
+  
+  const overdue = myTasks.filter(t => !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString());
+  const today = myTasks.filter(t => !t.done && t.due && new Date(t.due).toDateString() === now.toDateString());
+  const thisWeek = myTasks.filter(t => !t.done && t.due && new Date(t.due) > endOfToday && new Date(t.due) <= endOfWeek);
+  const later = myTasks.filter(t => !t.done && t.due && new Date(t.due) > endOfWeek);
+  const noDue = myTasks.filter(t => !t.done && !t.due);
+  const done = myTasks.filter(t => t.done);
+  
+  const renderGroup = (title, tasks, color) => {
+    if (!tasks.length) return '';
+    return `<div class="my-tasks-section">
+      <div class="my-tasks-section-hdr">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        <div class="my-tasks-section-title">${title}</div>
+        <div class="my-tasks-section-cnt">${tasks.length}</div>
+      </div>
+      ${tasks.map(t => renderMyTaskRow(t)).join('')}
+    </div>`;
+  };
+  
+  const wrap = document.getElementById('my-tasks-content');
+  if (!myTasks.length) {
+    wrap.innerHTML = '<div class="loading-row">No tasks assigned to you. You\'re clear.</div>';
+    return;
+  }
+  
+  wrap.innerHTML = 
+    renderGroup('Overdue', overdue, 'var(--red)') +
+    renderGroup('Today', today, 'var(--cyan)') +
+    renderGroup('This Week', thisWeek, 'var(--orange)') +
+    renderGroup('Later', later, 'var(--purple)') +
+    renderGroup('No Due Date', noDue, 'var(--text3)') +
+    renderGroup('Completed', done, 'var(--green)');
+  
+  // Populate client dropdown
+  const clientFilter = document.getElementById('mt-filter-client');
+  if (clientFilter && clientFilter.options.length <= 1) {
+    const opts = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    clientFilter.innerHTML = '<option value="all">All Clients</option>' + opts;
+    clientFilter.value = f.client;
+  }
+}
+
+function renderMyTaskRow(t) {
+  const client = t.client_id ? S.clients.find(c => c.id == t.client_id) : null;
+  const clientName = client ? client.name : 'General';
+  const overdue = !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString();
+  const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const priorityClass = t.priority === 'HIGH' ? 'tag-high' : t.priority === 'MEDIUM' ? 'tag-medium' : 'tag-low';
+  
+  return `<div class="my-task-row" onclick="${t.client_id ? `nav('client-profile',${t.client_id})` : ''}">
+    <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
+    <div style="flex:1">
+      <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}</div>
+      <div class="task-tags">
+        <span class="my-task-client-pill">${escHtml(clientName)}</span>
+        ${dueStr ? `<span class="tag ${overdue ? 'tag-overdue' : 'tag-date'}">${overdue ? 'OVERDUE · ' : ''}${dueStr}</span>` : ''}
+        ${t.priority ? `<span class="tag ${priorityClass}">${t.priority}</span>` : ''}
+        ${t.category ? `<span class="tag tag-cat">${t.category}</span>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ============ TODAY'S FOCUS PANEL ============
+function renderFocusPanel() {
+  if (!S.currentUser) return;
+  const userCode = USER_ROLES[S.currentUser].code;
+  const now = new Date();
+  const todayStr = toDateStr(now);
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  const tomorrowStr = toDateStr(tomorrow);
+  const endOfWeek = new Date(now); endOfWeek.setDate(now.getDate() + (7 - (now.getDay() || 7)));
+  
+  // My overdue tasks
+  const myOverdue = S.tasks.filter(t => t.assign === userCode && !t.done && t.due && 
+    new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
+  
+  // My tasks due today
+  const myToday = S.tasks.filter(t => t.assign === userCode && !t.done && t.due && 
+    new Date(t.due).toDateString() === now.toDateString()).length;
+  
+  // HIGH priority tasks assigned to me (flags!)
+  const myHighPriority = S.tasks.filter(t => t.assign === userCode && !t.done && t.priority === 'HIGH').length;
+  
+  // Posts going live today
+  const postsToday = S.content.filter(c => c.scheduled_date === todayStr).length;
+  
+  // Shoots tomorrow
+  const shootsTomorrow = S.shoots.filter(s => s.shoot_date === tomorrowStr).length;
+  
+  // Amber/Red clients
+  let amberRed = 0;
+  S.clients.forEach(c => {
+    const h = calcClientHealth(c);
+    if (h.auto === 'amber' || h.auto === 'red') amberRed++;
+  });
+  
+  // Open ideas
+  const openIdeas = S.ideas.filter(i => i.status === 'open').length;
+  
+  const cards = [];
+  
+  // Priority 1: HIGH priority flagged to me
+  if (myHighPriority > 0) {
+    cards.push({
+      cls: 'alert', num: myHighPriority,
+      lbl: 'FLAGGED FOR YOU', sub: 'High priority tasks need attention',
+      page: 'my-tasks'
+    });
+  }
+  
+  // Priority 2: Overdue
+  if (myOverdue > 0) {
+    cards.push({
+      cls: 'alert', num: myOverdue,
+      lbl: 'OVERDUE', sub: 'Tasks past their due date',
+      page: 'my-tasks'
+    });
+  }
+  
+  // Priority 3: Amber/Red clients
+  if (amberRed > 0) {
+    cards.push({
+      cls: 'warn', num: amberRed,
+      lbl: 'CLIENTS NEED ATTENTION', sub: 'Amber or red health status',
+      page: 'clients'
+    });
+  }
+  
+  // Priority 4: Today's tasks
+  if (myToday > 0) {
+    cards.push({
+      cls: 'neutral', num: myToday,
+      lbl: 'DUE TODAY', sub: 'Your tasks with today\'s due date',
+      page: 'my-tasks'
+    });
+  }
+  
+  // Priority 5: Posts today
+  if (postsToday > 0) {
+    cards.push({
+      cls: 'neutral', num: postsToday,
+      lbl: 'POSTS TODAY', sub: 'Content scheduled to go live',
+      page: 'calendar'
+    });
+  }
+  
+  // Priority 6: Shoots tomorrow
+  if (shootsTomorrow > 0) {
+    cards.push({
+      cls: 'warn', num: shootsTomorrow,
+      lbl: 'SHOOT TOMORROW', sub: 'Prep your gear and scripts',
+      page: 'shoot-pipeline'
+    });
+  }
+  
+  // Priority 7: Open ideas
+  if (openIdeas > 0) {
+    cards.push({
+      cls: 'good', num: openIdeas,
+      lbl: 'IDEAS TO REVIEW', sub: 'Captured, awaiting conversion',
+      page: 'ideas'
+    });
+  }
+  
+  const panel = document.getElementById('focus-panel');
+  const title = document.getElementById('focus-title');
+  
+  if (!cards.length) {
+    panel.innerHTML = '';
+    if (title) title.style.display = 'none';
+    return;
+  }
+  
+  if (title) title.style.display = 'flex';
+  
+  panel.innerHTML = cards.slice(0, 6).map(c => `
+    <div class="focus-card ${c.cls}" onclick="nav('${c.page}')">
+      <div class="focus-num">${c.num}</div>
+      <div class="focus-lbl">${c.lbl}</div>
+      <div class="focus-sub">${c.sub}</div>
+    </div>
+  `).join('');
 }
 
 // ============ SOPs ============
@@ -2238,35 +2889,161 @@ function openSOP(idx) {
   openModal('sop');
 }
 
-// ============ IDEAS ============
-function loadIdeas() {
-  try { S.ideas = JSON.parse(localStorage.getItem('bb-smm-ideas') || '[]'); }
-  catch { S.ideas = []; }
-  document.getElementById('sb-ideas-count').textContent = S.ideas.length;
-  renderIdeas();
-}
-
-function saveIdeas() {
-  localStorage.setItem('bb-smm-ideas', JSON.stringify(S.ideas));
-  document.getElementById('sb-ideas-count').textContent = S.ideas.length;
+// ============ IDEAS (now uses shared_ideas Supabase table) ============
+async function loadIdeas() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from('shared_ideas')
+      .select('*')
+      .order('captured_at', { ascending: false });
+    if (error) throw error;
+    S.ideas = data || [];
+    const openCount = S.ideas.filter(i => i.status === 'open').length;
+    const el = document.getElementById('sb-ideas-count');
+    if (el) el.textContent = openCount;
+  } catch (e) {
+    console.error('Ideas load failed:', e);
+    S.ideas = [];
+  }
 }
 
 function renderIdeas() {
   const list = document.getElementById('ideas-list');
-  if (!S.ideas.length) { list.innerHTML = '<div class="loading-row">No ideas yet. Click Capture Idea.</div>'; return; }
-  list.innerHTML = S.ideas.map((i, idx) => {
+  if (!list) return;
+  const openIdeas = S.ideas.filter(i => i.status === 'open');
+  if (!openIdeas.length) {
+    list.innerHTML = '<div class="loading-row">No open ideas. Click Capture Idea or use Quick Add.</div>';
+    return;
+  }
+  list.innerHTML = openIdeas.map(i => {
     const c = i.client_id ? S.clients.find(x => x.id == i.client_id) : null;
+    const captured = i.captured_at ? new Date(i.captured_at) : null;
+    const timeAgo = captured ? getTimeAgo(captured) : '';
+    const byRole = USER_ROLES[i.captured_by];
+    const byName = byRole ? byRole.name : i.captured_by;
     return `<div class="idea-row">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0"></div>
-      <div class="idea-text">${escHtml(i.text)}</div>
-      <div class="idea-client">${c ? escHtml(c.name) : 'General'}</div>
-      <button class="btn btn-ghost btn-sm" onclick="deleteIdea(${idx})">×</button>
+      <div style="flex:1">
+        <div class="idea-text">${escHtml(i.text)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">
+          By ${escHtml(byName)} · ${escHtml(timeAgo)}${c ? ' · ' + escHtml(c.name) : ''}
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="convertIdeaToContent(${i.id})">→ Content</button>
+      <button class="btn btn-ghost btn-sm" onclick="convertIdeaToTask(${i.id})">→ Task</button>
+      <button class="btn btn-ghost btn-sm" onclick="dismissIdea(${i.id})">×</button>
     </div>`;
   }).join('');
 }
 
-function deleteIdea(i) {
-  S.ideas.splice(i, 1); saveIdeas(); renderIdeas();
+function getTimeAgo(date) {
+  const now = new Date();
+  const diff = now - date;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + ' hr ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return days + ' day' + (days > 1 ? 's' : '') + ' ago';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function convertIdeaToContent(ideaId) {
+  const idea = S.ideas.find(i => i.id === ideaId);
+  if (!idea) return;
+  if (!idea.client_id) {
+    toast('Idea needs a client first. Edit it or use Quick Add.', 'error');
+    return;
+  }
+  if (!confirm('Convert this idea to a content card?\n\n"' + idea.text + '"')) return;
+  try {
+    const { data, error } = await sb.from('smm_content').insert([{
+      title: idea.text,
+      client_id: idea.client_id,
+      content_type: 'post',
+      status: 'ideas'
+    }]).select();
+    if (error) throw error;
+    await sb.from('shared_ideas').update({
+      status: 'converted',
+      converted_to_type: 'content',
+      converted_to_id: data[0].id,
+      updated_at: new Date().toISOString()
+    }).eq('id', ideaId);
+    await loadIdeas();
+    await loadContent();
+    renderIdeas();
+    toast('Converted to content card', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('Conversion failed', 'error');
+  }
+}
+
+async function convertIdeaToTask(ideaId) {
+  const idea = S.ideas.find(i => i.id === ideaId);
+  if (!idea) return;
+  if (!confirm('Convert this idea to a task?\n\n"' + idea.text + '"\n\nTask will be assigned to you.')) return;
+  try {
+    const { data, error } = await sb.from('tasks').insert([{
+      title: idea.text,
+      client_id: idea.client_id || null,
+      assign: S.currentUser ? USER_ROLES[S.currentUser].code : 'KE',
+      priority: 'MEDIUM',
+      category: 'Other',
+      done: false
+    }]).select();
+    if (error) throw error;
+    await sb.from('shared_ideas').update({
+      status: 'converted',
+      converted_to_type: 'task',
+      converted_to_id: data[0].id,
+      updated_at: new Date().toISOString()
+    }).eq('id', ideaId);
+    await loadIdeas();
+    await loadTasks();
+    renderIdeas();
+    toast('Converted to task', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('Conversion failed', 'error');
+  }
+}
+
+async function dismissIdea(ideaId) {
+  if (!confirm('Dismiss this idea?')) return;
+  try {
+    await sb.from('shared_ideas').update({
+      status: 'dismissed',
+      updated_at: new Date().toISOString()
+    }).eq('id', ideaId);
+    await loadIdeas();
+    renderIdeas();
+    toast('Idea dismissed', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('Failed', 'error');
+  }
+}
+
+function submitIdeaAdd() {
+  const text = document.getElementById('ia-text').value.trim();
+  const client_id = document.getElementById('ia-client').value || null;
+  if (!text) { toast('Enter idea', 'error'); return; }
+  if (!sb) { toast('Offline', 'error'); return; }
+  sb.from('shared_ideas').insert([{
+    text,
+    client_id: client_id ? parseInt(client_id) : null,
+    captured_by: S.currentUser || 'UNKNOWN',
+    status: 'open'
+  }]).select().then(({ data, error }) => {
+    if (error) { console.error(error); toast('Failed to capture', 'error'); return; }
+    loadIdeas().then(() => renderIdeas());
+    document.getElementById('ia-text').value = '';
+    closeModal('idea-add');
+    toast('Idea captured', 'success');
+  });
 }
 
 // ============ MODALS ============
@@ -2298,9 +3075,19 @@ async function submitQuickAdd() {
   } else if (type === 'shoot') {
     await createShoot({ title, client_id, status: 'requested' });
   } else {
-    S.ideas.unshift({ text: title, client_id, created: new Date().toISOString() });
-    saveIdeas();
-    if (S.currentPage === 'ideas') renderIdeas();
+    // Idea — insert into shared_ideas table
+    try {
+      await sb.from('shared_ideas').insert([{
+        text: title,
+        client_id: client_id ? parseInt(client_id) : null,
+        captured_by: S.currentUser || 'UNKNOWN',
+        status: 'open'
+      }]);
+      await loadIdeas();
+      if (S.currentPage === 'ideas') renderIdeas();
+    } catch (e) {
+      console.error(e); toast('Idea capture failed', 'error'); return;
+    }
   }
   document.getElementById('qa-title').value = '';
   closeModal('quick-add');
@@ -2375,13 +3162,22 @@ function toast(msg, type) {
 
 // ============ INIT ============
 async function init() {
+  loadCalFiltersFromStorage();
+  loadMyTasksFiltersFromStorage();
   await loadClients();
   await loadTasks();
   await loadContent();
   await loadShoots();
-  loadIdeas();
+  await loadIdeas();
   renderToday();
   renderSOPs();
+  // Update My Tasks badge
+  if (S.currentUser) {
+    const userCode = USER_ROLES[S.currentUser].code;
+    const openCount = S.tasks.filter(t => t.assign === userCode && !t.done).length;
+    const badge = document.getElementById('sb-mytasks-count');
+    if (badge) badge.textContent = openCount;
+  }
 }
 
 // login required on every page load — do not auto-init
