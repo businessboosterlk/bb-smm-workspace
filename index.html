@@ -2247,17 +2247,13 @@ function renderClients() {
 
   // Tab filtering
   let filtered = S.clients;
-  if (cliActiveTab === 'sm') {
-    filtered = S.clients.filter(c => {
-      const t = (c.type || '').toLowerCase();
-      return !t.includes('web') && !t.includes('seo');
-    });
-  } else if (cliActiveTab === 'web') {
+  if (cliActiveTab === 'web') {
     filtered = S.clients.filter(c => {
       const t = (c.type || '').toLowerCase();
       return t.includes('web') || t.includes('seo');
     });
   }
+  // 'sm' and 'all' tabs show all clients
 
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="loading-row">No clients in this category</td></tr>';
@@ -2588,8 +2584,8 @@ function renderShoots() {
     if (!zone) return;
     zone.innerHTML = '';
     const items = S.shoots.filter(sh => {
-      // Back-compat: map legacy statuses to new stages
-      let shootStage = sh.status || sh.stage || 'Videos Confirmed';
+      // Read stage first (CC writes stage), fall back to status
+      let shootStage = sh.stage || sh.status || 'Videos Confirmed';
       if (shootStage === 'requested') shootStage = 'Videos Confirmed';
       if (shootStage === 'scheduled') shootStage = 'Shoot Date Set';
       if (shootStage === 'delivered') shootStage = 'Shot';
@@ -2611,7 +2607,7 @@ function buildShootCard(sh) {
   card.dataset.id = sh.id;
   const client = S.clients.find(c => c.id == sh.client_id);
   const clientName = client ? client.name : '—';
-  let shootStage = sh.status || sh.stage || 'Videos Confirmed';
+  let shootStage = sh.stage || sh.status || 'Videos Confirmed';
   if (shootStage === 'requested') shootStage = 'Videos Confirmed';
   if (shootStage === 'scheduled') shootStage = 'Shoot Date Set';
   if (shootStage === 'delivered') shootStage = 'Shot';
@@ -2638,12 +2634,13 @@ async function updateShootStatus(id, status) {
   if (!item) return;
   const old = item.status;
   item.status = status;
+  item.stage = status;
   renderShoots();
   if (!sb) return;
   try {
-    await sb.from('smm_shoots').update({ status }).eq('id', id);
+    await sb.from('smm_shoots').update({ status, stage: status }).eq('id', id);
     toast('Shoot moved to ' + status.toUpperCase(), 'success');
-  } catch (e) { item.status = old; renderShoots(); toast('Failed', 'error'); }
+  } catch (e) { item.status = old; item.stage = old; renderShoots(); toast('Failed', 'error'); }
 }
 
 // ============ CALENDAR ============
