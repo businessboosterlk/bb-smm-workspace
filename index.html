@@ -1444,6 +1444,9 @@ tr:last-child td { border-bottom: none; }
         <div class="kanban-cards" data-sdrop="shot"></div>
       </div>
     </div>
+
+    <!-- Upcoming Shoot Dates by Week -->
+    <div id="shoots-weekly" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)"></div>
   </section>
 
   <!-- ============ CLIENTS ============ -->
@@ -2598,6 +2601,105 @@ function renderShoots() {
     if (counter) counter.textContent = items.length;
     items.forEach(sh => zone.appendChild(buildShootCard(sh)));
   });
+  renderShootsWeekly();
+}
+
+// ── Upcoming 4 weeks shoot-date list (mirrors Command Centre) ──
+function renderShootsWeekly() {
+  const el = document.getElementById('shoots-weekly');
+  if (!el) return;
+  const clients = S.clients || [];
+  const shoots = (S.shoots || []).filter(sh => {
+    let stage = sh.stage || sh.status || '';
+    if (stage === 'scheduled') stage = 'Shoot Date Set';
+    if (stage === 'delivered') stage = 'Shot';
+    return (stage === 'Shoot Date Set' || stage === 'Shot') && sh.shoot_date;
+  });
+
+  // Monday of THIS week (local time)
+  const now = new Date();
+  const dow = now.getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const buckets = [];
+  for (let i = 0; i < 4; i++) {
+    const start = new Date(weekStart); start.setDate(weekStart.getDate() + i * 7);
+    const end = new Date(start); end.setDate(start.getDate() + 7);
+    const label = i === 0 ? 'This Week' : i === 1 ? 'Next Week' : 'Week ' + (i + 1);
+    buckets.push({ i, start, end, label, shoots: [] });
+  }
+
+  shoots.forEach(sh => {
+    const d = new Date(sh.shoot_date); d.setHours(0, 0, 0, 0);
+    for (const b of buckets) {
+      if (d >= b.start && d < b.end) { b.shoots.push(sh); break; }
+    }
+  });
+
+  buckets.forEach(b => b.shoots.sort((a, b) => new Date(a.shoot_date) - new Date(b.shoot_date)));
+
+  const fmtRange = (start, end) => {
+    const e = new Date(end); e.setDate(e.getDate() - 1);
+    const opts = { day: 'numeric', month: 'short' };
+    return start.toLocaleDateString('en-GB', opts) + ' — ' + e.toLocaleDateString('en-GB', opts);
+  };
+
+  const totalShoots = buckets.reduce((s, b) => s + b.shoots.length, 0);
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text)">Upcoming Shoot Dates</div>
+      <div style="font-size:11px;color:var(--text2)">Next 4 weeks · Shoot Date Set + Shot · ${totalShoots} total</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+      ${buckets.map(b => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const isCurrent = b.i === 0;
+        return `<div style="background:var(--bg3);border:1px solid ${isCurrent ? 'var(--accent20)' : 'var(--border)'};border-radius:10px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div>
+              <div style="font-size:12px;font-weight:800;color:${isCurrent ? 'var(--accent)' : 'var(--text)'};text-transform:uppercase;letter-spacing:0.06em">${b.label}</div>
+              <div style="font-size:10px;color:var(--text2);margin-top:2px">${fmtRange(b.start, b.end)}</div>
+            </div>
+            <div style="background:${isCurrent ? 'var(--accent10)' : 'var(--bg4)'};color:${isCurrent ? 'var(--accent)' : 'var(--text2)'};font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid ${isCurrent ? 'var(--accent20)' : 'var(--border)'}">${b.shoots.length}</div>
+          </div>
+          ${b.shoots.length === 0 ?
+            `<div style="font-size:11px;color:var(--text3);text-align:center;padding:14px 6px;font-style:italic">No shoots scheduled</div>`
+            :
+            b.shoots.map(sh => {
+              const client = clients.find(c => c.id == sh.client_id);
+              const d = new Date(sh.shoot_date);
+              const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
+              const dayNum = d.getDate();
+              const monthShort = d.toLocaleDateString('en-GB', { month: 'short' });
+              let stage = sh.stage || sh.status || '';
+              if (stage === 'delivered') stage = 'Shot';
+              const isShot = stage === 'Shot';
+              const dCompare = new Date(sh.shoot_date); dCompare.setHours(0, 0, 0, 0);
+              const isToday = dCompare.getTime() === today.getTime();
+              return `<div onclick="openShootCard && openShootCard(${sh.id})" style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg4);border:1px solid ${isToday ? 'var(--accent20)' : 'var(--border)'};border-radius:8px;margin-bottom:6px;cursor:pointer">
+                <div style="flex-shrink:0;width:42px;text-align:center;padding:4px 0;background:${isShot ? 'rgba(0,255,133,0.08)' : isToday ? 'var(--accent10)' : 'var(--bg3)'};border-radius:6px;border:1px solid ${isShot ? 'rgba(0,255,133,0.2)' : isToday ? 'var(--accent20)' : 'var(--border)'}">
+                  <div style="font-size:9px;font-weight:700;color:${isShot ? 'var(--green)' : isToday ? 'var(--accent)' : 'var(--text2)'};text-transform:uppercase">${dayName}</div>
+                  <div style="font-size:15px;font-weight:800;color:${isShot ? 'var(--green)' : isToday ? 'var(--accent)' : 'var(--text)'};line-height:1">${dayNum}</div>
+                  <div style="font-size:8px;font-weight:600;color:${isShot ? 'var(--green)' : isToday ? 'var(--accent)' : 'var(--text2)'};text-transform:uppercase">${monthShort}</div>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${client ? client.name : 'Unknown'}</div>
+                  <div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${sh.title || ''}</div>
+                  <div style="display:flex;gap:6px;margin-top:3px;align-items:center">
+                    ${sh.video_count ? `<span style="font-size:9px;color:var(--text2)">${sh.video_count} vids</span>` : ''}
+                    <span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isShot ? 'rgba(0,255,133,0.12)' : 'rgba(255,45,120,0.12)'};color:${isShot ? 'var(--green)' : 'var(--pink)'};text-transform:uppercase;letter-spacing:0.04em">${isShot ? 'Shot' : 'Set'}</span>
+                  </div>
+                </div>
+              </div>`;
+            }).join('')
+          }
+        </div>`;
+      }).join('')}
+    </div>
+  `;
 }
 
 function buildShootCard(sh) {
