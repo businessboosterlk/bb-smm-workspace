@@ -1675,9 +1675,7 @@ tr:last-child td { border-bottom: none; }
 <div class="modal-bg" id="modal-task">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Add Task</div><button class="modal-close" onclick="closeModal('task')">×</button></div>
-    <div class="fg"><label class="fl">Task Title</label><input class="fi" id="t-title" placeholder="What needs doing?"></div>
-    <div class="g2">
-      <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="t-client"><option value="">General — No Client</option></select></div>
+    <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="t-client"><option value="">General — No Client</option></select></div>
     <div class="fg"><label class="fl">Task Title</label><input class="fi" id="t-title" placeholder="What needs doing?"></div>
     <div class="g2">
       <div class="fg"><label class="fl">Priority</label><select class="fi" id="t-priority"><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></div>
@@ -1985,6 +1983,9 @@ const SOPS = [
 (function initLoginDate() {
   const el = document.getElementById('login-date');
   if (el) el.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  // Set sidebar date immediately
+  const sbd = document.getElementById('sb-date');
+  if (sbd) sbd.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   // Start clock immediately
   function updateClock() {
     const t = document.getElementById('sb-time');
