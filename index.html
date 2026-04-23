@@ -2137,9 +2137,10 @@ async function loadTasks() {
   try {
     let query = sb.from('tasks').select('*').order('created_at', { ascending: false });
     const scope = currentSmmScope();
-    if (scope && S.clients.length) {
+    if (scope) {
       const ids = S.clients.map(c => c.id);
-      query = query.in('client_id', ids);
+      if (ids.length) query = query.in('client_id', ids);
+      else { S.tasks = []; return; }
     }
     const { data, error } = await query;
     if (error) throw error;
@@ -2152,9 +2153,10 @@ async function loadContent() {
   try {
     let query = sb.from('smm_content').select('*').order('created_at', { ascending: false });
     const scope = currentSmmScope();
-    if (scope && S.clients.length) {
+    if (scope) {
       const ids = S.clients.map(c => c.id);
-      query = query.in('client_id', ids);
+      if (ids.length) query = query.in('client_id', ids);
+      else { S.content = []; return; }
     }
     const { data, error } = await query;
     if (error) throw error;
@@ -2167,9 +2169,11 @@ async function loadShoots() {
   try {
     let query = sb.from('smm_shoots').select('*').order('shoot_date', { ascending: true });
     const scope = currentSmmScope();
-    if (scope && S.clients.length) {
+    if (scope) {
+      // Must use already-loaded client IDs for scoping
       const ids = S.clients.map(c => c.id);
-      query = query.in('client_id', ids);
+      if (ids.length) query = query.in('client_id', ids);
+      else { S.shoots = []; return; } // no clients = no shoots
     }
     const { data, error } = await query;
     if (error) throw error;
