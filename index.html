@@ -755,6 +755,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   font-family: 'Poppins', sans-serif; font-size: 10px;
   font-weight: 700; letter-spacing: 0.1em;
   text-transform: uppercase; flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kanban-col-cnt {
   font-size: 10px; font-weight: 700; background: var(--bg4);
@@ -1072,6 +1073,7 @@ tr:last-child td { border-bottom: none; }
     <img src="bb-logo.png" class="sb-logo-img" alt="Business Booster">
     <div class="sb-sub">SMM Workspace</div>
     <div class="sb-date" id="sb-date">—</div>
+    <div id="sb-time" style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:500">—</div>
   </div>
   <nav class="sb-nav">
     <div class="sb-grp">Daily</div>
@@ -1150,9 +1152,6 @@ tr:last-child td { border-bottom: none; }
   <section class="page active" id="page-today">
     <div class="ph">
       <div><div class="ph-title">Today</div><div class="ph-sub" id="today-sub">Your daily operating system</div></div>
-      <div class="ph-right">
-        <button class="btn btn-primary" onclick="openModal('quick-add')">+ Quick Add</button>
-      </div>
     </div>
 
     <!-- BB INTELLIGENCE PANEL -->
@@ -1970,9 +1969,15 @@ function doLogin() {
     err.style.display = 'none';
     document.getElementById('login').classList.add('gone');
     S.currentUser = name;
-    // Update sidebar date
+    // Update sidebar date and live clock
     const sbd = document.getElementById('sb-date');
     if (sbd) sbd.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    function updateClock() {
+      const t = document.getElementById('sb-time');
+      if (t) t.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
     const lbl = document.getElementById('sb-live-label');
     const userInfo = USER_ROLES[name];
     if (lbl) lbl.textContent = 'Live · ' + (userInfo ? userInfo.name : name);
@@ -2822,18 +2827,22 @@ function buildCell(date, muted, today) {
   const cell = document.createElement('div');
   cell.className = 'cal-cell' + (muted ? ' muted' : '') + (date.toDateString() === today.toDateString() ? ' today' : '');
   const colors = { post: 'var(--cyan)', video: 'var(--pink)', story: 'var(--purple)' };
-  
-  const dots = [
-    ...events.slice(0, 2).map(e => `<div class="cal-dot" style="background:var(--orange)" title="Event: ${escHtml(e.title)}"></div>`),
-    ...content.slice(0, 3).map(i => `<div class="cal-dot" style="background:${colors[i.content_type] || 'var(--green)'}" title="${escHtml(i.title)}"></div>`),
-    ...shoots.slice(0, 2).map(s => `<div class="cal-dot" style="background:var(--green)" title="Shoot: ${escHtml(s.title)}"></div>`),
-    ...tasks.slice(0, 3).map(t => `<div class="cal-dot" style="background:var(--yellow,#FBBF24)" title="Task: ${escHtml(t.title)}"></div>`)
-  ].join('');
-  
-  const totalEvents = content.length + shoots.length + tasks.length + events.length;
-  const moreIndicator = totalEvents > 10 ? `<div style="font-size:8px;color:var(--text3);margin-top:2px">+${totalEvents - 10}</div>` : '';
-  
-  cell.innerHTML = `<div class="cal-cell-num">${date.getDate()}</div><div class="cal-cell-dots">${dots}</div>${moreIndicator}`;
+
+  const allItems = [
+    ...events.map(e => ({ label: e.title, color: 'var(--orange)' })),
+    ...content.map(i => ({ label: i.title, color: colors[i.content_type] || 'var(--cyan)' })),
+    ...shoots.map(s => { const cl = S.clients.find(c => c.id == s.client_id); return { label: cl ? cl.name : s.title, color: 'var(--green)' }; }),
+    ...tasks.map(t => { const cl = t.client_id ? S.clients.find(c => c.id == t.client_id) : null; return { label: cl ? cl.name : t.title, color: 'var(--yellow,#FBBF24)' }; })
+  ];
+  const shown = allItems.slice(0, 3);
+  const extra = allItems.length - shown.length;
+
+  const itemsHTML = shown.map(item =>
+    `<div style="font-size:9px;font-weight:600;color:${item.color};background:${item.color}18;padding:1px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(item.label.length > 15 ? item.label.slice(0,15)+'…' : item.label)}</div>`
+  ).join('');
+  const moreHTML = extra > 0 ? `<div style="font-size:9px;font-weight:600;color:var(--text3)">+${extra} more</div>` : '';
+
+  cell.innerHTML = `<div class="cal-cell-num" style="font-size:12px;font-weight:${date.toDateString()===today.toDateString()?700:500};margin-bottom:4px">${date.getDate()}</div>${itemsHTML}${moreHTML}`;
   cell.addEventListener('click', () => openDayDetail(ds));
   return cell;
 }
@@ -2879,16 +2888,23 @@ function wireMyTasksFilters() {
 function renderMyTasks() {
   if (!S.currentUser) return;
   const userCode = USER_ROLES[S.currentUser].code;
+  const isSmm = USER_ROLES[S.currentUser].smm !== null;
   const f = S.mtFilters;
   
-  // Filter tasks assigned to current user
-  let myTasks = S.tasks.filter(t => t.assign === userCode);
+  // SMMs see ALL tasks on their assigned clients (not just ones tagged to them)
+  // CEO/Shiara see tasks assigned to their code
+  let myTasks = isSmm
+    ? S.tasks.filter(t => !t.done || t.done) // all tasks on their clients (already scoped by loadTasks)
+    : S.tasks.filter(t => t.assign === userCode);
+
   if (f.client !== 'all') myTasks = myTasks.filter(t => String(t.client_id) === String(f.client));
   if (f.priority !== 'all') myTasks = myTasks.filter(t => t.priority === f.priority);
   if (f.category !== 'all') myTasks = myTasks.filter(t => t.category === f.category);
   
   // Update sidebar count (only OPEN tasks)
-  const openCount = S.tasks.filter(t => t.assign === userCode && !t.done).length;
+  const openCount = isSmm
+    ? S.tasks.filter(t => !t.done).length
+    : S.tasks.filter(t => t.assign === userCode && !t.done).length;
   const badge = document.getElementById('sb-mytasks-count');
   if (badge) badge.textContent = openCount;
   
@@ -2965,22 +2981,18 @@ function renderMyTaskRow(t) {
 function renderFocusPanel() {
   if (!S.currentUser) return;
   const userCode = USER_ROLES[S.currentUser].code;
+  const isSmm = USER_ROLES[S.currentUser].smm !== null;
   const now = new Date();
   const todayStr = toDateStr(now);
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
   const tomorrowStr = toDateStr(tomorrow);
-  const endOfWeek = new Date(now); endOfWeek.setDate(now.getDate() + (7 - (now.getDay() || 7)));
   
-  // My overdue tasks
-  const myOverdue = S.tasks.filter(t => t.assign === userCode && !t.done && t.due && 
-    new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
+  // For SMMs — all tasks on their clients. For CEO/Shiara — tasks assigned to them.
+  const relevantTasks = isSmm ? S.tasks : S.tasks.filter(t => t.assign === userCode);
   
-  // My tasks due today
-  const myToday = S.tasks.filter(t => t.assign === userCode && !t.done && t.due && 
-    new Date(t.due).toDateString() === now.toDateString()).length;
-  
-  // HIGH priority tasks assigned to me (flags!)
-  const myHighPriority = S.tasks.filter(t => t.assign === userCode && !t.done && t.priority === 'HIGH').length;
+  const myOverdue = relevantTasks.filter(t => !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
+  const myToday = relevantTasks.filter(t => !t.done && t.due && new Date(t.due).toDateString() === now.toDateString()).length;
+  const myHighPriority = relevantTasks.filter(t => !t.done && t.priority === 'HIGH').length;
   
   // Posts going live today
   const postsToday = S.content.filter(c => c.scheduled_date === todayStr).length;
