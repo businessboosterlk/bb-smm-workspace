@@ -2477,6 +2477,7 @@ function renderTaskRow(t) {
         ${t.priority ? `<span class="tag ${priorityClass}">${t.priority}</span>` : ''}
         ${t.category ? `<span class="tag tag-cat">${t.category}</span>` : ''}
       </div>
+      ${t.created_at ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;font-weight:300">· ${new Date(t.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
     </div>
     <div class="av ${avClass}">${t.assign || '?'}</div>
     <button class="btn btn-ghost btn-sm" onclick="deleteTask(${t.id})">×</button>
@@ -3116,6 +3117,7 @@ function renderMyTaskRow(t) {
         ${t.priority ? `<span class="tag ${priorityClass}">${t.priority}</span>` : ''}
         ${t.category ? `<span class="tag tag-cat">${t.category}</span>` : ''}
       </div>
+      ${t.created_at ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;font-weight:300">· ${new Date(t.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
     </div>
     ${t.assign ? `<div class="av ${assignAvClass}">${t.assign}</div>` : ''}
     <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteTask(${t.id})">×</button>
