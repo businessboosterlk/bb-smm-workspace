@@ -1524,8 +1524,8 @@ tr:last-child td { border-bottom: none; }
     </div>
 
     <div class="tab-panel" id="cp-tab-content-plan">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-        <select class="fi" id="cplan-month" style="padding:6px 10px;font-size:12px;min-width:130px" onchange="renderContentPlan()">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <select class="fi" id="cplan-month" style="padding:7px 12px;font-size:13px;font-weight:600;min-width:130px" onchange="renderContentPlan()">
           <option value="1">January</option><option value="2">February</option>
           <option value="3">March</option><option value="4">April</option>
           <option value="5">May</option><option value="6">June</option>
@@ -1533,21 +1533,19 @@ tr:last-child td { border-bottom: none; }
           <option value="9">September</option><option value="10">October</option>
           <option value="11">November</option><option value="12">December</option>
         </select>
-        <select class="fi" id="cplan-year" style="padding:6px 10px;font-size:12px;width:90px" onchange="renderContentPlan()">
+        <select class="fi" id="cplan-year" style="padding:7px 12px;font-size:13px;font-weight:600;width:95px" onchange="renderContentPlan()">
           <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
         </select>
-        <div style="margin-left:auto;display:flex;gap:8px">
-          <button class="btn btn-ghost btn-sm" onclick="addContentPlanItem('post')">+ Post</button>
-          <button class="btn btn-primary btn-sm" onclick="addContentPlanItem('video')">+ Video</button>
-        </div>
+        <div id="cplan-inline-summary" style="flex:1;font-size:12px;color:var(--text2);font-weight:500"></div>
+        <button class="btn btn-ghost btn-sm" onclick="openCPlanModal('post')">+ Post</button>
+        <button class="btn btn-primary btn-sm" onclick="openCPlanModal('video')">+ Video</button>
       </div>
-      <div id="cplan-summary" style="margin-bottom:14px"></div>
       <div style="margin-bottom:20px">
-        <div class="stitle" style="margin-bottom:10px">Posts <span class="cnt" id="cplan-post-cnt">0</span></div>
+        <div class="stitle" style="margin-bottom:8px">Posts <span class="cnt" id="cplan-post-cnt">0</span></div>
         <div id="cplan-posts"></div>
       </div>
       <div>
-        <div class="stitle" style="margin-bottom:10px">Videos <span class="cnt" id="cplan-video-cnt">0</span></div>
+        <div class="stitle" style="margin-bottom:8px">Videos <span class="cnt" id="cplan-video-cnt">0</span></div>
         <div id="cplan-videos"></div>
       </div>
     </div>
@@ -3971,22 +3969,18 @@ function renderContentPlan() {
   const videos = plans.filter(p => p.type === 'video');
   const postedPosts = posts.filter(p => p.posted).length;
   const postedVideos = videos.filter(p => p.posted).length;
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const mName = monthNames[month - 1];
 
-  const sumEl = document.getElementById('cplan-summary');
+  const sumEl = document.getElementById('cplan-inline-summary');
   if (sumEl) {
-    sumEl.innerHTML = `
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;flex:1;min-width:140px">
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:4px">Posts</div>
-          <div style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;color:var(--cyan)">${postedPosts}<span style="font-size:13px;color:var(--text3);font-weight:400"> / ${posts.length}</span></div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">posted this month</div>
-        </div>
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;flex:1;min-width:140px">
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:4px">Videos</div>
-          <div style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;color:var(--pink)">${postedVideos}<span style="font-size:13px;color:var(--text3);font-weight:400"> / ${videos.length}</span></div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">posted this month</div>
-        </div>
-      </div>`;
+    sumEl.innerHTML = `<span style="font-weight:700;color:var(--text)">${mName}</span>
+      <span style="margin:0 8px;color:var(--border2)">·</span>
+      <span style="color:var(--cyan);font-weight:700">${postedPosts}/${posts.length}</span>
+      <span style="color:var(--text3)"> posts up</span>
+      <span style="margin:0 8px;color:var(--border2)">·</span>
+      <span style="color:var(--pink);font-weight:700">${postedVideos}/${videos.length}</span>
+      <span style="color:var(--text3)"> videos up</span>`;
   }
 
   const pCnt = document.getElementById('cplan-post-cnt');
@@ -3998,25 +3992,28 @@ function renderContentPlan() {
   if (postsEl) {
     postsEl.innerHTML = posts.length
       ? posts.map((p, i) => renderCPlanRow(p, i + 1, 'post')).join('')
-      : '<div style="font-size:12px;color:var(--text3);padding:12px 0">No posts added yet. Click + Post.</div>';
+      : '<div style="font-size:12px;color:var(--text3);padding:14px 0;text-align:center">No posts added. Click + Post.</div>';
   }
   const videosEl = document.getElementById('cplan-videos');
   if (videosEl) {
     videosEl.innerHTML = videos.length
       ? videos.map((p, i) => renderCPlanRow(p, i + 1, 'video')).join('')
-      : '<div style="font-size:12px;color:var(--text3);padding:12px 0">No videos added yet. Click + Video.</div>';
+      : '<div style="font-size:12px;color:var(--text3);padding:14px 0;text-align:center">No videos added. Click + Video.</div>';
   }
 }
 
 function renderCPlanRow(p, num, type) {
   const color = type === 'post' ? 'var(--cyan)' : 'var(--pink)';
-  const dateStr = p.scheduled_date ? new Date(p.scheduled_date + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—';
-  return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px">
-    <div style="width:17px;height:17px;border-radius:4px;border:1.5px solid ${p.posted ? color : 'var(--border2)'};background:${p.posted ? color : 'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;color:#000;flex-shrink:0;transition:all 0.15s" onclick="toggleCPlanPosted(${p.id})">${p.posted ? '✓' : ''}</div>
-    <div style="font-size:11px;font-weight:700;color:${color};min-width:24px">${String(num).padStart(2, '0')}</div>
-    <div style="flex:1;font-size:12px;font-weight:${p.posted ? 400 : 600};color:${p.posted ? 'var(--text3)' : 'var(--text)'};${p.posted ? 'text-decoration:line-through' : ''}">${escHtml(p.title || 'Untitled')}</div>
-    <div style="font-size:10px;color:var(--text3);min-width:60px;text-align:right">${dateStr}</div>
-    <button onclick="deleteCPlanItem(${p.id})" style="background:var(--r10);color:var(--red);border:1px solid var(--r20);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit;flex-shrink:0">×</button>
+  const bg = type === 'post' ? 'var(--c10)' : 'var(--p10)';
+  const dateStr = p.scheduled_date ? new Date(p.scheduled_date + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No date';
+  return `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg3);border:1px solid ${p.posted ? color + '44' : 'var(--border)'};border-radius:var(--rs);margin-bottom:6px;transition:all 0.15s">
+    <div onclick="toggleCPlanPosted(${p.id})" style="width:20px;height:20px;border-radius:5px;border:2px solid ${p.posted ? color : 'var(--border2)'};background:${p.posted ? color : 'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s">
+      ${p.posted ? '<svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7.5L10 1" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+    </div>
+    <div style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:800;color:${p.posted ? 'var(--text3)' : color};min-width:22px">${String(num).padStart(2, '0')}</div>
+    <div style="flex:1;font-size:12px;font-weight:${p.posted ? 400 : 600};color:${p.posted ? 'var(--text3)' : 'var(--text)'};${p.posted ? 'text-decoration:line-through' : ''};cursor:pointer" onclick="openCPlanModal('${type}', ${p.id})">${escHtml(p.title || 'Untitled')}</div>
+    <div style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:${p.posted ? 'var(--bg4)' : bg};color:${p.posted ? 'var(--text3)' : color};white-space:nowrap;flex-shrink:0">${dateStr}</div>
+    <button onclick="deleteCPlanItem(${p.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;flex-shrink:0">×</button>
   </div>`;
 }
 
@@ -4029,26 +4026,51 @@ async function toggleCPlanPosted(id) {
   catch (e) { item.posted = !item.posted; renderContentPlan(); toast('Failed', 'error'); }
 }
 
-async function addContentPlanItem(type) {
-  const title = prompt(`${type === 'post' ? 'Post' : 'Video'} topic?`);
-  if (!title || !title.trim()) return;
-  const dateInput = prompt('Scheduled date? (YYYY-MM-DD) Leave blank to skip', '');
-  const month = parseInt(document.getElementById('cplan-month')?.value || new Date().getMonth() + 1);
-  const year = parseInt(document.getElementById('cplan-year')?.value || new Date().getFullYear());
-  const payload = {
-    client_id: S.currentClientId, month, year, type,
-    title: title.trim(),
-    scheduled_date: dateInput && dateInput.trim() ? dateInput.trim() : null,
-    posted: false
-  };
-  try {
-    const { data, error } = await sb.from('content_plans').insert([payload]).select();
-    if (error) throw error;
-    S.contentPlans = S.contentPlans || [];
-    S.contentPlans.push(data[0]);
-    renderContentPlan();
-    toast(type === 'post' ? 'Post added' : 'Video added', 'success');
-  } catch (e) { toast('Failed: ' + (e.message || ''), 'error'); }
+function openCPlanModal(type, editId) {
+  const isEdit = !!editId;
+  document.getElementById('cplan-modal-title').textContent = isEdit ? `Edit ${type === 'post' ? 'Post' : 'Video'}` : `Add ${type === 'post' ? 'Post' : 'Video'}`;
+  document.getElementById('cplan-submit-btn').textContent = isEdit ? 'Save' : 'Add';
+  document.getElementById('cplan-edit-id').value = editId || '';
+  document.getElementById('cplan-edit-type').value = type;
+  if (isEdit) {
+    const item = (S.contentPlans || []).find(p => p.id === editId);
+    document.getElementById('cplan-title').value = item ? item.title : '';
+    document.getElementById('cplan-date').value = item?.scheduled_date || '';
+  } else {
+    document.getElementById('cplan-title').value = '';
+    document.getElementById('cplan-date').value = '';
+  }
+  openModal('cplan');
+  setTimeout(() => document.getElementById('cplan-title').focus(), 100);
+}
+
+async function submitCPlanModal() {
+  const editId = document.getElementById('cplan-edit-id').value;
+  const type = document.getElementById('cplan-edit-type').value;
+  const title = document.getElementById('cplan-title').value.trim();
+  const dateVal = document.getElementById('cplan-date').value;
+  if (!title) { toast('Enter a topic', 'error'); return; }
+  if (editId) {
+    const item = (S.contentPlans || []).find(p => p.id == editId);
+    if (!item) return;
+    const oldTitle = item.title; const oldDate = item.scheduled_date;
+    item.title = title; item.scheduled_date = dateVal || null;
+    renderContentPlan(); closeModal('cplan');
+    try { await sb.from('content_plans').update({ title, scheduled_date: dateVal || null }).eq('id', editId); toast('Updated', 'success'); }
+    catch (e) { item.title = oldTitle; item.scheduled_date = oldDate; renderContentPlan(); toast('Failed', 'error'); }
+  } else {
+    const month = parseInt(document.getElementById('cplan-month')?.value || new Date().getMonth() + 1);
+    const year = parseInt(document.getElementById('cplan-year')?.value || new Date().getFullYear());
+    const payload = { client_id: S.currentClientId, month, year, type, title, scheduled_date: dateVal || null, posted: false };
+    try {
+      const { data, error } = await sb.from('content_plans').insert([payload]).select();
+      if (error) throw error;
+      S.contentPlans = S.contentPlans || [];
+      S.contentPlans.push(data[0]);
+      renderContentPlan(); closeModal('cplan');
+      toast(type === 'post' ? 'Post added' : 'Video added', 'success');
+    } catch (e) { toast('Failed: ' + (e.message || ''), 'error'); }
+  }
 }
 
 async function deleteCPlanItem(id) {
@@ -4064,5 +4086,30 @@ async function deleteCPlanItem(id) {
 
 // login required on every page load — do not auto-init
 </script>
+
+<!-- ============ CONTENT PLAN MODAL ============ -->
+<div class="modal-bg" id="modal-cplan">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="cplan-modal-title">Add Post</div>
+      <button class="modal-close" onclick="closeModal('cplan')">×</button>
+    </div>
+    <input type="hidden" id="cplan-edit-id">
+    <input type="hidden" id="cplan-edit-type">
+    <div class="fg">
+      <label class="fl">Topic / Title</label>
+      <input class="fi" id="cplan-title" placeholder="What is this post about?">
+    </div>
+    <div class="fg">
+      <label class="fl">Scheduled Date <span style="color:var(--text3);font-weight:400;text-transform:none">(optional)</span></label>
+      <input class="fi" type="date" id="cplan-date">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-ghost" onclick="closeModal('cplan')" style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCPlanModal()" style="flex:1;justify-content:center" id="cplan-submit-btn">Add</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
