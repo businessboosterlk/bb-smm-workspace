@@ -2141,6 +2141,25 @@ function toDateStr(d) {
 }
 function titleCase(s) { return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); }
 function escHtml(s) { return s ? String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])) : ''; }
+function fmtCreated(rec){
+  if(!rec)return '';
+  const ts=rec.created_at||rec.createdAt;
+  if(!ts)return '';
+  try{
+    const d=new Date(ts);
+    if(isNaN(d.getTime()))return '';
+    const day=d.getDate();
+    const month=d.toLocaleDateString('en-GB',{month:'short'});
+    const hh=String(d.getHours()).padStart(2,'0');
+    const mm=String(d.getMinutes()).padStart(2,'0');
+    return `${day} ${month} ${hh}:${mm}`;
+  }catch{return '';}
+}
+function createdStamp(rec){
+  const t=fmtCreated(rec);
+  if(!t)return '';
+  return `<span style="font-size:10px;color:var(--text);opacity:0.55;font-weight:400;margin-left:6px" title="Created ${t}">· ${t}</span>`;
+}
 
 // ============ SUPABASE LOADERS ============
 async function loadClients() {
@@ -2280,7 +2299,7 @@ function renderClients() {
     else if (ct === 'both') typeBadge = '<span class="pill pill-p" style="font-size:10px">SM + Web</span>';
     else typeBadge = '<span class="pill pill-o" style="font-size:10px">Social Media</span>';
     return `<tr onclick="nav('client-profile', ${c.id})">
-      <td><div class="td-name">${escHtml(c.name)}</div></td>
+      <td><div class="td-name">${escHtml(c.name)}${createdStamp(c)}</div></td>
       <td>${typeBadge}</td>
       <td><span class="pill ${pkgClass}">${escHtml(c.package || '—')}</span></td>
       <td><span style="color:var(--cyan);font-weight:700">M${c.month || '—'}</span></td>
@@ -2387,7 +2406,7 @@ function renderTaskRow(t) {
   return `<div class="task-row">
     <div class="task-check ${t.done ? 'done' : ''}" onclick="toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
     <div class="task-body">
-      <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}</div>
+      <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}${createdStamp(t)}</div>
       <div class="task-tags">
         ${dueStr ? `<span class="tag ${overdue ? 'tag-overdue' : 'tag-date'}">${overdue ? 'OVERDUE · ' : ''}${dueStr}</span>` : ''}
         ${t.priority ? `<span class="tag ${priorityClass}">${t.priority}</span>` : ''}
@@ -2409,7 +2428,7 @@ function renderClientShoots(id) {
     return `<div class="card" style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="font-weight:700">${escHtml(s.title)}</div>
+          <div style="font-weight:700">${escHtml(s.title)}${createdStamp(s)}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:3px">${d} ${s.notes ? '· ' + escHtml(s.notes) : ''}</div>
         </div>
         <span class="pill ${statusClass}">${s.status}</span>
@@ -2520,7 +2539,7 @@ function buildContentCard(item) {
     </div>
     <div class="kanban-card-body">
       <div class="kanban-card-client">${escHtml(clientName)}</div>
-      <div class="kanban-card-title">${escHtml(item.title)}</div>
+      <div class="kanban-card-title">${escHtml(item.title)}${createdStamp(item)}</div>
       <div class="kanban-card-foot"><span>${dateStr}</span></div>
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', item.id); e.dataTransfer.setData('kind', 'content'); });
@@ -2726,7 +2745,7 @@ function buildShootCard(sh) {
     </div>
     <div class="kanban-card-body">
       <div class="kanban-card-client">${escHtml(clientName)}</div>
-      <div class="kanban-card-title">${escHtml(sh.title)}</div>
+      <div class="kanban-card-title">${escHtml(sh.title)}${createdStamp(sh)}</div>
       <div class="kanban-card-foot"><span>${dateStr}</span></div>
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', sh.id); e.dataTransfer.setData('kind', 'shoot'); });
@@ -2981,7 +3000,7 @@ function renderMyTaskRow(t) {
   return `<div class="my-task-row" onclick="${t.client_id ? `nav('client-profile',${t.client_id})` : ''}">
     <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
     <div style="flex:1">
-      <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}</div>
+      <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}${createdStamp(t)}</div>
       <div class="task-tags">
         <span class="my-task-client-pill">${escHtml(clientName)}</span>
         ${dueStr ? `<span class="tag ${overdue ? 'tag-overdue' : 'tag-date'}">${overdue ? 'OVERDUE · ' : ''}${dueStr}</span>` : ''}
