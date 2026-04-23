@@ -1073,7 +1073,7 @@ tr:last-child td { border-bottom: none; }
     <img src="bb-logo.png" class="sb-logo-img" alt="Business Booster">
     <div class="sb-sub">SMM Workspace</div>
     <div class="sb-date" id="sb-date">—</div>
-    <div id="sb-time" style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:500" id="sb-time">—</div>
+    <div id="sb-time" style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:500">—</div>
   </div>
   <nav class="sb-nav">
     <div class="sb-grp">Daily</div>
@@ -1229,9 +1229,9 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ MY TASKS ============ -->
   <section class="page" id="page-my-tasks">
     <div class="ph">
-      <div><div class="ph-title">My Tasks</div><div class="ph-sub" id="mytasks-sub">All tasks assigned to you across every client</div></div>
+      <div><div class="ph-title">My Tasks</div><div class="ph-sub">All tasks across your clients</div></div>
       <div class="ph-right">
-        <button class="btn btn-primary btn-sm" onclick="openTaskModalGlobal()">+ Add Task</button>
+        <button class="btn btn-primary btn-sm" onclick="openGlobalTaskModal()">+ Add Task</button>
       </div>
     </div>
 
@@ -1677,12 +1677,15 @@ tr:last-child td { border-bottom: none; }
     <div class="modal-head"><div class="modal-title">Add Task</div><button class="modal-close" onclick="closeModal('task')">×</button></div>
     <div class="fg"><label class="fl">Task Title</label><input class="fi" id="t-title" placeholder="What needs doing?"></div>
     <div class="g2">
+      <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="t-client"><option value="">General — No Client</option></select></div>
+    <div class="fg"><label class="fl">Task Title</label><input class="fi" id="t-title" placeholder="What needs doing?"></div>
+    <div class="g2">
       <div class="fg"><label class="fl">Priority</label><select class="fi" id="t-priority"><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></div>
       <div class="fg"><label class="fl">Category</label><select class="fi" id="t-category"><option value="Content Creation">Content Creation</option><option value="Community">Community</option><option value="Reporting">Reporting</option><option value="Shoots">Shoots</option><option value="Payment">Payment</option><option value="Other">Other</option></select></div>
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Due Date</label><input class="fi" type="date" id="t-due"></div>
-      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="TH">Thulaib</option><option value="SH">Shiara</option><option value="KE">Kenuli</option></select></div>
+      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="TH">Thulaib</option><option value="SH">Shiara</option><option value="KE">Kenuli</option><option value="KA">Kaneesha</option></select></div>
     </div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="t-notes" rows="2" placeholder="Optional notes"></textarea></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitTaskAdd()">Add Task</button>
@@ -2508,11 +2511,34 @@ async function deleteTask(id) {
   } catch (e) { console.error(e); toast('Failed', 'error'); }
 }
 
+function openGlobalTaskModal() {
+  S.currentClientId = null;
+  // Populate client dropdown
+  const clientSel = document.getElementById('t-client');
+  if (clientSel) {
+    const opts = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    clientSel.innerHTML = '<option value="">General — No Client</option>' + opts;
+  }
+  // Set default assign to current user
+  const assignSel = document.getElementById('t-assign');
+  if (assignSel && S.currentUser) {
+    const code = USER_ROLES[S.currentUser]?.code;
+    if (code) assignSel.value = code;
+  }
+  document.getElementById('t-title').value = '';
+  document.getElementById('t-notes').value = '';
+  document.getElementById('t-due').value = '';
+  openModal('task');
+  document.getElementById('t-title').focus();
+}
+
 function openTaskModal() { openModal('task'); document.getElementById('t-title').focus(); }
 
 async function submitTaskAdd() {
+  const clientSel = document.getElementById('t-client');
+  const clientId = clientSel && clientSel.value ? parseInt(clientSel.value) : (S.currentClientId || null);
   const data = {
-    client_id: S.currentClientId,
+    client_id: clientId || null,
     title: document.getElementById('t-title').value.trim(),
     assign: document.getElementById('t-assign').value,
     due: document.getElementById('t-due').value || null,
@@ -2532,7 +2558,11 @@ async function submitTaskAdd() {
     document.getElementById('t-notes').value = '';
     document.getElementById('t-due').value = '';
     toast('Task added', 'success');
-    openClientProfile(S.currentClientId);
+    if (S.currentClientId && S.currentPage === 'client-profile') {
+      openClientProfile(S.currentClientId);
+    } else {
+      renderMyTasks();
+    }
   } catch (e) { console.error(e); toast('Failed: ' + (e.message || ''), 'error'); }
 }
 
@@ -2956,70 +2986,72 @@ function renderMyTasks() {
   if (f.priority !== 'all') myTasks = myTasks.filter(t => t.priority === f.priority);
   if (f.category !== 'all') myTasks = myTasks.filter(t => t.category === f.category);
 
-  const openCount = myTasks.filter(t => !t.done).length;
+  // Only show open tasks — hide completed
+  myTasks = myTasks.filter(t => !t.done);
+
+  const openCount = myTasks.length;
   const badge = document.getElementById('sb-mytasks-count');
   if (badge) badge.textContent = openCount;
 
   const wrap = document.getElementById('my-tasks-content');
   if (!myTasks.length) {
-    wrap.innerHTML = '<div class="loading-row">No tasks. You\'re clear.</div>';
+    wrap.innerHTML = '<div class="loading-row">No open tasks. You\'re clear.</div>';
     return;
   }
 
   const now = new Date();
 
-  // Group by client
-  const byClient = {};
+  // Group by client — General first
+  const byClient = { general: [] };
   myTasks.forEach(t => {
     const key = t.client_id ? String(t.client_id) : 'general';
     if (!byClient[key]) byClient[key] = [];
     byClient[key].push(t);
   });
 
-  // Sort clients by name
-  const sortedKeys = Object.keys(byClient).sort((a, b) => {
-    const ca = a === 'general' ? 'ZZZZZ' : (S.clients.find(c => String(c.id) === a)?.name || 'ZZZZZ');
-    const cb = b === 'general' ? 'ZZZZZ' : (S.clients.find(c => String(c.id) === b)?.name || 'ZZZZZ');
+  // General first, then clients sorted by name
+  const clientKeys = Object.keys(byClient).filter(k => k !== 'general').sort((a, b) => {
+    const ca = S.clients.find(c => String(c.id) === a)?.name || '';
+    const cb = S.clients.find(c => String(c.id) === b)?.name || '';
     return ca.localeCompare(cb);
   });
+  const sortedKeys = byClient.general.length ? ['general', ...clientKeys] : clientKeys;
 
   wrap.innerHTML = sortedKeys.map(key => {
     const client = key === 'general' ? null : S.clients.find(c => String(c.id) === key);
-    const clientName = client ? client.name : 'General';
+    const clientName = client ? client.name : 'GENERAL';
     const tasks = byClient[key];
-    const openTasks = tasks.filter(t => !t.done);
-    const doneTasks = tasks.filter(t => t.done);
+    if (!tasks.length) return '';
 
     const taskRow = t => {
-      const overdue = !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString();
+      const overdue = t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString();
       const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : '';
       const priorityColor = t.priority === 'HIGH' ? 'var(--red)' : t.priority === 'MEDIUM' ? 'var(--yellow)' : 'var(--text3)';
       const priorityBg = t.priority === 'HIGH' ? 'var(--r10)' : t.priority === 'MEDIUM' ? 'var(--y10)' : 'var(--bg5)';
       const assignAvClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
-      return `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''" onclick="${client ? `nav('client-profile',${client.id})` : ''}">
-        <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})" style="flex-shrink:0">${t.done ? '✓' : ''}</div>
+      return `<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''" onclick="${client ? `nav('client-profile',${client.id})` : ''}" style="cursor:${client ? 'pointer' : 'default'}">
+        <div class="task-check" onclick="event.stopPropagation();toggleTask(${t.id})" style="flex-shrink:0"></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:${t.done ? 'var(--text3)' : 'var(--text)'};text-decoration:${t.done ? 'line-through' : 'none'};text-transform:uppercase;letter-spacing:0.02em">${escHtml(t.title)}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px">${t.category || ''}${t.created_at ? ' · ' + new Date(t.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : ''}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${t.category || ''}${t.created_at ? ' · ' + new Date(t.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : ''}</div>
         </div>
         ${t.assign ? `<div class="av ${assignAvClass}" style="flex-shrink:0">${t.assign}</div>` : ''}
-        ${dueStr ? `<div style="font-size:11px;font-weight:600;color:${overdue ? 'var(--red)' : 'var(--text2)'};flex-shrink:0">${overdue ? 'OVERDUE · ' : ''}${dueStr}</div>` : ''}
-        ${t.priority ? `<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:${priorityBg};color:${priorityColor};flex-shrink:0;border:1px solid ${priorityColor}44">${t.priority === 'MEDIUM' ? 'MED' : t.priority}</div>` : ''}
+        ${dueStr ? `<div style="font-size:11px;font-weight:600;color:${overdue ? 'var(--red)' : 'var(--text2)'};flex-shrink:0;min-width:50px;text-align:right">${dueStr}</div>` : '<div style="min-width:50px"></div>'}
+        ${t.priority ? `<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:${priorityBg};color:${priorityColor};border:1px solid ${priorityColor}44;flex-shrink:0;min-width:45px;text-align:center">${t.priority === 'MEDIUM' ? 'MED' : t.priority}</div>` : '<div style="min-width:45px"></div>'}
         <button onclick="event.stopPropagation();deleteTask(${t.id})" style="background:var(--r10);border:1px solid var(--r20);color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;font-weight:600;flex-shrink:0">×</button>
       </div>`;
     };
 
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden">
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
-        <div style="font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.06em;flex:1">${escHtml(clientName)}</div>
-        <div style="font-size:11px;color:var(--text3);font-weight:500">${openTasks.length} open</div>
+      <div style="display:flex;align-items:center;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.08em;flex:1">${escHtml(clientName)}</div>
+        <div style="font-size:11px;color:var(--text3);font-weight:500">${tasks.length} open</div>
       </div>
-      ${openTasks.map(t => taskRow(t)).join('')}
-      ${doneTasks.length ? `<div style="padding:8px 16px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;border-top:1px solid var(--border);margin-top:4px">Completed · ${doneTasks.length}</div>${doneTasks.map(t => taskRow(t)).join('')}` : ''}
+      ${tasks.map(t => taskRow(t)).join('')}
     </div>`;
   }).join('');
 
-  // Populate client dropdown
+  // Populate client filter dropdown
   const clientFilter = document.getElementById('mt-filter-client');
   if (clientFilter && clientFilter.options.length <= 1) {
     const opts = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
