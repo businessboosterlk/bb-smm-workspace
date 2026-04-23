@@ -2248,15 +2248,14 @@ function renderClients() {
     return;
   }
 
-  // Tab filtering
+  // Tab filtering (matches CC: read client_type, not type)
   let filtered = S.clients;
-  if (cliActiveTab === 'web') {
-    filtered = S.clients.filter(c => {
-      const t = (c.type || '').toLowerCase();
-      return t.includes('web') || t.includes('seo');
-    });
+  if (cliActiveTab === 'sm') {
+    filtered = S.clients.filter(c => !c.client_type || c.client_type === 'sm' || c.client_type === 'both');
+  } else if (cliActiveTab === 'web') {
+    filtered = S.clients.filter(c => c.client_type === 'web' || c.client_type === 'both' || ['SEO Essential','SEO+Maintenance'].includes(c.package));
   }
-  // 'sm' and 'all' tabs show all clients
+  // 'all' tab shows everything
 
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="loading-row">No clients in this category</td></tr>';
@@ -2266,22 +2265,26 @@ function renderClients() {
   tbody.innerHTML = filtered.map(c => {
     const pkg = (c.package || '').toLowerCase();
     const pkgClass = pkg.includes('spark') ? 'pill-c' : pkg.includes('ignite') ? 'pill-o' : pkg.includes('blaze') ? 'pill-p' : 'pill-grey';
-    const health = calcClientHealth(c);
-    const healthClass = health.auto === 'green' ? 'pill-g' : health.auto === 'amber' ? 'pill-y' : 'pill-r';
+    // Health: read c.health directly (matches CC), fallback to auto-calc only if not set
+    let healthVal = c.health;
+    if (!healthVal) { const h = calcClientHealth(c); healthVal = h.auto; }
+    const healthClass = healthVal === 'green' ? 'pill-g' : healthVal === 'amber' ? 'pill-y' : 'pill-r';
+    const healthLabel = healthVal === 'green' ? 'Green' : healthVal === 'amber' ? 'Amber' : 'Red';
     const open = S.tasks.filter(t => (t.client_id == c.id) && !t.done).length;
     const overdue = S.tasks.filter(t => (t.client_id == c.id) && !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString()).length;
     const openTxt = open ? `<span style="color:var(--text)">${open} open</span>${overdue ? ` · <span style="color:var(--red)">${overdue} overdue</span>` : ''}` : '—';
-    // Type badge — match CC style
-    const cType = (c.type || '').toLowerCase();
-    const typeBadge = (cType.includes('web') || cType.includes('seo'))
-      ? '<span class="pill pill-o" style="font-size:10px">SM + Web</span>'
-      : '<span class="pill pill-pu" style="font-size:10px">Social Media</span>';
+    // Type badge — read client_type (matches CC)
+    const ct = c.client_type;
+    let typeBadge;
+    if (ct === 'web') typeBadge = '<span class="pill pill-b" style="font-size:10px">Web/SEO</span>';
+    else if (ct === 'both') typeBadge = '<span class="pill pill-p" style="font-size:10px">SM + Web</span>';
+    else typeBadge = '<span class="pill pill-o" style="font-size:10px">Social Media</span>';
     return `<tr onclick="nav('client-profile', ${c.id})">
       <td><div class="td-name">${escHtml(c.name)}</div></td>
       <td>${typeBadge}</td>
       <td><span class="pill ${pkgClass}">${escHtml(c.package || '—')}</span></td>
       <td><span style="color:var(--cyan);font-weight:700">M${c.month || '—'}</span></td>
-      <td><span class="pill ${healthClass}" title="${escHtml(health.reason)}">${health.auto === 'green' ? 'Green' : health.auto === 'amber' ? 'Amber' : 'Red'}</span></td>
+      <td><span class="pill ${healthClass}">${healthLabel}</span></td>
       <td style="font-size:12px">${openTxt}</td>
     </tr>`;
   }).join('');
