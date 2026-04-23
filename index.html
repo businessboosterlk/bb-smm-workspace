@@ -1073,7 +1073,7 @@ tr:last-child td { border-bottom: none; }
     <img src="bb-logo.png" class="sb-logo-img" alt="Business Booster">
     <div class="sb-sub">SMM Workspace</div>
     <div class="sb-date" id="sb-date">—</div>
-    <div id="sb-time" style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:500">—</div>
+    <div id="sb-time" style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:500" id="sb-time">—</div>
   </div>
   <nav class="sb-nav">
     <div class="sb-grp">Daily</div>
@@ -1295,15 +1295,7 @@ tr:last-child td { border-bottom: none; }
       <button class="filter-clear" onclick="clearCalFilters()">Clear</button>
     </div>
 
-    <!-- LEGEND -->
-    <div class="cal-legend">
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--orange)"></div>Event</div>
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--cyan)"></div>Post</div>
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--pink)"></div>Video</div>
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--purple)"></div>Story</div>
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>Shoot</div>
-      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--yellow,#FBBF24)"></div>Task</div>
-    </div>
+    <!-- LEGEND REMOVED -->
 
     <div class="cal-month">
       <div class="cal-month-head">
@@ -1341,26 +1333,46 @@ tr:last-child td { border-bottom: none; }
       <div style="flex:1"></div>
       <select class="fi" id="ct-client-filter" style="width:auto;min-width:180px"><option value="all">All Clients</option></select>
     </div>
-    <div class="kanban-board" id="content-board">
-      <div class="kanban-col" data-accent="ideas">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-purple">Ideas</div><div class="kanban-col-cnt" id="cc-ideas">0</div></div>
-        <div class="kanban-cards" data-drop="ideas"></div>
-      </div>
-      <div class="kanban-col" data-accent="brief">
+    <div class="kanban-board" id="content-board" style="grid-template-columns:repeat(10,minmax(180px,1fr));overflow-x:auto;gap:8px">
+      <div class="kanban-col" style="border-top:2px solid var(--cyan)">
         <div class="kanban-col-hdr"><div class="kanban-col-title c-cyan">Brief</div><div class="kanban-col-cnt" id="cc-brief">0</div></div>
         <div class="kanban-cards" data-drop="brief"></div>
       </div>
-      <div class="kanban-col" data-accent="progress">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-orange">In Progress</div><div class="kanban-col-cnt" id="cc-progress">0</div></div>
-        <div class="kanban-cards" data-drop="progress"></div>
+      <div class="kanban-col" style="border-top:2px solid var(--purple)">
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-purple">Ideas</div><div class="kanban-col-cnt" id="cc-ideas">0</div></div>
+        <div class="kanban-cards" data-drop="ideas"></div>
       </div>
-      <div class="kanban-col" data-accent="review">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-pink">In Review</div><div class="kanban-col-cnt" id="cc-review">0</div></div>
-        <div class="kanban-cards" data-drop="review"></div>
+      <div class="kanban-col" style="border-top:2px solid var(--orange)">
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-orange">Editing</div><div class="kanban-col-cnt" id="cc-editing">0</div></div>
+        <div class="kanban-cards" data-drop="editing"></div>
       </div>
-      <div class="kanban-col" data-accent="live">
-        <div class="kanban-col-hdr"><div class="kanban-col-title c-green">Live</div><div class="kanban-col-cnt" id="cc-live">0</div></div>
-        <div class="kanban-cards" data-drop="live"></div>
+      <div class="kanban-col" style="border-top:2px solid var(--pink)">
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-pink">Team Review</div><div class="kanban-col-cnt" id="cc-team-review">0</div></div>
+        <div class="kanban-cards" data-drop="team-review"></div>
+      </div>
+      <div class="kanban-col" style="border-top:2px solid var(--yellow)">
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-yellow">Make Content Plan</div><div class="kanban-col-cnt" id="cc-content-plan">0</div></div>
+        <div class="kanban-cards" data-drop="content-plan"></div>
+      </div>
+      <div class="kanban-col" style="border-top:2px solid #60A5FA">
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#60A5FA">Send to Client</div><div class="kanban-col-cnt" id="cc-send-client">0</div></div>
+        <div class="kanban-cards" data-drop="send-client"></div>
+      </div>
+      <div class="kanban-col" style="border-top:2px solid var(--red)">
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-red">Client Changes</div><div class="kanban-col-cnt" id="cc-client-changes">0</div></div>
+        <div class="kanban-cards" data-drop="client-changes"></div>
+      </div>
+      <div class="kanban-col" style="border-top:2px solid #A3E635">
+        <div class="kanban-col-hdr"><div class="kanban-col-title" style="color:#A3E635">Client Approval</div><div class="kanban-col-cnt" id="cc-client-approval">0</div></div>
+        <div class="kanban-cards" data-drop="client-approval"></div>
+      </div>
+      <div class="kanban-col" style="border-top:2px solid var(--purple)">
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-purple">Add to Drive</div><div class="kanban-col-cnt" id="cc-drive">0</div></div>
+        <div class="kanban-cards" data-drop="drive"></div>
+      </div>
+      <div class="kanban-col" style="border-top:2px solid var(--green)">
+        <div class="kanban-col-hdr"><div class="kanban-col-title c-green">Posted</div><div class="kanban-col-cnt" id="cc-posted">0</div></div>
+        <div class="kanban-cards" data-drop="posted"></div>
       </div>
     </div>
   </section>
@@ -1381,7 +1393,7 @@ tr:last-child td { border-bottom: none; }
         <button class="btn btn-primary" onclick="openModal('shoot-add')">+ Schedule Shoot</button>
       </div>
     </div>
-    <div class="kanban-board" id="shoot-board" style="grid-template-columns:repeat(7,minmax(160px,1fr));overflow-x:auto;gap:8px">
+    <div class="kanban-board" id="shoot-board" style="grid-template-columns:repeat(7,minmax(220px,1fr));overflow-x:auto;gap:8px">
       <div class="kanban-col" style="border-top:2px solid #60A5FA">
         <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#60A5FA;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#60A5FA">Videos Confirmed</div><div class="kanban-col-cnt" id="sc-videos-confirmed">0</div></div>
         <div class="kanban-cards" data-sdrop="videos-confirmed"></div>
@@ -1586,7 +1598,18 @@ tr:last-child td { border-bottom: none; }
     <div class="fg"><label class="fl">Title</label><input class="fi" id="ca-title" placeholder="e.g. Friday reel"></div>
     <div class="fg"><label class="fl">Client</label><select class="fi" id="ca-client"></select></div>
     <div class="fg"><label class="fl">Content Type</label><select class="fi" id="ca-type"><option value="post">Post</option><option value="video">Video</option><option value="story">Story</option></select></div>
-    <div class="fg"><label class="fl">Status</label><select class="fi" id="ca-status"><option value="ideas">Ideas</option><option value="brief">Brief</option><option value="progress">In Progress</option><option value="review">In Review</option><option value="live">Live</option></select></div>
+    <div class="fg"><label class="fl">Status</label><select class="fi" id="ca-status">
+      <option value="brief">Brief</option>
+      <option value="ideas">Ideas</option>
+      <option value="editing">Editing</option>
+      <option value="team-review">Team Review</option>
+      <option value="content-plan">Make Content Plan</option>
+      <option value="send-client">Send to Client</option>
+      <option value="client-changes">Client Changes</option>
+      <option value="client-approval">Client Approval</option>
+      <option value="drive">Add to Drive</option>
+      <option value="posted">Posted</option>
+    </select></div>
     <div class="fg"><label class="fl">Scheduled Date</label><input class="fi" type="date" id="ca-date"></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitContentAdd()">Add Card</button>
   </div>
@@ -1959,6 +1982,13 @@ const SOPS = [
 (function initLoginDate() {
   const el = document.getElementById('login-date');
   if (el) el.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  // Start clock immediately
+  function updateClock() {
+    const t = document.getElementById('sb-time');
+    if (t) t.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
 })();
 
 function doLogin() {
@@ -1969,15 +1999,9 @@ function doLogin() {
     err.style.display = 'none';
     document.getElementById('login').classList.add('gone');
     S.currentUser = name;
-    // Update sidebar date and live clock
+    // Update sidebar date
     const sbd = document.getElementById('sb-date');
     if (sbd) sbd.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-    function updateClock() {
-      const t = document.getElementById('sb-time');
-      if (t) t.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
     const lbl = document.getElementById('sb-live-label');
     const userInfo = USER_ROLES[name];
     if (lbl) lbl.textContent = 'Live · ' + (userInfo ? userInfo.name : name);
@@ -2044,11 +2068,27 @@ function renderToday() {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     const ds = toDateStr(d);
-    const cnt = S.content.filter(c => c.scheduled_date === ds).length;
     const isToday = d.toDateString() === now.toDateString();
+    const dayTasks = S.tasks.filter(t => !t.done && t.due === ds);
+    const dayContent = S.content.filter(c => c.scheduled_date === ds);
+    const dayEvents = (S.events || []).filter(e => e.date === ds);
+    const allItems = [
+      ...dayEvents.map(e => ({ label: e.title, color: 'var(--orange)' })),
+      ...dayContent.map(c => ({ label: c.title, color: 'var(--cyan)' })),
+      ...dayTasks.map(t => { const cl = t.client_id ? S.clients.find(c => c.id == t.client_id) : null; return { label: cl ? cl.name : t.title, color: 'var(--yellow,#FBBF24)' }; })
+    ];
+    const shown = allItems.slice(0, 3);
+    const extra = allItems.length - shown.length;
     const el = document.createElement('div');
     el.className = 'week-day' + (isToday ? ' today' : '');
-    el.innerHTML = `<div class="week-day-dow">${d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</div><div class="week-day-num">${d.getDate()}</div><div class="week-day-cnt">${cnt > 0 ? cnt + ' ITEM' + (cnt > 1 ? 'S' : '') : '—'}</div>`;
+    el.style.cssText = 'min-height:110px;display:flex;flex-direction:column;padding:10px';
+    el.innerHTML = `
+      <div class="week-day-dow" style="font-size:9px;font-weight:700;letter-spacing:0.1em;color:${isToday ? 'var(--cyan)' : 'var(--text3)'};text-transform:uppercase;margin-bottom:3px">${d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</div>
+      <div class="week-day-num" style="font-size:18px;font-weight:700;color:${isToday ? 'var(--cyan)' : 'var(--text)'};margin-bottom:8px">${d.getDate()}</div>
+      ${shown.map(item => `<div style="font-size:9px;font-weight:600;color:${item.color};background:${item.color}18;padding:1px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(item.label.length > 14 ? item.label.slice(0,14)+'…' : item.label)}</div>`).join('')}
+      ${extra > 0 ? `<div style="font-size:9px;color:var(--text3);font-weight:600;margin-top:2px">+${extra} more</div>` : ''}
+      ${allItems.length === 0 ? `<div style="font-size:10px;color:var(--text3);font-weight:300">—</div>` : ''}
+    `;
     el.addEventListener('click', () => { S.calDate = new Date(d); nav('calendar'); });
     strip.appendChild(el);
   }
@@ -2497,8 +2537,28 @@ async function submitTaskAdd() {
 }
 
 // ============ CONTENT PIPELINE ============
+const CONTENT_STAGES = ['brief','ideas','editing','team-review','content-plan','send-client','client-changes','client-approval','drive','posted'];
+const CONTENT_STAGE_LABELS = {
+  'brief': 'BRIEF', 'ideas': 'IDEAS', 'editing': 'EDITING',
+  'team-review': 'TEAM REVIEW', 'content-plan': 'CONTENT PLAN',
+  'send-client': 'SEND TO CLIENT', 'client-changes': 'CLIENT CHANGES',
+  'client-approval': 'CLIENT APPROVAL', 'drive': 'ADD TO DRIVE', 'posted': 'POSTED'
+};
+const CONTENT_STAGE_COLORS = {
+  'brief': 'var(--cyan)', 'ideas': 'var(--purple)', 'editing': 'var(--orange)',
+  'team-review': 'var(--pink)', 'content-plan': 'var(--yellow)',
+  'send-client': '#60A5FA', 'client-changes': 'var(--red)',
+  'client-approval': '#A3E635', 'drive': 'var(--purple)', 'posted': 'var(--green)'
+};
+const CONTENT_STAGE_IDS = {
+  'brief': 'cc-brief', 'ideas': 'cc-ideas', 'editing': 'cc-editing',
+  'team-review': 'cc-team-review', 'content-plan': 'cc-content-plan',
+  'send-client': 'cc-send-client', 'client-changes': 'cc-client-changes',
+  'client-approval': 'cc-client-approval', 'drive': 'cc-drive', 'posted': 'cc-posted'
+};
+
 function renderContent() {
-  ['ideas', 'brief', 'progress', 'review', 'live'].forEach(s => {
+  CONTENT_STAGES.forEach(s => {
     const zone = document.querySelector(`[data-drop="${s}"]`);
     if (!zone) return;
     zone.innerHTML = '';
@@ -2508,7 +2568,8 @@ function renderContent() {
       if (S.filterClient !== 'all' && String(c.client_id) !== String(S.filterClient)) return false;
       return true;
     });
-    document.getElementById('cc-' + s).textContent = items.length;
+    const countEl = document.getElementById(CONTENT_STAGE_IDS[s]);
+    if (countEl) countEl.textContent = items.length;
     items.forEach(i => zone.appendChild(buildContentCard(i)));
   });
 }
@@ -2521,12 +2582,12 @@ function buildContentCard(item) {
   const client = S.clients.find(c => c.id == item.client_id);
   const clientName = client ? client.name : '—';
   const typeClass = 'type-' + (item.content_type || 'post');
-  const statusLbl = { ideas: 'IDEAS', brief: 'BRIEF', progress: 'IN PROGRESS', review: 'IN REVIEW', live: 'LIVE' }[item.status];
-  const statusClass = 'status-' + item.status;
+  const statusLbl = CONTENT_STAGE_LABELS[item.status] || item.status?.toUpperCase() || '—';
+  const stageColor = CONTENT_STAGE_COLORS[item.status] || 'var(--text2)';
   const dateStr = item.scheduled_date ? new Date(item.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
   card.innerHTML = `
     <div class="card-status-header">
-      <span class="${statusClass}">${statusLbl}</span>
+      <span style="color:${stageColor};font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em">${statusLbl}</span>
       <span class="card-type-badge ${typeClass}">${(item.content_type || 'post').toUpperCase()}</span>
     </div>
     <div class="kanban-card-body">
@@ -2962,10 +3023,11 @@ function renderMyTaskRow(t) {
   const overdue = !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString();
   const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
   const priorityClass = t.priority === 'HIGH' ? 'tag-high' : t.priority === 'MEDIUM' ? 'tag-medium' : 'tag-low';
-  
-  return `<div class="my-task-row" onclick="${t.client_id ? `nav('client-profile',${t.client_id})` : ''}">
+  const assignAvClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
+
+  return `<div class="task-row" onclick="${t.client_id ? `nav('client-profile',${t.client_id})` : ''}" style="cursor:pointer">
     <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
-    <div style="flex:1">
+    <div class="task-body">
       <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}</div>
       <div class="task-tags">
         <span class="my-task-client-pill">${escHtml(clientName)}</span>
@@ -2974,6 +3036,8 @@ function renderMyTaskRow(t) {
         ${t.category ? `<span class="tag tag-cat">${t.category}</span>` : ''}
       </div>
     </div>
+    ${t.assign ? `<div class="av ${assignAvClass}">${t.assign}</div>` : ''}
+    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteTask(${t.id})">×</button>
   </div>`;
 }
 
