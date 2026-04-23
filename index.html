@@ -2703,7 +2703,7 @@ function renderUpcomingShoots() {
   }).join('');
 }
 
-
+async function updateShootStatus(id, status) {
   const item = S.shoots.find(s => s.id == id);
   if (!item) return;
   const old = item.status;
