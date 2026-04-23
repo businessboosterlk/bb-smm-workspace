@@ -2948,66 +2948,77 @@ function wireMyTasksFilters() {
 
 function renderMyTasks() {
   if (!S.currentUser) return;
-  const userCode = USER_ROLES[S.currentUser].code;
   const isSmm = USER_ROLES[S.currentUser].smm !== null;
   const f = S.mtFilters;
-  
-  // SMMs see ALL tasks on their assigned clients (not just ones tagged to them)
-  // CEO/Shiara see tasks assigned to their code
-  let myTasks = isSmm
-    ? S.tasks.filter(t => !t.done || t.done) // all tasks on their clients (already scoped by loadTasks)
-    : S.tasks.filter(t => t.assign === userCode);
 
+  let myTasks = isSmm ? [...S.tasks] : S.tasks.filter(t => t.assign === USER_ROLES[S.currentUser].code);
   if (f.client !== 'all') myTasks = myTasks.filter(t => String(t.client_id) === String(f.client));
   if (f.priority !== 'all') myTasks = myTasks.filter(t => t.priority === f.priority);
   if (f.category !== 'all') myTasks = myTasks.filter(t => t.category === f.category);
-  
-  // Update sidebar count (only OPEN tasks)
-  const openCount = isSmm
-    ? S.tasks.filter(t => !t.done).length
-    : S.tasks.filter(t => t.assign === userCode && !t.done).length;
+
+  const openCount = myTasks.filter(t => !t.done).length;
   const badge = document.getElementById('sb-mytasks-count');
   if (badge) badge.textContent = openCount;
-  
-  // Group
-  const now = new Date();
-  const endOfToday = new Date(now); endOfToday.setHours(23,59,59,999);
-  const endOfWeek = new Date(now); endOfWeek.setDate(now.getDate() + (7 - (now.getDay() || 7)));
-  endOfWeek.setHours(23,59,59,999);
-  
-  const overdue = myTasks.filter(t => !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString());
-  const today = myTasks.filter(t => !t.done && t.due && new Date(t.due).toDateString() === now.toDateString());
-  const thisWeek = myTasks.filter(t => !t.done && t.due && new Date(t.due) > endOfToday && new Date(t.due) <= endOfWeek);
-  const later = myTasks.filter(t => !t.done && t.due && new Date(t.due) > endOfWeek);
-  const noDue = myTasks.filter(t => !t.done && !t.due);
-  const done = myTasks.filter(t => t.done);
-  
-  const renderGroup = (title, tasks, color) => {
-    if (!tasks.length) return '';
-    return `<div class="my-tasks-section">
-      <div class="my-tasks-section-hdr">
-        <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
-        <div class="my-tasks-section-title">${title}</div>
-        <div class="my-tasks-section-cnt">${tasks.length}</div>
-      </div>
-      ${tasks.map(t => renderMyTaskRow(t)).join('')}
-    </div>`;
-  };
-  
+
   const wrap = document.getElementById('my-tasks-content');
   if (!myTasks.length) {
-    wrap.innerHTML = '<div class="loading-row">No tasks assigned to you. You\'re clear.</div>';
+    wrap.innerHTML = '<div class="loading-row">No tasks. You\'re clear.</div>';
     return;
   }
-  
-  wrap.innerHTML = 
-    renderGroup('Overdue', overdue, 'var(--red)') +
-    renderGroup('Today', today, 'var(--cyan)') +
-    renderGroup('This Week', thisWeek, 'var(--orange)') +
-    renderGroup('Later', later, 'var(--purple)') +
-    renderGroup('No Due Date', noDue, 'var(--text3)') +
-    renderGroup('Completed', done, 'var(--green)');
-  
+
+  const now = new Date();
+
+  // Group by client
+  const byClient = {};
+  myTasks.forEach(t => {
+    const key = t.client_id ? String(t.client_id) : 'general';
+    if (!byClient[key]) byClient[key] = [];
+    byClient[key].push(t);
+  });
+
+  // Sort clients by name
+  const sortedKeys = Object.keys(byClient).sort((a, b) => {
+    const ca = a === 'general' ? 'ZZZZZ' : (S.clients.find(c => String(c.id) === a)?.name || 'ZZZZZ');
+    const cb = b === 'general' ? 'ZZZZZ' : (S.clients.find(c => String(c.id) === b)?.name || 'ZZZZZ');
+    return ca.localeCompare(cb);
+  });
+
+  wrap.innerHTML = sortedKeys.map(key => {
+    const client = key === 'general' ? null : S.clients.find(c => String(c.id) === key);
+    const clientName = client ? client.name : 'General';
+    const tasks = byClient[key];
+    const openTasks = tasks.filter(t => !t.done);
+    const doneTasks = tasks.filter(t => t.done);
+
+    const taskRow = t => {
+      const overdue = !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString();
+      const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : '';
+      const priorityColor = t.priority === 'HIGH' ? 'var(--red)' : t.priority === 'MEDIUM' ? 'var(--yellow)' : 'var(--text3)';
+      const priorityBg = t.priority === 'HIGH' ? 'var(--r10)' : t.priority === 'MEDIUM' ? 'var(--y10)' : 'var(--bg5)';
+      const assignAvClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''" onclick="${client ? `nav('client-profile',${client.id})` : ''}">
+        <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})" style="flex-shrink:0">${t.done ? '✓' : ''}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:${t.done ? 'var(--text3)' : 'var(--text)'};text-decoration:${t.done ? 'line-through' : 'none'};text-transform:uppercase;letter-spacing:0.02em">${escHtml(t.title)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">${t.category || ''}${t.created_at ? ' · ' + new Date(t.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : ''}</div>
+        </div>
+        ${t.assign ? `<div class="av ${assignAvClass}" style="flex-shrink:0">${t.assign}</div>` : ''}
+        ${dueStr ? `<div style="font-size:11px;font-weight:600;color:${overdue ? 'var(--red)' : 'var(--text2)'};flex-shrink:0">${overdue ? 'OVERDUE · ' : ''}${dueStr}</div>` : ''}
+        ${t.priority ? `<div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:${priorityBg};color:${priorityColor};flex-shrink:0;border:1px solid ${priorityColor}44">${t.priority === 'MEDIUM' ? 'MED' : t.priority}</div>` : ''}
+        <button onclick="event.stopPropagation();deleteTask(${t.id})" style="background:var(--r10);border:1px solid var(--r20);color:var(--red);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;font-weight:600;flex-shrink:0">×</button>
+      </div>`;
+    };
+
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.06em;flex:1">${escHtml(clientName)}</div>
+        <div style="font-size:11px;color:var(--text3);font-weight:500">${openTasks.length} open</div>
+      </div>
+      ${openTasks.map(t => taskRow(t)).join('')}
+      ${doneTasks.length ? `<div style="padding:8px 16px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;border-top:1px solid var(--border);margin-top:4px">Completed · ${doneTasks.length}</div>${doneTasks.map(t => taskRow(t)).join('')}` : ''}
+    </div>`;
+  }).join('');
+
   // Populate client dropdown
   const clientFilter = document.getElementById('mt-filter-client');
   if (clientFilter && clientFilter.options.length <= 1) {
