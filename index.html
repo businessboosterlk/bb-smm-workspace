@@ -4129,7 +4129,7 @@ async function deleteCPlanItem(id) {
 
 
 <!-- ══ SMM MISSION MODAL ══ -->
-<div class="overlay" id="smm-modal-mission" onclick="if(event.target===this)document.getElementById('smm-modal-mission').classList.remove('active')">
+<div class="modal-bg" id="smm-modal-mission" onclick="if(event.target===this)document.getElementById('smm-modal-mission').classList.remove('open')">
   <div class="modal" style="max-width:520px">
     <div class="modal-title" id="smm-mission-modal-title">New Mission</div>
     <input type="hidden" id="smm-mission-edit-id">
@@ -4154,14 +4154,14 @@ async function deleteCPlanItem(id) {
       </select>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-mission').classList.remove('active')">Cancel</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-mission').classList.remove('open')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSmmMission()">Save</button>
     </div>
   </div>
 </div>
 
 <!-- ══ SMM STEP MODAL ══ -->
-<div class="overlay" id="smm-modal-step" onclick="if(event.target===this)document.getElementById('smm-modal-step').classList.remove('active')">
+<div class="modal-bg" id="smm-modal-step" onclick="if(event.target===this)document.getElementById('smm-modal-step').classList.remove('open')">
   <div class="modal" style="max-width:480px">
     <div class="modal-title" id="smm-step-modal-title">Add Step</div>
     <input type="hidden" id="smm-step-edit-id">
@@ -4176,7 +4176,7 @@ async function deleteCPlanItem(id) {
       </select>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-step').classList.remove('active')">Cancel</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-step').classList.remove('open')">Cancel</button>
       <button class="btn btn-primary" onclick="saveSmmStep()">Save Step</button>
     </div>
   </div>
