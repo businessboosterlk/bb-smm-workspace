@@ -1071,9 +1071,11 @@ tr:last-child td { border-bottom: none; }
 <aside class="sidebar">
   <div class="sb-brand">
     <img src="bb-logo.png" class="sb-logo-img" alt="Business Booster">
-    <div class="sb-sub">SMM Workspace</div>
-    <div class="sb-date" id="sb-date">—</div>
-    <div id="sb-time" style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:500">—</div>
+    <div style="font-size:11px;font-weight:800;color:#00E5FF;letter-spacing:0.15em;text-transform:uppercase;margin-top:2px">SMM WORKSPACE</div>
+    <div style="margin-top:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 14px">
+      <div id="sb-time" style="font-family:'Poppins',sans-serif;font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.02em;line-height:1">—</div>
+      <div id="sb-date" style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:5px;font-weight:500;letter-spacing:0.05em">—</div>
+    </div>
   </div>
   <nav class="sb-nav">
     <div class="sb-grp">Daily</div>
@@ -2011,12 +2013,13 @@ const SOPS = [
   const el = document.getElementById('login-date');
   if (el) el.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   // Set sidebar date immediately
-  const sbd = document.getElementById('sb-date');
-  if (sbd) sbd.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   // Start clock immediately
   function updateClock() {
+    const now = new Date();
     const t = document.getElementById('sb-time');
-    if (t) t.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (t) t.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const d = document.getElementById('sb-date');
+    if (d) d.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   }
   updateClock();
   setInterval(updateClock, 1000);
