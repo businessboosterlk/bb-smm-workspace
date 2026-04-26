@@ -1127,6 +1127,11 @@ tr:last-child td { border-bottom: none; }
       Video Hub
     </button>
 
+    <div class="sb-grp">Missions</div>
+    <button class="sb-item" data-page="missions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Missions
+    </button>
     <div class="sb-grp">Capture</div>
     <button class="sb-item" data-page="ideas">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
@@ -1606,6 +1611,29 @@ tr:last-child td { border-bottom: none; }
     <div class="ideas-list" id="ideas-list"><div class="loading-row">No ideas yet. Click Capture Idea.</div></div>
   </section>
 
+  <!-- ══ MISSIONS PAGE ══ -->
+  <section class="page" id="page-missions">
+    <div id="smm-missions-view-people">
+      <div class="ph">
+        <div><div class="ph-title">Missions</div><div class="ph-sub">Track your projects and roadmaps</div></div>
+      </div>
+      <div id="smm-missions-people-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:4px"></div>
+    </div>
+    <div id="smm-missions-view-detail" style="display:none">
+      <div class="ph">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="btn btn-ghost" onclick="smmMissionsBack()" style="padding:6px 12px;font-size:12px">← Back</button>
+          <div>
+            <div class="ph-title" id="smm-missions-detail-name"></div>
+            <div class="ph-sub" id="smm-missions-detail-role"></div>
+          </div>
+        </div>
+        <div class="ph-right"><button class="btn btn-primary" onclick="openSmmMissionModal()">+ New Mission</button></div>
+      </div>
+      <div id="smm-missions-list"></div>
+    </div>
+  </section>
+
 </main>
 
 <!-- ============ MODALS ============ -->
@@ -2067,6 +2095,7 @@ function nav(page, data) {
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
   if (page === 'ideas') renderIdeas();
+  if (page === 'missions') renderSmmMissions();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
 }
 
@@ -4094,6 +4123,61 @@ async function deleteCPlanItem(id) {
     <div style="display:flex;gap:8px;margin-top:6px">
       <button class="btn btn-ghost" onclick="closeModal('cplan')" style="flex:1;justify-content:center">Cancel</button>
       <button class="btn btn-primary" onclick="submitCPlanModal()" style="flex:1;justify-content:center" id="cplan-submit-btn">Add</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ SMM MISSION MODAL ══ -->
+<div class="overlay" id="smm-modal-mission" onclick="if(event.target===this)document.getElementById('smm-modal-mission').classList.remove('active')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="smm-mission-modal-title">New Mission</div>
+    <input type="hidden" id="smm-mission-edit-id">
+    <div class="fg"><label class="flbl">Mission Name</label><input class="fi" id="smm-mission-title" placeholder="e.g. Fix content approval process"></div>
+    <div class="fg"><label class="flbl">Description</label><textarea class="fta" id="smm-mission-desc" placeholder="What is this and why does it matter?" style="min-height:70px"></textarea></div>
+    <div class="fg"><label class="flbl">Category</label>
+      <select class="fi" id="smm-mission-category">
+        <option value="product">Product / Build</option>
+        <option value="business">Business Ops</option>
+        <option value="sales">Sales / Growth</option>
+        <option value="team">Team / Hiring</option>
+        <option value="client">Client</option>
+        <option value="strategy">Strategy</option>
+        <option value="personal">Personal</option>
+      </select>
+    </div>
+    <div class="fg"><label class="flbl">Status</label>
+      <select class="fi" id="smm-mission-status">
+        <option value="active">Active</option>
+        <option value="paused">Paused</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-mission').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSmmMission()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SMM STEP MODAL ══ -->
+<div class="overlay" id="smm-modal-step" onclick="if(event.target===this)document.getElementById('smm-modal-step').classList.remove('active')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title" id="smm-step-modal-title">Add Step</div>
+    <input type="hidden" id="smm-step-edit-id">
+    <input type="hidden" id="smm-step-mission-id">
+    <div class="fg"><label class="flbl">Step Title</label><input class="fi" id="smm-step-title" placeholder="What needs to happen?"></div>
+    <div class="fg"><label class="flbl">Notes</label><textarea class="fta" id="smm-step-notes" placeholder="Any details..." style="min-height:60px"></textarea></div>
+    <div class="fg"><label class="flbl">Status</label>
+      <select class="fi" id="smm-step-status">
+        <option value="todo">To Do</option>
+        <option value="inprogress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-step').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSmmStep()">Save Step</button>
     </div>
   </div>
 </div>
