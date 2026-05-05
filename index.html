@@ -1101,6 +1101,10 @@ tr:last-child td { border-bottom: none; }
     </button>
 
     <div class="sb-grp">Accounts</div>
+    <button class="sb-item" data-page="content-overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+      Content Plans
+    </button>
     <button class="sb-item" data-page="clients">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Clients
@@ -1428,13 +1432,23 @@ tr:last-child td { border-bottom: none; }
       </div>
     </div>
 
-    <!-- UPCOMING SHOOT DATES — week breakdown -->
-    <div class="card" style="margin-top:20px;padding:18px 20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div class="stitle" style="margin-bottom:0">Upcoming Shoot Dates <span class="cnt" id="upcoming-shoots-count">0</span></div>
-        <div style="font-size:10px;color:var(--text3)">Next 4 weeks · Shoot Date Set + Shot</div>
+    <!-- VIEW TOGGLE -->
+    <div style="display:flex;gap:0;margin-top:20px;border-bottom:1px solid var(--border)">
+      <button id="smm-shoot-tab-pipeline" onclick="setSmmShootTab('pipeline')" style="padding:8px 18px;font-size:12px;font-weight:700;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer;font-family:inherit">Pipeline</button>
+      <button id="smm-shoot-tab-calendar" onclick="setSmmShootTab('calendar')" style="padding:8px 18px;font-size:12px;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;font-family:inherit">4-Week Calendar</button>
+    </div>
+    <!-- KANBAN WRAP -->
+    <div id="smm-shoot-kanban-wrap">
+      <div class="kanban-board" id="shoot-board-2" style="display:none"></div>
+    </div>
+    <!-- CALENDAR WRAP -->
+    <div id="smm-shoot-calendar-wrap" style="display:none;margin-top:16px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+        <button class="btn btn-ghost" onclick="smmShootCalNav(-1)" style="padding:6px 14px;font-size:13px">← Prev</button>
+        <div id="smm-shoot-cal-label" style="font-size:15px;font-weight:800;color:#fff;min-width:160px;text-align:center"></div>
+        <button class="btn btn-ghost" onclick="smmShootCalNav(1)" style="padding:6px 14px;font-size:13px">Next →</button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="upcoming-shoots-grid"></div>
+      <div id="smm-shoot-weekly-grid"></div>
     </div>
   </section>
 
@@ -1612,6 +1626,10 @@ tr:last-child td { border-bottom: none; }
   </section>
 
   <!-- ══ MISSIONS PAGE ══ -->
+  <section class="page" id="page-content-overview">
+    <div id="smm-co-root"></div>
+  </section>
+
   <section class="page" id="page-missions">
     <div id="smm-missions-view-people">
       <div class="ph">
@@ -2086,6 +2104,7 @@ function nav(page, data) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
+  window.scrollTo(0,0);
 
   if (page === 'today') renderToday();
   if (page === 'calendar') { renderCalendar(); renderUpcoming(); wireCalFilters(); populateCalFilterDropdowns(); }
@@ -2096,6 +2115,7 @@ function nav(page, data) {
   if (page === 'sops') renderSOPs();
   if (page === 'ideas') renderIdeas();
   if (page === 'missions') renderSmmMissions();
+  if (page === 'content-overview') renderSmmContentOverview();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
 }
 
@@ -4100,87 +4120,194 @@ async function deleteCPlanItem(id) {
 
 
 // login required on every page load — do not auto-init
+
+// ══ SMM SHOOT WEEKLY CALENDAR ═══════════════════
+var smmShootCalYear=new Date().getFullYear();
+var smmShootCalMonth=new Date().getMonth();
+function smmShootCalNav(dir){
+  smmShootCalMonth+=dir;
+  if(smmShootCalMonth>11){smmShootCalMonth=0;smmShootCalYear++;}
+  if(smmShootCalMonth<0){smmShootCalMonth=11;smmShootCalYear--;}
+  renderSmmShootWeekly();
+}
+function setSmmShootTab(tab){
+  const cw=document.getElementById('smm-shoot-calendar-wrap');
+  const kt=document.getElementById('smm-shoot-tab-pipeline');
+  const ct=document.getElementById('smm-shoot-tab-calendar');
+  const mainBoard=document.querySelector('#page-shoot-pipeline .kanban-board');
+  if(tab==='pipeline'){
+    if(mainBoard)mainBoard.style.display='';
+    if(cw)cw.style.display='none';
+    if(kt){kt.style.color='var(--accent)';kt.style.borderBottomColor='var(--accent)';}
+    if(ct){ct.style.color='var(--text3)';ct.style.borderBottomColor='transparent';}
+  } else {
+    if(mainBoard)mainBoard.style.display='none';
+    if(cw)cw.style.display='block';
+    if(kt){kt.style.color='var(--text3)';kt.style.borderBottomColor='transparent';}
+    if(ct){ct.style.color='var(--accent)';ct.style.borderBottomColor='var(--accent)';}
+    renderSmmShootWeekly();
+  }
+}
+
+function renderSmmShootWeekly(){
+  var el=document.getElementById('smm-shoot-weekly-grid');
+  var lbl=document.getElementById('smm-shoot-cal-label');
+  if(!el)return;
+  var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  if(lbl)lbl.textContent=MONTHS[smmShootCalMonth]+' '+smmShootCalYear;
+  var clients=S.clients||[];
+  var allShoots=(S.shoots||[]).filter(function(s){return s.shoot_date;});
+  var todayStr=new Date().toISOString().split('T')[0];
+  var firstDay=new Date(smmShootCalYear,smmShootCalMonth,1).getDay();
+  var daysInMonth=new Date(smmShootCalYear,smmShootCalMonth+1,0).getDate();
+  var dayNames=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  var stageColors={'Videos Confirmed':'#00E5FF','Script Made':'#FBBF24','Script Changes':'#FF6B2B','Final Script':'#A855F7','Shoot Date Set':'#FF2D78','Shot':'#00FF85'};
+  function pad(n){return String(n).padStart(2,'0');}
+  function dateKey(d){return smmShootCalYear+'-'+pad(smmShootCalMonth+1)+'-'+pad(d);}
+  var html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">'+dayNames.map(function(d){return '<div style="text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);padding:6px 0">'+d+'</div>';}).join('')+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+  for(var i=0;i<firstDay;i++)html+='<div style="min-height:90px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.05);border-radius:8px;opacity:0.3"></div>';
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=dateKey(d);
+    var isToday=ds===todayStr;
+    var colIdx=(firstDay+d-1)%7;
+    var isWeekend=colIdx===0||colIdx===6;
+    var dayShoots=allShoots.filter(function(s){return s.shoot_date===ds;});
+    var hasShoot=dayShoots.length>0;
+    html+='<div style="min-height:90px;background:'+(isToday?'rgba(0,229,255,0.08)':hasShoot?'rgba(255,45,120,0.07)':isWeekend?'rgba(255,255,255,0.01)':'rgba(255,255,255,0.04)')+'";border:1px solid '+(isToday?'rgba(0,229,255,0.3)':hasShoot?'rgba(255,45,120,0.3)':'rgba(255,255,255,0.08)')+';border-radius:8px;padding:8px;border:1px solid '+(isToday?'rgba(0,229,255,0.3)':hasShoot?'rgba(255,45,120,0.3)':'rgba(255,255,255,0.08)')+'"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="'+(isToday?'background:#00E5FF;color:#000;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;':'color:'+(hasShoot?'#FF2D78':'rgba(255,255,255,0.5)')+';font-size:11px;font-weight:700;')+'">'+d+'</div>'+(hasShoot?'<span style="font-size:9px;background:#FF2D78;color:#fff;border-radius:3px;padding:1px 4px;font-weight:700">'+dayShoots.length+'</span>':'')+'</div>'+dayShoots.slice(0,3).map(function(s){var c=clients.find(function(x){return x.id==s.client_id;});var sc=stageColors[s.stage||s.status]||'rgba(255,255,255,0.4)';return '<div style="background:'+sc+'18;border-left:2px solid '+sc+';border-radius:0 4px 4px 0;padding:3px 5px;margin-bottom:3px"><div style="font-size:8px;font-weight:700;color:'+sc+';line-height:1.2">'+(c?escHtml(c.name):'?')+'</div><div style="font-size:7px;color:rgba(255,255,255,0.4)">'+escHtml(s.title||'')+'</div></div>';}).join('')+(dayShoots.length>3?'<div style="font-size:8px;color:rgba(255,255,255,0.3)">+'+(dayShoots.length-3)+' more</div>':'')+'</div>';
+  }
+  var rem=(firstDay+daysInMonth)%7;
+  if(rem>0)for(var j=rem;j<7;j++)html+='<div style="min-height:90px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.05);border-radius:8px;opacity:0.3"></div>';
+  html+='</div>';
+  var pad2=function(n){return String(n).padStart(2,'0');};
+  var monthShoots=allShoots.filter(function(s){return s.shoot_date&&s.shoot_date.startsWith(smmShootCalYear+'-'+pad2(smmShootCalMonth+1));});
+  el.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:12px">'+monthShoots.length+' shoot'+(monthShoots.length!==1?'s':'')+' this month</div>'+html;
+}
+
+// ══ SMM CONTENT OVERVIEW ══════════════════════════
+async function renderSmmContentOverview(){
+  const root=document.getElementById('smm-co-root');
+  if(!root)return;
+  root.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px">Loading...</div>';
+
+  // Load fresh data
+  let clients=S.clients||[];
+  let plans=[];
+  try{
+    const r=await sb.from('content_plans').select('*');
+    plans=r.data||[];
+  }catch(e){}
+
+  const now=new Date();
+  if(!window.SMM_CO_MONTH)window.SMM_CO_MONTH=now.getMonth()+1;
+  if(!window.SMM_CO_YEAR)window.SMM_CO_YEAR=now.getFullYear();
+
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthLabel=MONTHS[window.SMM_CO_MONTH-1]+' '+window.SMM_CO_YEAR;
+
+  const rows=clients.sort((a,b)=>a.name.localeCompare(b.name)).map(function(c){
+    const cp=plans.filter(function(p){
+      return String(p.client_id)===String(c.id)&&
+             parseInt(p.month)===parseInt(window.SMM_CO_MONTH)&&
+             parseInt(p.year)===parseInt(window.SMM_CO_YEAR);
+    });
+    const posts=cp.filter(p=>p.type==='post');
+    const videos=cp.filter(p=>p.type==='video');
+    const postsUp=posts.filter(p=>p.posted).length;
+    const videosUp=videos.filter(p=>p.posted).length;
+    const hasPlan=cp.length>0;
+    const isReady=c.plan_ready===true||c.plan_ready==='true';
+    const allPosted=hasPlan&&cp.every(p=>p.posted);
+    return {c,posts,videos,postsUp,videosUp,hasPlan,isReady,allPosted};
+  });
+
+  const ready=rows.filter(r=>r.isReady&&!r.allPosted).length;
+  const done=rows.filter(r=>r.allPosted).length;
+  const waiting=rows.filter(r=>!r.isReady&&!r.allPosted).length;
+
+  var html='';
+  // Header
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'
+    +'<div><div style="font-size:22px;font-weight:800;color:#fff">Content Plans</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">'+monthLabel+'</div></div>'
+    +'<div style="display:flex;gap:8px">'
+      +'<select style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer" onchange="window.SMM_CO_MONTH=parseInt(this.value);renderSmmContentOverview()">'
+        +MONTHS.map((m,i)=>'<option value="'+(i+1)+'" '+(window.SMM_CO_MONTH===i+1?'selected':'')+'>'+m+'</option>').join('')
+      +'</select>'
+      +'<select style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer" onchange="window.SMM_CO_YEAR=parseInt(this.value);renderSmmContentOverview()">'
+        +[2025,2026,2027].map(y=>'<option value="'+y+'" '+(window.SMM_CO_YEAR===y?'selected':'')+'>'+y+'</option>').join('')
+      +'</select>'
+    +'</div>'
+  +'</div>';
+
+  // Summary pills
+  html+='<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">'
+    +'<div style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:12px 20px;text-align:center;min-width:90px">'
+      +'<div style="font-size:24px;font-weight:800;color:#00E5FF">'+ready+'</div>'
+      +'<div style="font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Ready to Fill</div>'
+    +'</div>'
+    +'<div style="background:rgba(0,255,133,0.1);border:1px solid rgba(0,255,133,0.3);border-radius:10px;padding:12px 20px;text-align:center;min-width:90px">'
+      +'<div style="font-size:24px;font-weight:800;color:#00FF85">'+done+'</div>'
+      +'<div style="font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">All Posted</div>'
+    +'</div>'
+    +'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 20px;text-align:center;min-width:90px">'
+      +'<div style="font-size:24px;font-weight:800;color:rgba(255,255,255,0.4)">'+waiting+'</div>'
+      +'<div style="font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Waiting</div>'
+    +'</div>'
+  +'</div>';
+
+  // Client list
+  // Sort: ready first, then waiting, then done
+  rows.sort((a,b)=>{
+    if(a.isReady&&!a.allPosted&&!(b.isReady&&!b.allPosted))return -1;
+    if(b.isReady&&!b.allPosted&&!(a.isReady&&!a.allPosted))return 1;
+    if(a.allPosted&&!b.allPosted)return 1;
+    if(!a.allPosted&&b.allPosted)return -1;
+    return a.c.name.localeCompare(b.c.name);
+  });
+
+  html+='<div style="display:flex;flex-direction:column;gap:8px">';
+  rows.forEach(function(r){
+    var dotColor,label,bg,border;
+    if(r.allPosted){dotColor='#00FF85';label='All Posted';bg='rgba(0,255,133,0.04)';border='rgba(0,255,133,0.15)';}
+    else if(r.isReady){dotColor='#00E5FF';label='Ready — Fill Now';bg='rgba(0,229,255,0.06)';border='rgba(0,229,255,0.25)';}
+    else{dotColor='rgba(255,255,255,0.2)';label='Waiting for Approval';bg='rgba(255,255,255,0.02)';border='rgba(255,255,255,0.06)';}
+
+    var total=r.posts.length+r.videos.length;
+    var posted=r.postsUp+r.videosUp;
+    var pct=total>0?Math.round(posted/total*100):0;
+
+    html+='<div style="background:'+bg+';border:1px solid '+border+';border-radius:10px;padding:14px 18px;cursor:pointer;display:flex;align-items:center;gap:14px" onclick="smmOpenClientContentPlan('+r.c.id+')">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0;box-shadow:0 0 6px '+dotColor+'88"></div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px">'+escHtml(r.c.name)+'</div>'
+        +'<div style="font-size:10px;color:rgba(255,255,255,0.4)">'+label+'</div>'
+      +'</div>'
+      +(total>0?'<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">'
+        +'<div style="text-align:right"><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:3px">Posts: '+r.postsUp+'/'+r.posts.length+' &nbsp; Videos: '+r.videosUp+'/'+r.videos.length+'</div>'
+          +'<div style="width:100px;height:4px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">'
+            +'<div style="height:100%;width:'+pct+'%;background:'+dotColor+';border-radius:3px"></div>'
+          +'</div>'
+        +'</div>'
+      +'</div>':'')
+      +'<div style="font-size:12px;color:rgba(255,255,255,0.3)">→</div>'
+    +'</div>';
+  });
+  html+='</div>';
+
+  root.innerHTML=html;
+}
+
+function smmOpenClientContentPlan(id){
+  // Navigate to client profile and switch to content plan tab
+  S.selectedClientId=id;
+  nav('client-profile');
+  setTimeout(function(){
+    const tabs=document.querySelectorAll('.tab-btn');
+    tabs.forEach(function(t){
+      if(t.textContent.trim()==='Content Plan'){t.click();}
+    });
+  },300);
+}
+
 </script>
-
-
-<!-- ============ CONTENT PLAN MODAL ============ -->
-<div class="modal-bg" id="modal-cplan">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title" id="cplan-modal-title">Add Post</div>
-      <button class="modal-close" onclick="closeModal('cplan')">×</button>
-    </div>
-    <input type="hidden" id="cplan-edit-id">
-    <input type="hidden" id="cplan-edit-type">
-    <div class="fg">
-      <label class="fl">Topic / Title</label>
-      <input class="fi" id="cplan-title" placeholder="What is this post about?">
-    </div>
-    <div class="fg">
-      <label class="fl">Scheduled Date <span style="color:var(--text3);font-weight:400;text-transform:none">(optional)</span></label>
-      <input class="fi" type="date" id="cplan-date">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:6px">
-      <button class="btn btn-ghost" onclick="closeModal('cplan')" style="flex:1;justify-content:center">Cancel</button>
-      <button class="btn btn-primary" onclick="submitCPlanModal()" style="flex:1;justify-content:center" id="cplan-submit-btn">Add</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- ══ SMM MISSION MODAL ══ -->
-<div class="modal-bg" id="smm-modal-mission" onclick="if(event.target===this)document.getElementById('smm-modal-mission').classList.remove('open')">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-title" id="smm-mission-modal-title">New Mission</div>
-    <input type="hidden" id="smm-mission-edit-id">
-    <div class="fg"><label class="flbl">Mission Name</label><input class="fi" id="smm-mission-title" placeholder="e.g. Fix content approval process"></div>
-    <div class="fg"><label class="flbl">Description</label><textarea class="fta" id="smm-mission-desc" placeholder="What is this and why does it matter?" style="min-height:70px"></textarea></div>
-    <div class="fg"><label class="flbl">Category</label>
-      <select class="fi" id="smm-mission-category">
-        <option value="product">Product / Build</option>
-        <option value="business">Business Ops</option>
-        <option value="sales">Sales / Growth</option>
-        <option value="team">Team / Hiring</option>
-        <option value="client">Client</option>
-        <option value="strategy">Strategy</option>
-        <option value="personal">Personal</option>
-      </select>
-    </div>
-    <div class="fg"><label class="flbl">Status</label>
-      <select class="fi" id="smm-mission-status">
-        <option value="active">Active</option>
-        <option value="paused">Paused</option>
-        <option value="completed">Completed</option>
-      </select>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-mission').classList.remove('open')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSmmMission()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ SMM STEP MODAL ══ -->
-<div class="modal-bg" id="smm-modal-step" onclick="if(event.target===this)document.getElementById('smm-modal-step').classList.remove('open')">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-title" id="smm-step-modal-title">Add Step</div>
-    <input type="hidden" id="smm-step-edit-id">
-    <input type="hidden" id="smm-step-mission-id">
-    <div class="fg"><label class="flbl">Step Title</label><input class="fi" id="smm-step-title" placeholder="What needs to happen?"></div>
-    <div class="fg"><label class="flbl">Notes</label><textarea class="fta" id="smm-step-notes" placeholder="Any details..." style="min-height:60px"></textarea></div>
-    <div class="fg"><label class="flbl">Status</label>
-      <select class="fi" id="smm-step-status">
-        <option value="todo">To Do</option>
-        <option value="inprogress">In Progress</option>
-        <option value="done">Done</option>
-      </select>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="document.getElementById('smm-modal-step').classList.remove('open')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSmmStep()">Save Step</button>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
