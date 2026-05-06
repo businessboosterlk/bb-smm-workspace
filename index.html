@@ -1499,7 +1499,8 @@ tr:last-child td { border-bottom: none; }
       <div class="cp-field"><div class="cp-field-lbl">Package</div><input id="cpf-package" placeholder="—" readonly></div>
       <div class="cp-field"><div class="cp-field-lbl">Industry</div><input id="cpf-industry" placeholder="—" readonly></div>
       <div class="cp-field"><div class="cp-field-lbl">Contact Person</div><input id="cpf-contact" placeholder="—" readonly></div>
-      <div class="cp-field" style="border-right:none"><div class="cp-field-lbl">Health</div><input id="cpf-health" placeholder="—" readonly></div>
+      <div class="cp-field"><div class="cp-field-lbl">Health</div><input id="cpf-health" placeholder="—" readonly></div>
+      <div class="cp-field" style="border-right:none"><div class="cp-field-lbl">Start Date</div><input id="cpf-startdate" placeholder="—" readonly></div>
     </div>
 
     <div class="cp-stats">
@@ -4049,6 +4050,7 @@ function renderCPlanRow(p, num, type) {
     <div style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:800;color:${p.posted ? 'var(--text3)' : color};min-width:22px">${String(num).padStart(2, '0')}</div>
     <div style="flex:1;font-size:12px;font-weight:${p.posted ? 400 : 600};color:${p.posted ? 'var(--text3)' : 'var(--text)'};${p.posted ? 'text-decoration:line-through' : ''};cursor:pointer" onclick="openCPlanModal('${type}', ${p.id})">${escHtml(p.title || 'Untitled')}</div>
     <div style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:${p.posted ? 'var(--bg4)' : bg};color:${p.posted ? 'var(--text3)' : color};white-space:nowrap;flex-shrink:0">${dateStr}</div>
+    <button onclick="duplicateSmmCPlanItem(${p.id})" title="Duplicate" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:0 4px;flex-shrink:0" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">⧉</button>
     <button onclick="deleteCPlanItem(${p.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;flex-shrink:0">×</button>
   </div>`;
 }
@@ -4191,12 +4193,16 @@ async function renderSmmContentOverview(){
   root.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px">Loading...</div>';
 
   // Load fresh data
-  let clients=S.clients||[];
+  let clients=[];
   let plans=[];
   try{
-    const r=await sb.from('content_plans').select('*');
-    plans=r.data||[];
-  }catch(e){}
+    const [cr,pr]=await Promise.all([
+      sb.from('clients').select('id,name,package,plan_ready').order('name'),
+      sb.from('content_plans').select('*')
+    ]);
+    clients=cr.data||[];
+    plans=pr.data||[];
+  }catch(e){clients=S.clients||[];}
 
   const now=new Date();
   if(!window.SMM_CO_MONTH)window.SMM_CO_MONTH=now.getMonth()+1;
@@ -4310,4 +4316,17 @@ function smmOpenClientContentPlan(id){
   },300);
 }
 
+async function duplicateSmmCPlanItem(id){
+  const item=(S.contentPlans||[]).find(p=>p.id===id);
+  if(!item)return;
+  const month=parseInt(document.getElementById('cplan-month')?.value||new Date().getMonth()+1);
+  const year=parseInt(document.getElementById('cplan-year')?.value||new Date().getFullYear());
+  const payload={client_id:item.client_id,month,year,type:item.type,title:item.title,scheduled_date:null,posted:false};
+  const r=await sb.from('content_plans').insert([payload]).select();
+  if(r.data&&r.data[0]){
+    if(!S.contentPlans)S.contentPlans=[];
+    S.contentPlans.push(r.data[0]);
+  }
+  renderContentPlan();
+}
 </script>
