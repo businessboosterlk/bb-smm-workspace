@@ -1195,6 +1195,11 @@ tr:last-child td { border-bottom: none; }
 
     <div class="stitle">This Week <a onclick="nav('calendar')" style="margin-left:auto;font-size:10px;color:var(--cyan);cursor:pointer;text-transform:none;letter-spacing:0">View Calendar →</a></div>
     <div class="week-strip" id="week-strip"></div>
+    <div style="display:flex;gap:16px;margin-top:6px;font-size:10px;color:var(--text3);font-weight:600">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--orange);display:inline-block"></span>Event</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--cyan);display:inline-block"></span>Content</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--yellow,#FBBF24);display:inline-block"></span>Task</span>
+    </div>
 
     <div class="stitle" style="margin-top:4px">Seven Pillars <span class="cnt">Complete in order</span></div>
     <div class="pillars-grid" id="pillars-grid" style="margin-bottom:18px"></div>
@@ -3169,6 +3174,25 @@ function renderMyTaskRow(t) {
 }
 
 // ============ TODAY'S FOCUS PANEL ============
+// Scope (c): a task is "mine" if it's on a client this SMM owns OR tagged assign:'smm'.
+// CEO/Co-founder: tasks assigned to their own code. Single source of truth so the
+// Focus panel and BB Intelligence panel can never disagree again.
+function myScopedTasks() {
+  if (!S.currentUser) return [];
+  const r = USER_ROLES[S.currentUser];
+  if (r && r.smm) {
+    const smmKey = String(r.smm).toUpperCase();
+    const mineIds = new Set(
+      S.clients.filter(c => String(c.owner || '').toUpperCase() === smmKey)
+               .map(c => Number(c.id))
+    );
+    return S.tasks.filter(t =>
+      (t.client_id != null && mineIds.has(Number(t.client_id))) || t.assign === 'smm'
+    );
+  }
+  return S.tasks.filter(t => t.assign === (r ? r.code : ''));
+}
+
 function renderFocusPanel() {
   if (!S.currentUser) return;
   const userCode = USER_ROLES[S.currentUser].code;
@@ -3178,8 +3202,8 @@ function renderFocusPanel() {
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
   const tomorrowStr = toDateStr(tomorrow);
   
-  // For SMMs — all tasks on their clients. For CEO/Shiara — tasks assigned to them.
-  const relevantTasks = isSmm ? S.tasks : S.tasks.filter(t => t.assign === userCode);
+  // Scoped — clients this SMM owns OR tagged 'smm' (CEO/Co-founder: their own tasks)
+  const relevantTasks = myScopedTasks();
   
   const myOverdue = relevantTasks.filter(t => !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
   const myToday = relevantTasks.filter(t => !t.done && t.due && new Date(t.due).toDateString() === now.toDateString()).length;
@@ -3221,14 +3245,9 @@ function renderFocusPanel() {
     });
   }
   
-  // Priority 3: Amber/Red clients
-  if (amberRed > 0) {
-    cards.push({
-      cls: 'warn', num: amberRed,
-      lbl: 'CLIENTS NEED ATTENTION', sub: 'Amber or red health status',
-      page: 'clients'
-    });
-  }
+  // Priority 3: (removed) Amber/Red clients — the dedicated "Clients Needing
+  // Attention" list and the BB Intelligence headline already show this. Keeping
+  // it here too made the same number appear three times on one screen.
   
   // Priority 4: Today's tasks
   if (myToday > 0) {
@@ -3768,10 +3787,60 @@ function saveTop3() {
   try { localStorage.setItem('top3-' + S.currentUser, JSON.stringify(S.top3)); } catch {}
 }
 
+// #5 — Suggest a Top 3 from real signals so the widget is never dead weight.
+function buildSuggestedTop3() {
+  const now = new Date();
+  const mine = myScopedTasks();
+  const sug = [];
+  const rank = p => p === 'HIGH' ? 0 : p === 'LOW' ? 2 : 1;
+  const overdue = mine.filter(t => !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString())
+    .sort((a, b) => rank(a.priority) - rank(b.priority) || new Date(a.due) - new Date(b.due));
+  overdue.slice(0, 2).forEach(t => {
+    const cl = t.client_id ? S.clients.find(c => Number(c.id) === Number(t.client_id)) : null;
+    sug.push((cl ? cl.name + ': ' : '') + t.title);
+  });
+  if (sug.length < 3) {
+    const ranked = S.clients.map(c => { const h = calcClientHealth(c); return { c, r: h.auto === 'red' ? 2 : h.auto === 'amber' ? 1 : 0, reason: h.reason }; })
+      .filter(x => x.r > 0).sort((a, b) => b.r - a.r);
+    if (ranked.length) sug.push('Fix ' + ranked[0].c.name + ' — ' + ranked[0].reason);
+  }
+  if (sug.length < 3) {
+    mine.filter(t => !t.done && t.due && new Date(t.due).toDateString() === now.toDateString())
+      .slice(0, 3 - sug.length).forEach(t => {
+        const cl = t.client_id ? S.clients.find(c => Number(c.id) === Number(t.client_id)) : null;
+        sug.push((cl ? cl.name + ': ' : '') + t.title);
+      });
+  }
+  return sug.slice(0, 3);
+}
+
+function acceptSuggestedTop3() {
+  const s = buildSuggestedTop3();
+  if (!s.length) { toast('Nothing urgent to suggest right now', ''); return; }
+  S.top3 = s;
+  saveTop3();
+  renderTop3();
+  toast('Top 3 set from suggestions', 'success');
+}
+
 function renderTop3() {
   const el = document.getElementById('top3-list');
   if (!el) return;
   if (!S.top3 || !S.top3.length) {
+    const sug = buildSuggestedTop3();
+    if (sug.length) {
+      el.innerHTML = `<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Suggested from your overdue &amp; at-risk clients</div>`
+        + sug.map((t, i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border:1px dashed var(--border2);border-radius:8px;margin-bottom:6px;opacity:0.85">
+          <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:800;color:var(--text3);min-width:24px">0${i + 1}</div>
+          <div style="flex:1;font-size:13px;color:var(--text2)">${escHtml(t)}</div>
+        </div>`).join('')
+        + `<div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" onclick="acceptSuggestedTop3()">Use these 3</button>
+            <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" onclick="openTop3Editor()">Set my own</button>
+          </div>`;
+      return;
+    }
     el.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">No Top 3 set. <button class="btn btn-ghost btn-sm" onclick="openTop3Editor()" style="padding:4px 10px;margin-left:6px">+ Set Top 3</button></div>`;
     return;
   }
@@ -3849,12 +3918,13 @@ function buildIntelCards() {
   
   const cards = [];
   
-  // Overdue tasks
-  const overdue = S.tasks.filter(t => t.assign === userCode && !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
+  // Overdue tasks (scoped — identical rule to Today's Focus, no drift)
+  const mine = myScopedTasks();
+  const overdue = mine.filter(t => !t.done && t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString()).length;
   if (overdue > 0) cards.push({ cls: 'alert', num: overdue, lbl: 'Overdue Tasks', sub: 'Past their due date — clear these first', page: 'my-tasks' });
   
   // HIGH priority tasks
-  const highPriority = S.tasks.filter(t => t.assign === userCode && !t.done && t.priority === 'HIGH').length;
+  const highPriority = mine.filter(t => !t.done && t.priority === 'HIGH').length;
   if (highPriority > 0) cards.push({ cls: 'alert', num: highPriority, lbl: 'Flagged For You', sub: 'High priority — from Thulaib or Shiara', page: 'my-tasks' });
   
   // Posts today
@@ -3919,15 +3989,15 @@ function renderIntel() {
           </div>
         </div>
       </div>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+      ${total > 1 ? `<div style="margin-left:auto;display:flex;align-items:center;gap:10px">
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();intelPrev()" style="padding:6px 10px;font-size:14px">‹</button>
         <div style="font-size:10px;color:var(--text3);font-weight:600;min-width:40px;text-align:center">${S.intelIndex + 1} / ${total}</div>
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();intelNext()" style="padding:6px 10px;font-size:14px">›</button>
-      </div>
+      </div>` : ''}
     </div>
-    <div style="display:flex;gap:5px;justify-content:center;margin-top:8px">
+    ${total > 1 ? `<div style="display:flex;gap:5px;justify-content:center;margin-top:8px">
       ${cards.map((_, i) => `<div style="width:5px;height:5px;border-radius:50%;background:${i === S.intelIndex ? 'var(--accent)' : 'var(--border2)'};transition:background 0.15s"></div>`).join('')}
-    </div>
+    </div>` : ''}
   `;
   
   // Hover pause / auto-advance
@@ -3942,6 +4012,7 @@ function renderIntel() {
 
 function startIntelTimer() {
   if (S.intelTimer) clearTimeout(S.intelTimer);
+  if (buildIntelCards().length <= 1) return;
   S.intelTimer = setTimeout(() => { intelNext(); }, 8000);
 }
 
