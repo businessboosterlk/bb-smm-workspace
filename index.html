@@ -1092,6 +1092,10 @@ tr:last-child td { border-bottom: none; }
       My Tasks
       <span class="sb-badge" id="sb-mytasks-count">0</span>
     </button>
+    <button class="sb-item" data-page="diary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      My Diary
+    </button>
 
     <div class="sb-grp">Pipelines</div>
 
@@ -1195,11 +1199,6 @@ tr:last-child td { border-bottom: none; }
 
     <div class="stitle">This Week <a onclick="nav('calendar')" style="margin-left:auto;font-size:10px;color:var(--cyan);cursor:pointer;text-transform:none;letter-spacing:0">View Calendar →</a></div>
     <div class="week-strip" id="week-strip"></div>
-    <div style="display:flex;gap:16px;margin-top:6px;font-size:10px;color:var(--text3);font-weight:600">
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--orange);display:inline-block"></span>Event</span>
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--cyan);display:inline-block"></span>Content</span>
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:var(--yellow,#FBBF24);display:inline-block"></span>Task</span>
-    </div>
 
     <div class="stitle" style="margin-top:4px">Seven Pillars <span class="cnt">Complete in order</span></div>
     <div class="pillars-grid" id="pillars-grid" style="margin-bottom:18px"></div>
@@ -1273,6 +1272,30 @@ tr:last-child td { border-bottom: none; }
     </div>
 
     <div id="my-tasks-content"></div>
+  </section>
+
+  <!-- ============ MY DIARY ============ -->
+  <section class="page" id="page-diary">
+    <div class="ph">
+      <div><div class="ph-title">My Diary</div><div class="ph-sub">Your work log — notes &amp; handover. Not a task list.</div></div>
+      <div class="ph-right">
+        <button class="btn btn-primary btn-sm" onclick="openDiaryModal()">+ New Entry</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <span class="filter-bar-label">Filter</span>
+      <span id="diary-author-wrap" style="display:none">
+        <select class="filter-select" id="diary-filter-author" onchange="renderDiary()">
+          <option value="all">All People</option>
+        </select>
+      </span>
+      <select class="filter-select" id="diary-filter-client" onchange="renderDiary()">
+        <option value="all">All Clients</option>
+      </select>
+    </div>
+
+    <div id="diary-list"></div>
   </section>
 
   <!-- ============ CALENDAR ============ -->
@@ -1743,6 +1766,17 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<!-- DIARY ENTRY MODAL -->
+<div class="modal-bg" id="modal-diary">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="modal-diary-title">New Diary Entry</div><button class="modal-close" onclick="closeModal('diary')">×</button></div>
+    <div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="d-date"></div>
+    <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="d-client"><option value="">No specific client</option></select></div>
+    <div class="fg"><label class="fl">What did you work on?</label><textarea class="fi" id="d-body" rows="6" placeholder="Notes for your own memory and for handover if you're out…" style="resize:vertical;min-height:120px"></textarea></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveDiarySubmit()">Save Entry</button>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-idea-add">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Capture Idea</div><button class="modal-close" onclick="closeModal('idea-add')">×</button></div>
@@ -1818,7 +1852,10 @@ const S = {
   intelIndex: 0,
   intelTimer: null,
   // Top 3
-  top3: []
+  top3: [],
+  // My Diary
+  diary: [],
+  diaryEditId: null
 };
 
 // ============ USER ROLES ============
@@ -2123,6 +2160,7 @@ function nav(page, data) {
   if (page === 'missions') renderSmmMissions();
   if (page === 'content-overview') renderSmmContentOverview();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
+  if (page === 'diary') renderDiary();
 }
 
 function populateCalFilterDropdowns() {
@@ -3174,23 +3212,20 @@ function renderMyTaskRow(t) {
 }
 
 // ============ TODAY'S FOCUS PANEL ============
-// Scope (c): a task is "mine" if it's on a client this SMM owns OR tagged assign:'smm'.
-// CEO/Co-founder: tasks assigned to their own code. Single source of truth so the
-// Focus panel and BB Intelligence panel can never disagree again.
+// Single source of truth for "my tasks" so the Focus panel and BB Intelligence
+// panel can never disagree again.
+// - SMM users: loadClients() + loadTasks() already scope S.tasks to this SMM's
+//   own clients (via assigned_smm). So S.tasks IS their task set — do not
+//   re-derive it off a column the spec doc gets wrong.
+// - CEO / Co-founder: S.tasks is unscoped; return tasks assigned to them.
+//   assign codes are lowercase ('th','sh','both'); the old code compared to
+//   'TH'/'SH' and never matched, so their Focus panel always showed 0.
 function myScopedTasks() {
   if (!S.currentUser) return [];
   const r = USER_ROLES[S.currentUser];
-  if (r && r.smm) {
-    const smmKey = String(r.smm).toUpperCase();
-    const mineIds = new Set(
-      S.clients.filter(c => String(c.owner || '').toUpperCase() === smmKey)
-               .map(c => Number(c.id))
-    );
-    return S.tasks.filter(t =>
-      (t.client_id != null && mineIds.has(Number(t.client_id))) || t.assign === 'smm'
-    );
-  }
-  return S.tasks.filter(t => t.assign === (r ? r.code : ''));
+  if (r && r.smm) return S.tasks;
+  const code = r ? String(r.code).toLowerCase() : '';
+  return S.tasks.filter(t => t.assign === code || t.assign === 'both');
 }
 
 function renderFocusPanel() {
@@ -4028,6 +4063,143 @@ function intelPrev() {
   renderIntel();
 }
 
+// ============ MY DIARY ============
+function diaryCanSeeAll() {
+  const r = USER_ROLES[S.currentUser];
+  return !!(r && !r.smm); // CEO / Co-founder see everyone's entries (handover)
+}
+
+async function loadDiary() {
+  if (!sb) return;
+  try {
+    let q = sb.from('smm_diary').select('*')
+      .order('entry_date', { ascending: false })
+      .order('created_at', { ascending: false });
+    const r = USER_ROLES[S.currentUser];
+    if (r && r.smm) q = q.eq('author', S.currentUser); // SMM sees only their own
+    const { data, error } = await q;
+    if (error) throw error;
+    S.diary = data || [];
+  } catch (e) { console.error(e); }
+}
+
+function populateDiaryDropdowns() {
+  const optList = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+  const dc = document.getElementById('d-client');
+  if (dc) dc.innerHTML = '<option value="">No specific client</option>' + optList;
+  const fc = document.getElementById('diary-filter-client');
+  if (fc) { const cur = fc.value || 'all'; fc.innerHTML = '<option value="all">All Clients</option>' + optList; fc.value = cur; }
+  const wrap = document.getElementById('diary-author-wrap');
+  if (wrap) wrap.style.display = diaryCanSeeAll() ? '' : 'none';
+  const fa = document.getElementById('diary-filter-author');
+  if (fa && diaryCanSeeAll()) {
+    const authors = [...new Set(S.diary.map(d => d.author))];
+    const cur = fa.value || 'all';
+    fa.innerHTML = '<option value="all">All People</option>' + authors.map(a => `<option value="${a}">${escHtml(titleCase(a))}</option>`).join('');
+    fa.value = cur;
+  }
+}
+
+function renderDiary() {
+  const el = document.getElementById('diary-list');
+  if (!el) return;
+  populateDiaryDropdowns();
+  let rows = [...S.diary];
+  const fa = document.getElementById('diary-filter-author');
+  if (diaryCanSeeAll() && fa && fa.value !== 'all') rows = rows.filter(d => d.author === fa.value);
+  const fc = document.getElementById('diary-filter-client');
+  if (fc && fc.value !== 'all') rows = rows.filter(d => String(d.client_id) === String(fc.value));
+
+  if (!rows.length) {
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">No diary entries yet. Click "+ New Entry" to start your work log.</div>`;
+    return;
+  }
+
+  const groups = {};
+  rows.forEach(d => { (groups[d.entry_date] = groups[d.entry_date] || []).push(d); });
+  const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  el.innerHTML = dates.map(date => {
+    const dObj = new Date(date + 'T00:00:00');
+    const label = isNaN(dObj) ? date : dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    return `<div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px">${label}</div>
+      ${groups[date].map(d => {
+        const cl = d.client_id != null ? S.clients.find(c => Number(c.id) === Number(d.client_id)) : null;
+        const canEdit = d.author === S.currentUser;
+        return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+            ${cl ? `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:var(--accent20);color:var(--accent)">${escHtml(cl.name)}</span>` : ''}
+            ${diaryCanSeeAll() ? `<span style="font-size:10px;color:var(--text3);font-weight:600">${escHtml(titleCase(d.author || ''))}</span>` : ''}
+            <span style="margin-left:auto;display:flex;gap:6px">
+              ${canEdit ? `<button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px" onclick="openDiaryModal(${d.id})">Edit</button><button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;color:var(--red)" onclick="deleteDiaryEntry(${d.id})">Delete</button>` : ''}
+            </span>
+          </div>
+          <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.5">${escHtml(d.body)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function openDiaryModal(id) {
+  populateDiaryDropdowns();
+  S.diaryEditId = id || null;
+  const entry = id ? S.diary.find(d => d.id === id) : null;
+  if (id && !entry) { toast('Entry not found', 'error'); return; }
+  document.getElementById('d-date').value = entry ? entry.entry_date : toDateStr(new Date());
+  document.getElementById('d-client').value = entry && entry.client_id != null ? String(entry.client_id) : '';
+  document.getElementById('d-body').value = entry ? entry.body : '';
+  document.getElementById('modal-diary-title').textContent = id ? 'Edit Diary Entry' : 'New Diary Entry';
+  openModal('diary');
+}
+
+async function saveDiarySubmit() {
+  const body = document.getElementById('d-body').value.trim();
+  if (!body) { toast('Write something first', 'error'); return; }
+  if (!sb) { toast('Not connected', 'error'); return; }
+  const clientVal = document.getElementById('d-client').value;
+  const rec = {
+    author: S.currentUser,
+    entry_date: document.getElementById('d-date').value || toDateStr(new Date()),
+    client_id: clientVal ? Number(clientVal) : null,
+    body: body
+  };
+  try {
+    if (S.diaryEditId) {
+      rec.updated_at = new Date().toISOString();
+      const { data, error } = await sb.from('smm_diary').update(rec).eq('id', S.diaryEditId).select();
+      if (error) throw error;
+      const idx = S.diary.findIndex(d => d.id === S.diaryEditId);
+      if (idx > -1 && data && data[0]) S.diary[idx] = data[0];
+      toast('Entry updated', 'success');
+    } else {
+      const { data, error } = await sb.from('smm_diary').insert([rec]).select();
+      if (error) throw error;
+      if (data && data[0]) S.diary.unshift(data[0]);
+      toast('Entry saved', 'success');
+    }
+    S.diaryEditId = null;
+    closeModal('diary');
+    document.getElementById('d-body').value = '';
+    renderDiary();
+  } catch (e) { console.error(e); toast('Save failed', 'error'); }
+}
+
+async function deleteDiaryEntry(id) {
+  const entry = S.diary.find(d => d.id === id);
+  if (entry && entry.author !== S.currentUser) { toast('You can only delete your own entries', 'error'); return; }
+  if (!confirm('Delete this diary entry?')) return;
+  if (!sb) { toast('Not connected', 'error'); return; }
+  try {
+    const { error } = await sb.from('smm_diary').delete().eq('id', id);
+    if (error) throw error;
+    S.diary = S.diary.filter(d => d.id !== id);
+    renderDiary();
+    toast('Entry deleted', 'success');
+  } catch (e) { console.error(e); toast('Delete failed', 'error'); }
+}
+
 // ============ TOAST ============
 function toast(msg, type) {
   const t = document.getElementById('toast');
@@ -4048,6 +4220,7 @@ async function init() {
   await loadEvents();
   await loadIdeas();
   await loadContentPlans();
+  await loadDiary();
   renderToday();
   renderSOPs();
   // Update My Tasks badge
