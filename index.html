@@ -6,7 +6,7 @@
 <title>SMM WORKSPACE — Business Booster</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
@@ -51,7 +51,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 400;
   min-height: 100vh;
@@ -1572,7 +1572,7 @@ tr:last-child td { border-bottom: none; }
 
     <div class="tab-panel" id="cp-tab-content-plan">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-        <select class="fi" id="cplan-month" style="padding:7px 12px;font-size:13px;font-weight:600;min-width:130px" onchange="renderContentPlan()">
+        <select class="fi" id="cplan-month" style="padding:7px 12px;font-size:13px;font-weight:600;min-width:130px" onchange="this.dataset.userSet='1';renderContentPlan()">
           <option value="1">January</option><option value="2">February</option>
           <option value="3">March</option><option value="4">April</option>
           <option value="5">May</option><option value="6">June</option>
@@ -1580,7 +1580,7 @@ tr:last-child td { border-bottom: none; }
           <option value="9">September</option><option value="10">October</option>
           <option value="11">November</option><option value="12">December</option>
         </select>
-        <select class="fi" id="cplan-year" style="padding:7px 12px;font-size:13px;font-weight:600;width:95px" onchange="renderContentPlan()">
+        <select class="fi" id="cplan-year" style="padding:7px 12px;font-size:13px;font-weight:600;width:95px" onchange="this.dataset.userSet='1';renderContentPlan()">
           <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
         </select>
         <div id="cplan-inline-summary" style="flex:1;font-size:12px;color:var(--text2);font-weight:500"></div>
@@ -2492,6 +2492,8 @@ function openClientProfile(id) {
   document.getElementById('cpf-contact').value = c.contact || '';
   const health = calcClientHealth(c);
   document.getElementById('cpf-health').value = health.auto.toUpperCase() + ' · ' + health.reason;
+  const startRaw = c.start_date || c.created_at || '';
+  document.getElementById('cpf-startdate').value = startRaw ? new Date(startRaw).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
 
   // Stats
   const clientTasks = S.tasks.filter(t => t.client_id == id);
@@ -2510,6 +2512,7 @@ function openClientProfile(id) {
 
   renderClientTasks(id);
   renderClientShoots(id);
+  renderContentPlan();
   document.querySelectorAll('#page-client-profile [data-tfilter]').forEach(b => {
     b.classList.toggle('active', b.dataset.tfilter === S.taskFilter);
     b.onclick = () => { S.taskFilter = b.dataset.tfilter; document.querySelectorAll('[data-tfilter]').forEach(x => x.classList.toggle('active', x.dataset.tfilter === S.taskFilter)); renderClientTasks(id); };
@@ -2608,7 +2611,15 @@ function switchCpTab(tab) {
   document.getElementById('cpt-' + tab).classList.add('active');
   document.querySelectorAll('#page-client-profile .tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('cp-tab-' + tab).classList.add('active');
-
+  if (tab === 'content-plan') {
+    // Auto-set to current month/year if not already set
+    const now = new Date();
+    const mSel = document.getElementById('cplan-month');
+    const ySel = document.getElementById('cplan-year');
+    if (mSel && !mSel.dataset.userSet) mSel.value = now.getMonth() + 1;
+    if (ySel && !ySel.dataset.userSet) ySel.value = now.getFullYear();
+    renderContentPlan();
+  }
 }
 
 // ============ TASKS CRUD ============
@@ -3107,7 +3118,7 @@ function renderMyTasks() {
   const isSmm = USER_ROLES[S.currentUser].smm !== null;
   const f = S.mtFilters;
 
-  let myTasks = isSmm ? [...S.tasks] : S.tasks.filter(t => t.assign === USER_ROLES[S.currentUser].code);
+  let myTasks = myScopedTasks();
   if (f.client !== 'all') myTasks = myTasks.filter(t => String(t.client_id) === String(f.client));
   if (f.priority !== 'all') myTasks = myTasks.filter(t => t.priority === f.priority);
   if (f.category !== 'all') myTasks = myTasks.filter(t => t.category === f.category);
@@ -3154,7 +3165,7 @@ function renderMyTasks() {
       const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : '';
       const priorityColor = t.priority === 'HIGH' ? 'var(--red)' : t.priority === 'MEDIUM' ? 'var(--yellow)' : 'var(--text3)';
       const priorityBg = t.priority === 'HIGH' ? 'var(--r10)' : t.priority === 'MEDIUM' ? 'var(--y10)' : 'var(--bg5)';
-      const assignAvClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
+      const assignAvClass = t.assign === 'th' ? 'av-t' : t.assign === 'sh' ? 'av-s' : 'av-k';
       return `<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''" onclick="${client ? `nav('client-profile',${client.id})` : ''}" style="cursor:${client ? 'pointer' : 'default'}">
         <div class="task-check" onclick="event.stopPropagation();toggleTask(${t.id})" style="flex-shrink:0"></div>
         <div style="flex:1;min-width:0">
@@ -3192,7 +3203,7 @@ function renderMyTaskRow(t) {
   const overdue = !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString();
   const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
   const priorityClass = t.priority === 'HIGH' ? 'tag-high' : t.priority === 'MEDIUM' ? 'tag-medium' : 'tag-low';
-  const assignAvClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
+  const assignAvClass = t.assign === 'th' ? 'av-t' : t.assign === 'sh' ? 'av-s' : 'av-k';
 
   return `<div class="task-row" onclick="${t.client_id ? `nav('client-profile',${t.client_id})` : ''}" style="cursor:pointer">
     <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
@@ -4225,8 +4236,7 @@ async function init() {
   renderSOPs();
   // Update My Tasks badge
   if (S.currentUser) {
-    const userCode = USER_ROLES[S.currentUser].code;
-    const openCount = S.tasks.filter(t => t.assign === userCode && !t.done).length;
+    const openCount = myScopedTasks().length;
     const badge = document.getElementById('sb-mytasks-count');
     if (badge) badge.textContent = openCount;
   }
@@ -4440,10 +4450,13 @@ async function renderSmmContentOverview(){
   let clients=[];
   let plans=[];
   try{
-    const [cr,pr]=await Promise.all([
-      sb.from('clients').select('id,name,package,plan_ready').order('name'),
-      sb.from('content_plans').select('*')
-    ]);
+    const scope=currentSmmScope();
+    const ids=S.clients.map(c=>c.id);
+    let cq=sb.from('clients').select('id,name,package,plan_ready').order('name');
+    if(scope&&ids.length) cq=cq.in('id',ids);
+    let pq=sb.from('content_plans').select('*');
+    if(scope&&ids.length) pq=pq.in('client_id',ids);
+    const [cr,pr]=await Promise.all([cq,pq]);
     clients=cr.data||[];
     plans=pr.data||[];
   }catch(e){clients=S.clients||[];}
@@ -4549,15 +4562,8 @@ async function renderSmmContentOverview(){
 }
 
 function smmOpenClientContentPlan(id){
-  // Navigate to client profile and switch to content plan tab
-  S.selectedClientId=id;
-  nav('client-profile');
-  setTimeout(function(){
-    const tabs=document.querySelectorAll('.tab-btn');
-    tabs.forEach(function(t){
-      if(t.textContent.trim()==='Content Plan'){t.click();}
-    });
-  },300);
+  nav('client-profile', id);
+  setTimeout(function(){ switchCpTab('content-plan'); }, 250);
 }
 
 async function duplicateSmmCPlanItem(id){
