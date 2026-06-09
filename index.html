@@ -793,6 +793,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .type-video { background: var(--p10); color: var(--pink); }
 .type-story { background: rgba(250,204,21,0.12); color: #FACC15; }
 .type-reel  { background: rgba(168,85,247,0.12); color: var(--purple); }
+.type-shoot { background: rgba(255,45,120,0.12); color: #FF2D78; }
 .type-story { background: var(--pu10); color: var(--purple); }
 .type-shoot { background: var(--o10); color: var(--orange); }
 .kanban-card-body { padding: 12px; }
@@ -1769,6 +1770,30 @@ tr:last-child td { border-bottom: none; }
     </select></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="sa-notes" rows="3" placeholder="Location, team, brief"></textarea></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitShootAdd()">Schedule</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-shoot-edit">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Edit Shoot</div><button class="modal-close" onclick="closeModal('shoot-edit')">×</button></div>
+    <input type="hidden" id="se-id">
+    <div class="fg"><label class="fl">Shoot Name</label><input class="fi" id="se-title" placeholder="e.g. Monthly reel shoot"></div>
+    <div class="fg"><label class="fl">Client</label><select class="fi" id="se-client"></select></div>
+    <div class="fg"><label class="fl">Shoot Date</label><input class="fi" type="date" id="se-date"></div>
+    <div class="fg"><label class="fl">Stage</label><select class="fi" id="se-status">
+      <option value="Videos Confirmed">Videos Confirmed</option>
+      <option value="Script Made">Script Made</option>
+      <option value="Script Changes">Script Changes</option>
+      <option value="Final Script">Final Script</option>
+      <option value="Get Shoot Date">Get Shoot Date</option>
+      <option value="Shoot Date Set">Shoot Date Set</option>
+      <option value="Shot">Shot</option>
+    </select></div>
+    <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="se-notes" rows="3" placeholder="Location, team, brief"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="submitShootEdit()">Save</button>
+      <button class="btn btn-ghost" style="justify-content:center;color:var(--red);border-color:var(--red)" onclick="deleteShootCard()">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -2877,12 +2902,23 @@ function renderShoots() {
       if (shootStage === 'delivered') shootStage = 'Shot';
       if (shootStage !== s) return false;
       if (S.filterShootClient !== 'all' && String(sh.client_id) !== String(S.filterShootClient)) return false;
-      if (S.filterShootQ !== 'all' && sh.quarter !== S.filterShootQ) return false;
+      if (S.filterShootQ !== 'all') {
+        const sd = sh.shoot_date ? new Date(sh.shoot_date) : null;
+        const q = sd ? 'Q' + Math.ceil((sd.getMonth() + 1) / 3) : null;
+        if (q !== S.filterShootQ) return false;
+      }
       return true;
     });
     const counter = document.getElementById('sc-' + key);
     if (counter) counter.textContent = items.length;
-    items.forEach(sh => zone.appendChild(buildShootCard(sh)));
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:var(--text2);font-size:11px;text-align:center;padding:20px 8px;border:1px dashed var(--border);border-radius:8px;margin:4px 0;line-height:1.4';
+      empty.textContent = 'Nothing here yet';
+      zone.appendChild(empty);
+    } else {
+      items.forEach(sh => zone.appendChild(buildShootCard(sh)));
+    }
   });
 }
 
@@ -2901,17 +2937,17 @@ function buildShootCard(sh) {
   const stageColor = stageColors[shootStage] || '#7B8099';
   const dateStr = sh.shoot_date ? new Date(sh.shoot_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD';
   card.innerHTML = `
-    <div class="card-status-header">
-      <span style="background:${stageColor}22;color:${stageColor};border:1px solid ${stageColor}44;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase">${shootStage}</span>
-      <span class="card-type-badge type-shoot">SHOOT</span>
-    </div>
-    <div class="kanban-card-body">
+    <div class="kanban-card-body" style="padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span class="card-type-badge type-shoot">SHOOT</span>
+        <span style="font-size:10px;color:var(--text2)">${dateStr}</span>
+      </div>
       <div class="kanban-card-client">${escHtml(clientName)}</div>
       <div class="kanban-card-title">${escHtml(sh.title)}</div>
-      <div class="kanban-card-foot"><span>${dateStr}</span></div>
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', sh.id); e.dataTransfer.setData('kind', 'shoot'); });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  card.addEventListener('click', () => openShootCard(sh.id));
   return card;
 }
 
@@ -2989,6 +3025,56 @@ async function updateShootStatus(id, status) {
     await sb.from('smm_shoots').update({ status, stage: status }).eq('id', id);
     toast('Shoot moved to ' + status.toUpperCase(), 'success');
   } catch (e) { item.status = old; item.stage = old; renderShoots(); toast('Failed', 'error'); }
+}
+
+function openShootCard(id) {
+  const sh = S.shoots.find(s => s.id == id);
+  if (!sh) return;
+  document.getElementById('se-id').value = sh.id;
+  document.getElementById('se-title').value = sh.title || '';
+  document.getElementById('se-date').value = sh.shoot_date ? sh.shoot_date.split('T')[0] : '';
+  document.getElementById('se-notes').value = sh.notes || '';
+  const stage = sh.stage || sh.status || 'Videos Confirmed';
+  document.getElementById('se-status').value = stage;
+  const seClient = document.getElementById('se-client');
+  seClient.innerHTML = S.clients.map(c => `<option value="${c.id}"${c.id == sh.client_id ? ' selected' : ''}>${c.name}</option>`).join('');
+  openModal('shoot-edit');
+}
+
+async function submitShootEdit() {
+  const id = document.getElementById('se-id').value;
+  const title = document.getElementById('se-title').value.trim();
+  const client_id = document.getElementById('se-client').value;
+  const shoot_date = document.getElementById('se-date').value || null;
+  const status = document.getElementById('se-status').value;
+  const notes = document.getElementById('se-notes').value.trim();
+  if (!title) { toast('Title required', 'error'); return; }
+  const sh = S.shoots.find(s => s.id == id);
+  if (!sh) return;
+  const old = { ...sh };
+  Object.assign(sh, { title, client_id: Number(client_id), shoot_date, status, stage: status, notes });
+  renderShoots();
+  renderUpcomingShoots();
+  closeModal('shoot-edit');
+  try {
+    const { error } = await sb.from('smm_shoots').update({ title, client_id: Number(client_id), shoot_date, status, stage: status, notes }).eq('id', id);
+    if (error) throw error;
+    toast('Saved', 'success');
+  } catch (e) { Object.assign(sh, old); renderShoots(); toast('Save failed', 'error'); }
+}
+
+async function deleteShootCard() {
+  const id = document.getElementById('se-id').value;
+  if (!confirm('Delete this shoot? This cannot be undone.')) return;
+  closeModal('shoot-edit');
+  const idx = S.shoots.findIndex(s => s.id == id);
+  if (idx > -1) S.shoots.splice(idx, 1);
+  renderShoots();
+  renderUpcomingShoots();
+  try {
+    await sb.from('smm_shoots').delete().eq('id', id);
+    toast('Shoot deleted', 'success');
+  } catch (e) { toast('Delete failed', 'error'); await loadShoots(); renderShoots(); }
 }
 
 // ============ CALENDAR ============
