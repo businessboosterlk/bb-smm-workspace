@@ -791,6 +791,8 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 .type-post { background: var(--c10); color: var(--cyan); }
 .type-video { background: var(--p10); color: var(--pink); }
+.type-story { background: rgba(250,204,21,0.12); color: #FACC15; }
+.type-reel  { background: rgba(168,85,247,0.12); color: var(--purple); }
 .type-story { background: var(--pu10); color: var(--purple); }
 .type-shoot { background: var(--o10); color: var(--orange); }
 .kanban-card-body { padding: 12px; }
@@ -1715,6 +1717,38 @@ tr:last-child td { border-bottom: none; }
     </select></div>
     <div class="fg"><label class="fl">Scheduled Date</label><input class="fi" type="date" id="ca-date"></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitContentAdd()">Add Card</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-content-edit">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Edit Card</div><button class="modal-close" onclick="closeModal('content-edit')">×</button></div>
+    <input type="hidden" id="ce-id">
+    <div class="fg"><label class="fl">Title</label><input class="fi" id="ce-title" placeholder="e.g. Friday reel"></div>
+    <div class="fg"><label class="fl">Client</label><select class="fi" id="ce-client"></select></div>
+    <div class="fg"><label class="fl">Content Type</label><select class="fi" id="ce-type">
+      <option value="post">Post</option>
+      <option value="video">Video</option>
+      <option value="story">Story</option>
+      <option value="reel">Reel</option>
+    </select></div>
+    <div class="fg"><label class="fl">Stage</label><select class="fi" id="ce-status">
+      <option value="brief">Brief</option>
+      <option value="ideas">Ideas</option>
+      <option value="editing">Editing</option>
+      <option value="team-review">Team Review</option>
+      <option value="content-plan">Make Content Plan</option>
+      <option value="send-client">Send to Client</option>
+      <option value="client-changes">Client Changes</option>
+      <option value="client-approval">Client Approval</option>
+      <option value="drive">Add to Drive</option>
+      <option value="posted">Posted</option>
+    </select></div>
+    <div class="fg"><label class="fl">Scheduled Date</label><input class="fi" type="date" id="ce-date"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="submitContentEdit()">Save</button>
+      <button class="btn btn-ghost" style="justify-content:center;color:var(--red);border-color:var(--red)" onclick="deleteContentCard()">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -2737,7 +2771,14 @@ function renderContent() {
     });
     const countEl = document.getElementById(CONTENT_STAGE_IDS[s]);
     if (countEl) countEl.textContent = items.length;
-    items.forEach(i => zone.appendChild(buildContentCard(i)));
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:var(--text2);font-size:11px;text-align:center;padding:20px 8px;border:1px dashed var(--border);border-radius:8px;margin:4px 0;line-height:1.4';
+      empty.textContent = 'Nothing here yet';
+      zone.appendChild(empty);
+    } else {
+      items.forEach(i => zone.appendChild(buildContentCard(i)));
+    }
   });
 }
 
@@ -2753,17 +2794,17 @@ function buildContentCard(item) {
   const stageColor = CONTENT_STAGE_COLORS[item.status] || 'var(--text2)';
   const dateStr = item.scheduled_date ? new Date(item.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
   card.innerHTML = `
-    <div class="card-status-header">
-      <span style="color:${stageColor};font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em">${statusLbl}</span>
-      <span class="card-type-badge ${typeClass}">${(item.content_type || 'post').toUpperCase()}</span>
-    </div>
-    <div class="kanban-card-body">
+    <div class="kanban-card-body" style="padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span class="card-type-badge ${typeClass}">${(item.content_type || 'post').toUpperCase()}</span>
+        <span style="font-size:10px;color:var(--text2)">${dateStr}</span>
+      </div>
       <div class="kanban-card-client">${escHtml(clientName)}</div>
       <div class="kanban-card-title">${escHtml(item.title)}</div>
-      <div class="kanban-card-foot"><span>${dateStr}</span></div>
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', item.id); e.dataTransfer.setData('kind', 'content'); });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  card.addEventListener('click', () => openContentCard(item.id));
   return card;
 }
 
@@ -3605,9 +3646,58 @@ async function submitContentAdd() {
   const status = document.getElementById('ca-status').value;
   const scheduled_date = document.getElementById('ca-date').value || null;
   if (!title) { toast('Title required', 'error'); return; }
-  await createContent({ title, client_id, content_type, status, scheduled_date });
+  if (!client_id) { toast('Select a client', 'error'); return; }
+  await createContent({ title, client_id: Number(client_id), content_type, status, scheduled_date });
   document.getElementById('ca-title').value = '';
   closeModal('content-add');
+}
+
+function openContentCard(id) {
+  const item = S.content.find(c => c.id == id);
+  if (!item) return;
+  document.getElementById('ce-id').value = item.id;
+  document.getElementById('ce-title').value = item.title || '';
+  document.getElementById('ce-type').value = item.content_type || 'post';
+  document.getElementById('ce-status').value = item.status || 'brief';
+  document.getElementById('ce-date').value = item.scheduled_date ? item.scheduled_date.split('T')[0] : '';
+  // Populate client dropdown
+  const ceClient = document.getElementById('ce-client');
+  ceClient.innerHTML = S.clients.map(c => `<option value="${c.id}"${c.id == item.client_id ? ' selected' : ''}>${c.name}</option>`).join('');
+  openModal('content-edit');
+}
+
+async function submitContentEdit() {
+  const id = document.getElementById('ce-id').value;
+  const title = document.getElementById('ce-title').value.trim();
+  const client_id = document.getElementById('ce-client').value;
+  const content_type = document.getElementById('ce-type').value;
+  const status = document.getElementById('ce-status').value;
+  const scheduled_date = document.getElementById('ce-date').value || null;
+  if (!title) { toast('Title required', 'error'); return; }
+  const item = S.content.find(c => c.id == id);
+  if (!item) return;
+  const old = { ...item };
+  Object.assign(item, { title, client_id: Number(client_id), content_type, status, scheduled_date });
+  renderContent();
+  closeModal('content-edit');
+  try {
+    const { error } = await sb.from('smm_content').update({ title, client_id: Number(client_id), content_type, status, scheduled_date }).eq('id', id);
+    if (error) throw error;
+    toast('Saved', 'success');
+  } catch (e) { Object.assign(item, old); renderContent(); toast('Save failed', 'error'); }
+}
+
+async function deleteContentCard() {
+  const id = document.getElementById('ce-id').value;
+  if (!confirm('Delete this card? This cannot be undone.')) return;
+  closeModal('content-edit');
+  const idx = S.content.findIndex(c => c.id == id);
+  if (idx > -1) S.content.splice(idx, 1);
+  renderContent();
+  try {
+    await sb.from('smm_content').delete().eq('id', id);
+    toast('Card deleted', 'success');
+  } catch (e) { toast('Delete failed', 'error'); await loadContent(); renderContent(); }
 }
 
 async function submitShootAdd() {
