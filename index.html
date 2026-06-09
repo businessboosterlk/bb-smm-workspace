@@ -772,6 +772,23 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   transition: border-color 0.15s; user-select: none; overflow: hidden;
 }
 .kanban-card:hover { border-color: var(--border2); }
+.sched-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:28px; }
+.sched-day { background:var(--bg3); border:1px solid var(--border); border-radius:10px; min-height:120px; overflow:hidden; }
+.sched-day-hdr { padding:8px 10px 6px; border-bottom:1px solid var(--border); }
+.sched-day-name { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); }
+.sched-day-num { font-family:'Poppins',sans-serif; font-size:20px; font-weight:800; color:var(--text1); line-height:1.1; }
+.sched-day.today-col .sched-day-num { color:var(--cyan); }
+.sched-day.today-col { border-color:rgba(0,229,255,0.3); }
+.sched-day-cards { padding:6px; display:flex; flex-direction:column; gap:4px; }
+.sched-card { background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:7px 8px; cursor:pointer; transition:background 0.15s; }
+.sched-card:hover { background:rgba(255,255,255,0.06); }
+.sched-card-client { font-size:9px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px; }
+.sched-card-title { font-size:11px; font-weight:600; color:var(--text1); line-height:1.3; }
+.sched-unscheduled { }
+.sched-unsched-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; }
+.sched-unsched-card { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:12px 14px; cursor:pointer; transition:background 0.15s; }
+.sched-unsched-card:hover { background:var(--bg2); }
+@media(max-width:768px) { .sched-grid { grid-template-columns:repeat(7,minmax(100px,1fr)); overflow-x:auto; } }
 .kanban-card.dragging { opacity: 0.4; }
 .card-status-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -793,6 +810,25 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .type-video { background: var(--p10); color: var(--pink); }
 .type-story { background: var(--pu10); color: var(--purple); }
 .type-shoot { background: var(--o10); color: var(--orange); }
+.sched-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:28px; }
+.sched-day { background:var(--bg3); border:1px solid var(--border); border-radius:10px; min-height:120px; overflow:hidden; }
+.sched-day-hdr { padding:8px 10px 6px; border-bottom:1px solid var(--border); }
+.sched-day-name { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); }
+.sched-day-num { font-family:'Poppins',sans-serif; font-size:20px; font-weight:800; color:var(--text1); line-height:1.1; }
+.sched-day.today-col .sched-day-num { color:var(--cyan); }
+.sched-day.today-col { border-color:rgba(0,229,255,0.3); }
+.sched-day-cards { padding:6px; display:flex; flex-direction:column; gap:4px; }
+.sched-card { background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:7px 8px; cursor:pointer; transition:background 0.15s; }
+.sched-card:hover { background:rgba(255,255,255,0.06); }
+.sched-card-client { font-size:9px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px; }
+.sched-card-title { font-size:11px; font-weight:600; color:var(--text1); line-height:1.3; }
+.sched-unscheduled { }
+.sched-unsched-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; }
+.sched-unsched-card { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:12px 14px; cursor:pointer; transition:background 0.15s; }
+.sched-unsched-card:hover { background:var(--bg2); }
+@media(max-width:768px) { .sched-grid { grid-template-columns:repeat(7,minmax(100px,1fr)); overflow-x:auto; } }
+.kanban-card.dragging { opacity:0.4; transform:scale(0.97); }
+.kanban-cards.drag-over { background:rgba(0,229,255,0.06); border-radius:8px; outline:2px dashed var(--cyan); outline-offset:-2px; }
 .aq-empty { font-size:11px;color:var(--text3);padding:16px 18px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;text-align:center; }
 .aq-row { display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 16px;transition:background 0.15s; }
 .aq-row:hover { background:var(--bg2); }
@@ -1112,6 +1148,11 @@ tr:last-child td { border-bottom: none; }
 
     <div class="sb-grp">Pipelines</div>
 
+    <button class="sb-item" data-page="content-pipeline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
+      Content Pipeline
+      <span class="sb-badge" id="sb-pipeline-count">0</span>
+    </button>
     <button class="sb-item" data-page="shoot-pipeline">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/></svg>
       Shoot Pipeline
@@ -1120,6 +1161,10 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Approval Queue
       <span class="sb-badge" id="sb-approval-count">0</span>
+    </button>
+    <button class="sb-item" data-page="scheduler">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+      Scheduler
     </button>
 
     <div class="sb-grp">Accounts</div>
@@ -1431,6 +1476,39 @@ tr:last-child td { border-bottom: none; }
     </div>
   </section>
 
+
+
+  <!-- ============ SCHEDULER ============ -->
+  <section class="page" id="page-scheduler">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Scheduler</div>
+        <div class="ph-sub" id="sched-summary">Weekly content schedule</div>
+      </div>
+      <div class="ph-right" style="gap:8px">
+        <button class="btn btn-ghost" onclick="schedNav(-1)">← Prev</button>
+        <button class="btn btn-ghost" onclick="schedNav(0)" id="sched-today-btn">This Week</button>
+        <button class="btn btn-ghost" onclick="schedNav(1)">Next →</button>
+        <select class="fi" id="sched-client-filter" style="width:auto;min-width:160px"><option value="all">All Clients</option></select>
+      </div>
+    </div>
+
+    <div id="sched-week-label" style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em"></div>
+
+    <!-- Weekly grid -->
+    <div class="sched-grid" id="sched-grid"></div>
+
+    <!-- Unscheduled bucket -->
+    <div class="sched-unscheduled">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--orange);flex-shrink:0"></div>
+        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:0.08em">Needs a Date</div>
+        <div id="sched-unsched-cnt" style="background:rgba(255,107,43,0.15);color:var(--orange);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">0</div>
+        <div style="font-size:11px;color:var(--text3)">— approved or in-pipeline, no scheduled date set</div>
+      </div>
+      <div class="sched-unsched-grid" id="sched-unsched-list"></div>
+    </div>
+  </section>
 
   <!-- ============ APPROVAL QUEUE ============ -->
   <section class="page" id="page-approval-queue">
@@ -2225,6 +2303,7 @@ function nav(page, data) {
   if (page === 'content-pipeline') renderContent();
   if (page === 'shoot-pipeline') { renderShoots(); renderUpcomingShoots(); }
   if (page === 'approval-queue') renderApprovalQueue();
+  if (page === 'scheduler') renderScheduler();
   if (page === 'clients') renderClients();
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
@@ -2880,6 +2959,172 @@ async function updateContentStatus(id, status) {
 }
 
 
+
+
+// ============ SCHEDULER ============
+if (!window.S_SCHED_OFFSET) window.S_SCHED_OFFSET = 0;
+
+function schedNav(dir) {
+  if (dir === 0) window.S_SCHED_OFFSET = 0;
+  else window.S_SCHED_OFFSET = (window.S_SCHED_OFFSET || 0) + dir;
+  renderScheduler();
+}
+
+function getWeekStart(offset) {
+  const now = new Date();
+  const day = now.getDay() === 0 ? 6 : now.getDay() - 1; // Mon=0
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day + (offset * 7));
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+function renderScheduler() {
+  const scope = currentSmmScope();
+  const cf = document.getElementById('sched-client-filter');
+  const filterClient = cf ? cf.value : 'all';
+  const offset = window.S_SCHED_OFFSET || 0;
+
+  // Populate client dropdown once
+  if (cf && cf.options.length <= 1) {
+    const scopedClients = scope ? S.clients.filter(c => c.assigned_smm === scope) : S.clients;
+    cf.innerHTML = '<option value="all">All Clients</option>' +
+      scopedClients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    cf.value = filterClient;
+    cf.onchange = () => renderScheduler();
+  }
+
+  // Get scoped content
+  let items = S.content.filter(c => c.status !== 'posted');
+  if (scope) {
+    const myIds = S.clients.filter(c => c.assigned_smm === scope).map(c => c.id);
+    items = items.filter(c => myIds.includes(Number(c.client_id)));
+  }
+  if (filterClient !== 'all') items = items.filter(c => String(c.client_id) === String(filterClient));
+
+  // Week range
+  const weekStart = getWeekStart(offset);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+
+  // Week label
+  const opts = { day:'numeric', month:'short' };
+  const we = new Date(weekEnd); we.setDate(we.getDate()-1);
+  const labelEl = document.getElementById('sched-week-label');
+  if (labelEl) labelEl.textContent = weekStart.toLocaleDateString('en-GB', opts) + ' — ' + we.toLocaleDateString('en-GB', opts) + (offset === 0 ? '  (This Week)' : offset === 1 ? '  (Next Week)' : offset === -1 ? '  (Last Week)' : '');
+
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const grid = document.getElementById('sched-grid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  DAYS.forEach((dayName, i) => {
+    const dayDate = new Date(weekStart);
+    dayDate.setDate(weekStart.getDate() + i);
+    const isToday = dayDate.getTime() === today.getTime();
+
+    // Items scheduled this day
+    const dayItems = items.filter(c => {
+      if (!c.scheduled_date) return false;
+      const d = new Date(c.scheduled_date); d.setHours(0,0,0,0);
+      return d.getTime() === dayDate.getTime();
+    });
+
+    const col = document.createElement('div');
+    col.className = 'sched-day' + (isToday ? ' today-col' : '');
+
+    const stageColors = {
+      'brief':'var(--cyan)','ideas':'var(--purple)','editing':'var(--orange)',
+      'team-review':'var(--pink)','content-plan':'#FBBF24','send-client':'#60A5FA',
+      'client-changes':'var(--red)','client-approval':'#A3E635','drive':'var(--purple)','posted':'var(--green)'
+    };
+
+    const cardsHtml = dayItems.map(item => {
+      const client = S.clients.find(c => c.id == item.client_id);
+      const clientName = client ? client.name : '—';
+      const typeClass = 'type-' + (item.content_type || 'post');
+      const stageColor = stageColors[item.status] || 'var(--text2)';
+      return `<div class="sched-card" onclick="openSchedItem(${item.id})" title="${escHtml(item.title)}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <span class="card-type-badge ${typeClass}" style="font-size:8px;padding:1px 5px">${(item.content_type||'post').toUpperCase()}</span>
+          <span style="width:6px;height:6px;border-radius:50%;background:${stageColor};display:inline-block;flex-shrink:0"></span>
+        </div>
+        <div class="sched-card-client">${escHtml(clientName)}</div>
+        <div class="sched-card-title">${escHtml(item.title)}</div>
+      </div>`;
+    }).join('');
+
+    col.innerHTML = `
+      <div class="sched-day-hdr">
+        <div class="sched-day-name">${dayName}</div>
+        <div class="sched-day-num">${dayDate.getDate()}</div>
+      </div>
+      <div class="sched-day-cards">${cardsHtml || '<div style="font-size:10px;color:var(--text3);padding:8px 4px;text-align:center">—</div>'}</div>`;
+    grid.appendChild(col);
+  });
+
+  // Unscheduled bucket — items without a date, not yet posted
+  const unscheduled = items.filter(c => !c.scheduled_date);
+  const cntEl = document.getElementById('sched-unsched-cnt');
+  if (cntEl) cntEl.textContent = unscheduled.length;
+
+  const unschedList = document.getElementById('sched-unsched-list');
+  if (!unschedList) return;
+
+  if (unscheduled.length === 0) {
+    unschedList.innerHTML = '<div class="aq-empty">All active content has a scheduled date ✓</div>';
+    return;
+  }
+
+  const stageLabels = {
+    'brief':'Brief','ideas':'Ideas','editing':'Editing','team-review':'Team Review',
+    'content-plan':'Content Plan','send-client':'Sent to Client',
+    'client-changes':'Changes Needed','client-approval':'Approved','drive':'Add to Drive'
+  };
+
+  unschedList.innerHTML = unscheduled.map(item => {
+    const client = S.clients.find(c => c.id == item.client_id);
+    const clientName = client ? client.name : '—';
+    const typeClass = 'type-' + (item.content_type || 'post');
+    const stageLbl = stageLabels[item.status] || item.status || '—';
+    return `<div class="sched-unsched-card" onclick="openSchedItem(${item.id})">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span class="card-type-badge ${typeClass}">${(item.content_type||'post').toUpperCase()}</span>
+        <span style="font-size:10px;color:var(--text3)">${escHtml(stageLbl)}</span>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">${escHtml(clientName)}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text1);margin-bottom:8px">${escHtml(item.title)}</div>
+      <button class="aq-btn aq-btn-blue" style="font-size:10px" onclick="event.stopPropagation();openSchedSetDate(${item.id})">+ Set Date</button>
+    </div>`;
+  }).join('');
+
+  // Summary
+  const sumEl = document.getElementById('sched-summary');
+  if (sumEl) {
+    const thisWeekCount = items.filter(c => {
+      if (!c.scheduled_date) return false;
+      const d = new Date(c.scheduled_date); d.setHours(0,0,0,0);
+      return d >= weekStart && d < weekEnd;
+    }).length;
+    sumEl.textContent = thisWeekCount + ' item' + (thisWeekCount !== 1 ? 's' : '') + ' scheduled' + (offset === 0 ? ' this week' : '') + (unscheduled.length > 0 ? ' · ' + unscheduled.length + ' need a date' : '');
+    sumEl.style.color = unscheduled.length > 0 ? 'var(--orange)' : 'var(--text3)';
+  }
+}
+
+function openSchedItem(id) {
+  // Reuse the content pipeline edit modal
+  const item = S.content.find(c => c.id == id);
+  if (!item) return;
+  openContentCard(id);
+}
+
+function openSchedSetDate(id) {
+  const item = S.content.find(c => c.id == id);
+  if (!item) return;
+  openContentCard(id);
+}
+
 // ============ APPROVAL QUEUE ============
 function renderApprovalQueue() {
   const scope = currentSmmScope();
@@ -2998,6 +3243,17 @@ async function moveApproval(id, newStatus) {
     const labels = { 'client-changes':'Changes Requested','client-approval':'Approved','editing':'Back to Editing','drive':'Added to Drive','posted':'Posted' };
     toast(labels[newStatus] || newStatus, 'success');
   } catch (e) { item.status = old; renderApprovalQueue(); toast('Update failed', 'error'); }
+}
+
+function updatePipelineBadge() {
+  const scope = currentSmmScope();
+  let items = S.content.filter(c => !['posted','drive'].includes(c.status));
+  if (scope) {
+    const myIds = S.clients.filter(c => c.assigned_smm === scope).map(c => c.id);
+    items = items.filter(c => myIds.includes(Number(c.client_id)));
+  }
+  const badge = document.getElementById('sb-pipeline-count');
+  if (badge) { badge.textContent = items.length; badge.style.display = items.length > 0 ? '' : 'none'; }
 }
 
 function updateApprovalBadge() {
@@ -4427,6 +4683,7 @@ async function init() {
   await loadDiary();
   renderToday();
   updateApprovalBadge();
+  updatePipelineBadge();
   renderSOPs();
   // Update My Tasks badge
   if (S.currentUser) {
