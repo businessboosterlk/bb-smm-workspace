@@ -6,7 +6,7 @@
 <title>SMM WORKSPACE — Business Booster</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
@@ -51,7 +51,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 13px;
   font-weight: 400;
   min-height: 100vh;
@@ -791,11 +791,21 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 .type-post { background: var(--c10); color: var(--cyan); }
 .type-video { background: var(--p10); color: var(--pink); }
-.type-story { background: rgba(250,204,21,0.12); color: #FACC15; }
-.type-reel  { background: rgba(168,85,247,0.12); color: var(--purple); }
-.type-shoot { background: rgba(255,45,120,0.12); color: #FF2D78; }
 .type-story { background: var(--pu10); color: var(--purple); }
 .type-shoot { background: var(--o10); color: var(--orange); }
+.aq-empty { font-size:11px;color:var(--text3);padding:16px 18px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;text-align:center; }
+.aq-row { display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 16px;transition:background 0.15s; }
+.aq-row:hover { background:var(--bg2); }
+.aq-row-info { flex:1;min-width:0; }
+.aq-row-title { font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.aq-row-meta { font-size:11px;color:var(--text3);margin-top:3px; }
+.aq-actions { display:flex;gap:6px;flex-shrink:0; }
+.aq-btn { font-size:11px;font-weight:600;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;transition:opacity 0.15s; }
+.aq-btn:hover { opacity:0.8; }
+.aq-btn-red { background:rgba(255,82,82,0.15);color:var(--red); }
+.aq-btn-green { background:rgba(163,230,53,0.15);color:#A3E635; }
+.aq-btn-blue { background:rgba(96,165,250,0.15);color:#60A5FA; }
+.aq-btn-purple { background:rgba(168,85,247,0.15);color:var(--purple); }
 .kanban-card-body { padding: 12px; }
 .kanban-card-client {
   font-size: 10px; color: var(--text3); letter-spacing: 0.08em;
@@ -1106,6 +1116,11 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/></svg>
       Shoot Pipeline
     </button>
+    <button class="sb-item" data-page="approval-queue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Approval Queue
+      <span class="sb-badge" id="sb-approval-count">0</span>
+    </button>
 
     <div class="sb-grp">Accounts</div>
     <button class="sb-item" data-page="content-overview">
@@ -1244,7 +1259,7 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ MY TASKS ============ -->
   <section class="page" id="page-my-tasks">
     <div class="ph">
-      <div><div class="ph-title">My Tasks</div><div class="ph-sub">All tasks across your clients</div><div id="mt-summary" style="font-size:12px;font-weight:600;margin-top:2px"></div></div>
+      <div><div class="ph-title">My Tasks</div><div class="ph-sub">All tasks across your clients</div></div>
       <div class="ph-right">
         <button class="btn btn-primary btn-sm" onclick="openGlobalTaskModal()">+ Add Task</button>
       </div>
@@ -1416,6 +1431,59 @@ tr:last-child td { border-bottom: none; }
     </div>
   </section>
 
+
+  <!-- ============ APPROVAL QUEUE ============ -->
+  <section class="page" id="page-approval-queue">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Approval Queue</div>
+        <div class="ph-sub" id="aq-summary">Client content awaiting action</div>
+      </div>
+      <div class="ph-right">
+        <select class="fi" id="aq-client-filter" style="width:auto;min-width:180px"><option value="all">All Clients</option></select>
+      </div>
+    </div>
+
+    <!-- AWAITING RESPONSE -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:#60A5FA;flex-shrink:0"></div>
+        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:#60A5FA;text-transform:uppercase;letter-spacing:0.08em">Awaiting Response</div>
+        <div id="aq-cnt-send" style="background:rgba(96,165,250,0.15);color:#60A5FA;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">0</div>
+        <div style="font-size:11px;color:var(--text3);margin-left:2px">— sent to client, waiting</div>
+      </div>
+      <div id="aq-list-send" style="display:flex;flex-direction:column;gap:6px">
+        <div class="aq-empty">Nothing waiting — all clear ✓</div>
+      </div>
+    </div>
+
+    <!-- CHANGES NEEDED -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
+        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.08em">Changes Needed</div>
+        <div id="aq-cnt-changes" style="background:rgba(255,82,82,0.15);color:var(--red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">0</div>
+        <div style="font-size:11px;color:var(--text3);margin-left:2px">— client feedback received, needs rework</div>
+      </div>
+      <div id="aq-list-changes" style="display:flex;flex-direction:column;gap:6px">
+        <div class="aq-empty">No changes requested ✓</div>
+      </div>
+    </div>
+
+    <!-- APPROVED -->
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:#A3E635;flex-shrink:0"></div>
+        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:#A3E635;text-transform:uppercase;letter-spacing:0.08em">Approved</div>
+        <div id="aq-cnt-approved" style="background:rgba(163,230,53,0.15);color:#A3E635;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">0</div>
+        <div style="font-size:11px;color:var(--text3);margin-left:2px">— ready to add to Drive and post</div>
+      </div>
+      <div id="aq-list-approved" style="display:flex;flex-direction:column;gap:6px">
+        <div class="aq-empty">Nothing approved yet</div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ SHOOT PIPELINE ============ -->
   <section class="page" id="page-shoot-pipeline">
     <div class="ph">
@@ -1575,7 +1643,7 @@ tr:last-child td { border-bottom: none; }
 
     <div class="tab-panel" id="cp-tab-content-plan">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-        <select class="fi" id="cplan-month" style="padding:7px 12px;font-size:13px;font-weight:600;min-width:130px" onchange="this.dataset.userSet='1';renderContentPlan()">
+        <select class="fi" id="cplan-month" style="padding:7px 12px;font-size:13px;font-weight:600;min-width:130px" onchange="renderContentPlan()">
           <option value="1">January</option><option value="2">February</option>
           <option value="3">March</option><option value="4">April</option>
           <option value="5">May</option><option value="6">June</option>
@@ -1583,7 +1651,7 @@ tr:last-child td { border-bottom: none; }
           <option value="9">September</option><option value="10">October</option>
           <option value="11">November</option><option value="12">December</option>
         </select>
-        <select class="fi" id="cplan-year" style="padding:7px 12px;font-size:13px;font-weight:600;width:95px" onchange="this.dataset.userSet='1';renderContentPlan()">
+        <select class="fi" id="cplan-year" style="padding:7px 12px;font-size:13px;font-weight:600;width:95px" onchange="renderContentPlan()">
           <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
         </select>
         <div id="cplan-inline-summary" style="flex:1;font-size:12px;color:var(--text2);font-weight:500"></div>
@@ -1721,38 +1789,6 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
-<div class="modal-bg" id="modal-content-edit">
-  <div class="modal">
-    <div class="modal-head"><div class="modal-title">Edit Card</div><button class="modal-close" onclick="closeModal('content-edit')">×</button></div>
-    <input type="hidden" id="ce-id">
-    <div class="fg"><label class="fl">Title</label><input class="fi" id="ce-title" placeholder="e.g. Friday reel"></div>
-    <div class="fg"><label class="fl">Client</label><select class="fi" id="ce-client"></select></div>
-    <div class="fg"><label class="fl">Content Type</label><select class="fi" id="ce-type">
-      <option value="post">Post</option>
-      <option value="video">Video</option>
-      <option value="story">Story</option>
-      <option value="reel">Reel</option>
-    </select></div>
-    <div class="fg"><label class="fl">Stage</label><select class="fi" id="ce-status">
-      <option value="brief">Brief</option>
-      <option value="ideas">Ideas</option>
-      <option value="editing">Editing</option>
-      <option value="team-review">Team Review</option>
-      <option value="content-plan">Make Content Plan</option>
-      <option value="send-client">Send to Client</option>
-      <option value="client-changes">Client Changes</option>
-      <option value="client-approval">Client Approval</option>
-      <option value="drive">Add to Drive</option>
-      <option value="posted">Posted</option>
-    </select></div>
-    <div class="fg"><label class="fl">Scheduled Date</label><input class="fi" type="date" id="ce-date"></div>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="submitContentEdit()">Save</button>
-      <button class="btn btn-ghost" style="justify-content:center;color:var(--red);border-color:var(--red)" onclick="deleteContentCard()">Delete</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-bg" id="modal-shoot-add">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Schedule Shoot</div><button class="modal-close" onclick="closeModal('shoot-add')">×</button></div>
@@ -1770,30 +1806,6 @@ tr:last-child td { border-bottom: none; }
     </select></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="sa-notes" rows="3" placeholder="Location, team, brief"></textarea></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitShootAdd()">Schedule</button>
-  </div>
-</div>
-
-<div class="modal-bg" id="modal-shoot-edit">
-  <div class="modal">
-    <div class="modal-head"><div class="modal-title">Edit Shoot</div><button class="modal-close" onclick="closeModal('shoot-edit')">×</button></div>
-    <input type="hidden" id="se-id">
-    <div class="fg"><label class="fl">Shoot Name</label><input class="fi" id="se-title" placeholder="e.g. Monthly reel shoot"></div>
-    <div class="fg"><label class="fl">Client</label><select class="fi" id="se-client"></select></div>
-    <div class="fg"><label class="fl">Shoot Date</label><input class="fi" type="date" id="se-date"></div>
-    <div class="fg"><label class="fl">Stage</label><select class="fi" id="se-status">
-      <option value="Videos Confirmed">Videos Confirmed</option>
-      <option value="Script Made">Script Made</option>
-      <option value="Script Changes">Script Changes</option>
-      <option value="Final Script">Final Script</option>
-      <option value="Get Shoot Date">Get Shoot Date</option>
-      <option value="Shoot Date Set">Shoot Date Set</option>
-      <option value="Shot">Shot</option>
-    </select></div>
-    <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="se-notes" rows="3" placeholder="Location, team, brief"></textarea></div>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="submitShootEdit()">Save</button>
-      <button class="btn btn-ghost" style="justify-content:center;color:var(--red);border-color:var(--red)" onclick="deleteShootCard()">Delete</button>
-    </div>
   </div>
 </div>
 
@@ -2212,6 +2224,7 @@ function nav(page, data) {
   if (page === 'calendar') { renderCalendar(); renderUpcoming(); wireCalFilters(); populateCalFilterDropdowns(); }
   if (page === 'content-pipeline') renderContent();
   if (page === 'shoot-pipeline') { renderShoots(); renderUpcomingShoots(); }
+  if (page === 'approval-queue') renderApprovalQueue();
   if (page === 'clients') renderClients();
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
@@ -2551,8 +2564,6 @@ function openClientProfile(id) {
   document.getElementById('cpf-contact').value = c.contact || '';
   const health = calcClientHealth(c);
   document.getElementById('cpf-health').value = health.auto.toUpperCase() + ' · ' + health.reason;
-  const startRaw = c.start_date || c.created_at || '';
-  document.getElementById('cpf-startdate').value = startRaw ? new Date(startRaw).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
 
   // Stats
   const clientTasks = S.tasks.filter(t => t.client_id == id);
@@ -2571,7 +2582,6 @@ function openClientProfile(id) {
 
   renderClientTasks(id);
   renderClientShoots(id);
-  renderContentPlan();
   document.querySelectorAll('#page-client-profile [data-tfilter]').forEach(b => {
     b.classList.toggle('active', b.dataset.tfilter === S.taskFilter);
     b.onclick = () => { S.taskFilter = b.dataset.tfilter; document.querySelectorAll('[data-tfilter]').forEach(x => x.classList.toggle('active', x.dataset.tfilter === S.taskFilter)); renderClientTasks(id); };
@@ -2670,15 +2680,7 @@ function switchCpTab(tab) {
   document.getElementById('cpt-' + tab).classList.add('active');
   document.querySelectorAll('#page-client-profile .tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('cp-tab-' + tab).classList.add('active');
-  if (tab === 'content-plan') {
-    // Auto-set to current month/year if not already set
-    const now = new Date();
-    const mSel = document.getElementById('cplan-month');
-    const ySel = document.getElementById('cplan-year');
-    if (mSel && !mSel.dataset.userSet) mSel.value = now.getMonth() + 1;
-    if (ySel && !ySel.dataset.userSet) ySel.value = now.getFullYear();
-    renderContentPlan();
-  }
+
 }
 
 // ============ TASKS CRUD ============
@@ -2796,14 +2798,7 @@ function renderContent() {
     });
     const countEl = document.getElementById(CONTENT_STAGE_IDS[s]);
     if (countEl) countEl.textContent = items.length;
-    if (items.length === 0) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'color:var(--text2);font-size:11px;text-align:center;padding:20px 8px;border:1px dashed var(--border);border-radius:8px;margin:4px 0;line-height:1.4';
-      empty.textContent = 'Nothing here yet';
-      zone.appendChild(empty);
-    } else {
-      items.forEach(i => zone.appendChild(buildContentCard(i)));
-    }
+    items.forEach(i => zone.appendChild(buildContentCard(i)));
   });
 }
 
@@ -2819,17 +2814,17 @@ function buildContentCard(item) {
   const stageColor = CONTENT_STAGE_COLORS[item.status] || 'var(--text2)';
   const dateStr = item.scheduled_date ? new Date(item.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
   card.innerHTML = `
-    <div class="kanban-card-body" style="padding:10px 12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span class="card-type-badge ${typeClass}">${(item.content_type || 'post').toUpperCase()}</span>
-        <span style="font-size:10px;color:var(--text2)">${dateStr}</span>
-      </div>
+    <div class="card-status-header">
+      <span style="color:${stageColor};font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em">${statusLbl}</span>
+      <span class="card-type-badge ${typeClass}">${(item.content_type || 'post').toUpperCase()}</span>
+    </div>
+    <div class="kanban-card-body">
       <div class="kanban-card-client">${escHtml(clientName)}</div>
       <div class="kanban-card-title">${escHtml(item.title)}</div>
+      <div class="kanban-card-foot"><span>${dateStr}</span></div>
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', item.id); e.dataTransfer.setData('kind', 'content'); });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
-  card.addEventListener('click', () => openContentCard(item.id));
   return card;
 }
 
@@ -2884,6 +2879,138 @@ async function updateContentStatus(id, status) {
   } catch (e) { item.status = old; renderContent(); toast('Failed', 'error'); }
 }
 
+
+// ============ APPROVAL QUEUE ============
+function renderApprovalQueue() {
+  const scope = currentSmmScope();
+  let items = S.content.filter(c =>
+    ['send-client','client-changes','client-approval'].includes(c.status)
+  );
+  if (scope) {
+    const myClientIds = S.clients.filter(c => c.assigned_smm === scope).map(c => c.id);
+    items = items.filter(c => myClientIds.includes(Number(c.client_id)));
+  }
+
+  // Apply client filter
+  const cf = document.getElementById('aq-client-filter');
+  const filterClient = cf ? cf.value : 'all';
+  if (filterClient !== 'all') items = items.filter(c => String(c.client_id) === String(filterClient));
+
+  const bySend    = items.filter(c => c.status === 'send-client');
+  const byChanges = items.filter(c => c.status === 'client-changes');
+  const byApproved= items.filter(c => c.status === 'client-approval');
+
+  // Update counts
+  const setCount = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+  setCount('aq-cnt-send',     bySend.length);
+  setCount('aq-cnt-changes',  byChanges.length);
+  setCount('aq-cnt-approved', byApproved.length);
+
+  // Summary line
+  const pending = bySend.length + byChanges.length;
+  const sumEl = document.getElementById('aq-summary');
+  if (sumEl) {
+    if (byChanges.length > 0) {
+      sumEl.textContent = byChanges.length + ' item' + (byChanges.length > 1 ? 's' : '') + ' need rework · ' + bySend.length + ' awaiting client response';
+      sumEl.style.color = 'var(--red)';
+    } else if (bySend.length > 0) {
+      sumEl.textContent = bySend.length + ' item' + (bySend.length > 1 ? 's' : '') + ' sent to client · waiting for response';
+      sumEl.style.color = '#60A5FA';
+    } else if (byApproved.length > 0) {
+      sumEl.textContent = byApproved.length + ' item' + (byApproved.length > 1 ? 's' : '') + ' approved and ready to post';
+      sumEl.style.color = '#A3E635';
+    } else {
+      sumEl.textContent = 'All clear — nothing pending client action';
+      sumEl.style.color = 'var(--text3)';
+    }
+  }
+
+  // Sidebar badge
+  const sbBadge = document.getElementById('sb-approval-count');
+  if (sbBadge) { sbBadge.textContent = pending; sbBadge.style.display = pending > 0 ? '' : 'none'; }
+
+  // Render helpers
+  function buildRow(item, actions) {
+    const client = S.clients.find(c => c.id == item.client_id);
+    const clientName = client ? client.name : '—';
+    const typeClass = 'type-' + (item.content_type || 'post');
+    const dateStr = item.scheduled_date ? new Date(item.scheduled_date).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : '';
+    return `<div class="aq-row">
+      <span class="card-type-badge ${typeClass}" style="flex-shrink:0">${(item.content_type || 'post').toUpperCase()}</span>
+      <div class="aq-row-info">
+        <div class="aq-row-title">${escHtml(item.title)}</div>
+        <div class="aq-row-meta">${escHtml(clientName)}${dateStr ? ' · ' + dateStr : ''}</div>
+      </div>
+      <div class="aq-actions">${actions}</div>
+    </div>`;
+  }
+
+  function renderSection(listId, items, buildActions) {
+    const el = document.getElementById(listId);
+    if (!el) return;
+    if (items.length === 0) {
+      el.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'aq-empty';
+      el.appendChild(empty);
+      return;
+    }
+    el.innerHTML = items.map(item => buildRow(item, buildActions(item))).join('');
+  }
+
+  // AWAITING RESPONSE — can mark as "Changes Needed" or "Approved"
+  renderSection('aq-list-send', bySend, item => `
+    <button class="aq-btn aq-btn-red" onclick="moveApproval(${item.id},'client-changes')">Changes ✏</button>
+    <button class="aq-btn aq-btn-green" onclick="moveApproval(${item.id},'client-approval')">Approved ✓</button>
+  `);
+
+  // CHANGES NEEDED — can send back to editing or mark as approved
+  renderSection('aq-list-changes', byChanges, item => `
+    <button class="aq-btn aq-btn-purple" onclick="moveApproval(${item.id},'editing')">Back to Edit</button>
+    <button class="aq-btn aq-btn-green" onclick="moveApproval(${item.id},'client-approval')">Approved ✓</button>
+  `);
+
+  // APPROVED — move to Drive
+  renderSection('aq-list-approved', byApproved, item => `
+    <button class="aq-btn aq-btn-blue" onclick="moveApproval(${item.id},'drive')">Add to Drive →</button>
+    <button class="aq-btn aq-btn-green" onclick="moveApproval(${item.id},'posted')">Mark Posted ✓</button>
+  `);
+
+  // Populate client filter dropdown once
+  if (cf && cf.options.length <= 1) {
+    const scopedClients = scope ? S.clients.filter(c => c.assigned_smm === scope) : S.clients;
+    cf.innerHTML = '<option value="all">All Clients</option>' +
+      scopedClients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    cf.value = filterClient;
+    cf.onchange = () => renderApprovalQueue();
+  }
+}
+
+async function moveApproval(id, newStatus) {
+  const item = S.content.find(c => c.id == id);
+  if (!item) return;
+  const old = item.status;
+  item.status = newStatus;
+  renderApprovalQueue();
+  if (!sb) return;
+  try {
+    await sb.from('smm_content').update({ status: newStatus }).eq('id', id);
+    const labels = { 'client-changes':'Changes Requested','client-approval':'Approved','editing':'Back to Editing','drive':'Added to Drive','posted':'Posted' };
+    toast(labels[newStatus] || newStatus, 'success');
+  } catch (e) { item.status = old; renderApprovalQueue(); toast('Update failed', 'error'); }
+}
+
+function updateApprovalBadge() {
+  const scope = currentSmmScope();
+  let items = S.content.filter(c => ['send-client','client-changes'].includes(c.status));
+  if (scope) {
+    const myClientIds = S.clients.filter(c => c.assigned_smm === scope).map(c => c.id);
+    items = items.filter(c => myClientIds.includes(Number(c.client_id)));
+  }
+  const badge = document.getElementById('sb-approval-count');
+  if (badge) { badge.textContent = items.length; badge.style.display = items.length > 0 ? '' : 'none'; }
+}
+
 // ============ SHOOTS PIPELINE ============
 const SMM_SHOOT_STAGES = ['Videos Confirmed', 'Script Made', 'Script Changes', 'Final Script', 'Get Shoot Date', 'Shoot Date Set', 'Shot'];
 const SMM_STAGE_KEY = { 'Videos Confirmed': 'videos-confirmed', 'Script Made': 'script-made', 'Script Changes': 'script-changes', 'Final Script': 'final-script', 'Get Shoot Date': 'get-shoot-date', 'Shoot Date Set': 'shoot-date-set', 'Shot': 'shot' };
@@ -2902,23 +3029,12 @@ function renderShoots() {
       if (shootStage === 'delivered') shootStage = 'Shot';
       if (shootStage !== s) return false;
       if (S.filterShootClient !== 'all' && String(sh.client_id) !== String(S.filterShootClient)) return false;
-      if (S.filterShootQ !== 'all') {
-        const sd = sh.shoot_date ? new Date(sh.shoot_date) : null;
-        const q = sd ? 'Q' + Math.ceil((sd.getMonth() + 1) / 3) : null;
-        if (q !== S.filterShootQ) return false;
-      }
+      if (S.filterShootQ !== 'all' && sh.quarter !== S.filterShootQ) return false;
       return true;
     });
     const counter = document.getElementById('sc-' + key);
     if (counter) counter.textContent = items.length;
-    if (items.length === 0) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'color:var(--text2);font-size:11px;text-align:center;padding:20px 8px;border:1px dashed var(--border);border-radius:8px;margin:4px 0;line-height:1.4';
-      empty.textContent = 'Nothing here yet';
-      zone.appendChild(empty);
-    } else {
-      items.forEach(sh => zone.appendChild(buildShootCard(sh)));
-    }
+    items.forEach(sh => zone.appendChild(buildShootCard(sh)));
   });
 }
 
@@ -2937,17 +3053,17 @@ function buildShootCard(sh) {
   const stageColor = stageColors[shootStage] || '#7B8099';
   const dateStr = sh.shoot_date ? new Date(sh.shoot_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD';
   card.innerHTML = `
-    <div class="kanban-card-body" style="padding:10px 12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span class="card-type-badge type-shoot">SHOOT</span>
-        <span style="font-size:10px;color:var(--text2)">${dateStr}</span>
-      </div>
+    <div class="card-status-header">
+      <span style="background:${stageColor}22;color:${stageColor};border:1px solid ${stageColor}44;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase">${shootStage}</span>
+      <span class="card-type-badge type-shoot">SHOOT</span>
+    </div>
+    <div class="kanban-card-body">
       <div class="kanban-card-client">${escHtml(clientName)}</div>
       <div class="kanban-card-title">${escHtml(sh.title)}</div>
+      <div class="kanban-card-foot"><span>${dateStr}</span></div>
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', sh.id); e.dataTransfer.setData('kind', 'shoot'); });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
-  card.addEventListener('click', () => openShootCard(sh.id));
   return card;
 }
 
@@ -3025,56 +3141,6 @@ async function updateShootStatus(id, status) {
     await sb.from('smm_shoots').update({ status, stage: status }).eq('id', id);
     toast('Shoot moved to ' + status.toUpperCase(), 'success');
   } catch (e) { item.status = old; item.stage = old; renderShoots(); toast('Failed', 'error'); }
-}
-
-function openShootCard(id) {
-  const sh = S.shoots.find(s => s.id == id);
-  if (!sh) return;
-  document.getElementById('se-id').value = sh.id;
-  document.getElementById('se-title').value = sh.title || '';
-  document.getElementById('se-date').value = sh.shoot_date ? sh.shoot_date.split('T')[0] : '';
-  document.getElementById('se-notes').value = sh.notes || '';
-  const stage = sh.stage || sh.status || 'Videos Confirmed';
-  document.getElementById('se-status').value = stage;
-  const seClient = document.getElementById('se-client');
-  seClient.innerHTML = S.clients.map(c => `<option value="${c.id}"${c.id == sh.client_id ? ' selected' : ''}>${c.name}</option>`).join('');
-  openModal('shoot-edit');
-}
-
-async function submitShootEdit() {
-  const id = document.getElementById('se-id').value;
-  const title = document.getElementById('se-title').value.trim();
-  const client_id = document.getElementById('se-client').value;
-  const shoot_date = document.getElementById('se-date').value || null;
-  const status = document.getElementById('se-status').value;
-  const notes = document.getElementById('se-notes').value.trim();
-  if (!title) { toast('Title required', 'error'); return; }
-  const sh = S.shoots.find(s => s.id == id);
-  if (!sh) return;
-  const old = { ...sh };
-  Object.assign(sh, { title, client_id: Number(client_id), shoot_date, status, stage: status, notes });
-  renderShoots();
-  renderUpcomingShoots();
-  closeModal('shoot-edit');
-  try {
-    const { error } = await sb.from('smm_shoots').update({ title, client_id: Number(client_id), shoot_date, status, stage: status, notes }).eq('id', id);
-    if (error) throw error;
-    toast('Saved', 'success');
-  } catch (e) { Object.assign(sh, old); renderShoots(); toast('Save failed', 'error'); }
-}
-
-async function deleteShootCard() {
-  const id = document.getElementById('se-id').value;
-  if (!confirm('Delete this shoot? This cannot be undone.')) return;
-  closeModal('shoot-edit');
-  const idx = S.shoots.findIndex(s => s.id == id);
-  if (idx > -1) S.shoots.splice(idx, 1);
-  renderShoots();
-  renderUpcomingShoots();
-  try {
-    await sb.from('smm_shoots').delete().eq('id', id);
-    toast('Shoot deleted', 'success');
-  } catch (e) { toast('Delete failed', 'error'); await loadShoots(); renderShoots(); }
 }
 
 // ============ CALENDAR ============
@@ -3245,7 +3311,7 @@ function renderMyTasks() {
   const isSmm = USER_ROLES[S.currentUser].smm !== null;
   const f = S.mtFilters;
 
-  let myTasks = myScopedTasks();
+  let myTasks = isSmm ? [...S.tasks] : S.tasks.filter(t => t.assign === USER_ROLES[S.currentUser].code);
   if (f.client !== 'all') myTasks = myTasks.filter(t => String(t.client_id) === String(f.client));
   if (f.priority !== 'all') myTasks = myTasks.filter(t => t.priority === f.priority);
   if (f.category !== 'all') myTasks = myTasks.filter(t => t.category === f.category);
@@ -3258,14 +3324,6 @@ function renderMyTasks() {
   if (badge) badge.textContent = openCount;
 
   const wrap = document.getElementById('my-tasks-content');
-  // Summary line
-  const overdueCount = myTasks.filter(t => t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString()).length;
-  const summaryEl = document.getElementById('mt-summary');
-  if (summaryEl) {
-    summaryEl.textContent = myTasks.length + ' open' + (overdueCount > 0 ? ' · ' + overdueCount + ' overdue' : ' · all clear');
-    summaryEl.style.color = overdueCount > 0 ? 'var(--red)' : 'var(--green)';
-  }
-
   if (!myTasks.length) {
     wrap.innerHTML = '<div class="loading-row">No open tasks. You\'re clear.</div>';
     return;
@@ -3292,33 +3350,19 @@ function renderMyTasks() {
   wrap.innerHTML = sortedKeys.map(key => {
     const client = key === 'general' ? null : S.clients.find(c => String(c.id) === key);
     const clientName = client ? client.name : 'GENERAL';
-    let tasks = byClient[key];
+    const tasks = byClient[key];
     if (!tasks.length) return '';
-    // Sort: overdue → HIGH → due date ASC → no due date
-    const pWeight = {'HIGH':0,'MEDIUM':1,'LOW':2};
-    tasks = [...tasks].sort((a, b) => {
-      const aOver = a.due && new Date(a.due) < now && new Date(a.due).toDateString() !== now.toDateString() ? 0 : 1;
-      const bOver = b.due && new Date(b.due) < now && new Date(b.due).toDateString() !== now.toDateString() ? 0 : 1;
-      if (aOver !== bOver) return aOver - bOver;
-      const aP = pWeight[a.priority] ?? 3;
-      const bP = pWeight[b.priority] ?? 3;
-      if (aP !== bP) return aP - bP;
-      if (a.due && b.due) return new Date(a.due) - new Date(b.due);
-      if (a.due) return -1;
-      if (b.due) return 1;
-      return 0;
-    });
 
     const taskRow = t => {
       const overdue = t.due && new Date(t.due) < now && new Date(t.due).toDateString() !== now.toDateString();
       const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : '';
       const priorityColor = t.priority === 'HIGH' ? 'var(--red)' : t.priority === 'MEDIUM' ? 'var(--yellow)' : 'var(--text3)';
       const priorityBg = t.priority === 'HIGH' ? 'var(--r10)' : t.priority === 'MEDIUM' ? 'var(--y10)' : 'var(--bg5)';
-      const assignAvClass = t.assign === 'th' ? 'av-t' : t.assign === 'sh' ? 'av-s' : 'av-k';
+      const assignAvClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
       return `<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''" onclick="${client ? `nav('client-profile',${client.id})` : ''}" style="cursor:${client ? 'pointer' : 'default'}">
         <div class="task-check" onclick="event.stopPropagation();toggleTask(${t.id})" style="flex-shrink:0"></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--text);letter-spacing:0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${t.category || ''}${t.created_at ? ' · ' + new Date(t.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : ''}</div>
         </div>
         ${t.assign ? `<div class="av ${assignAvClass}" style="flex-shrink:0">${t.assign}</div>` : ''}
@@ -3346,6 +3390,30 @@ function renderMyTasks() {
   }
 }
 
+function renderMyTaskRow(t) {
+  const client = t.client_id ? S.clients.find(c => c.id == t.client_id) : null;
+  const clientName = client ? client.name : 'General';
+  const overdue = !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString();
+  const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const priorityClass = t.priority === 'HIGH' ? 'tag-high' : t.priority === 'MEDIUM' ? 'tag-medium' : 'tag-low';
+  const assignAvClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
+
+  return `<div class="task-row" onclick="${t.client_id ? `nav('client-profile',${t.client_id})` : ''}" style="cursor:pointer">
+    <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
+    <div class="task-body">
+      <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}</div>
+      <div class="task-tags">
+        <span class="my-task-client-pill">${escHtml(clientName)}</span>
+        ${dueStr ? `<span class="tag ${overdue ? 'tag-overdue' : 'tag-date'}">${overdue ? 'OVERDUE · ' : ''}${dueStr}</span>` : ''}
+        ${t.priority ? `<span class="tag ${priorityClass}">${t.priority}</span>` : ''}
+        ${t.category ? `<span class="tag tag-cat">${t.category}</span>` : ''}
+      </div>
+      ${t.created_at ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;font-weight:300">· ${new Date(t.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+    </div>
+    ${t.assign ? `<div class="av ${assignAvClass}">${t.assign}</div>` : ''}
+    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteTask(${t.id})">×</button>
+  </div>`;
+}
 
 // ============ TODAY'S FOCUS PANEL ============
 // Single source of truth for "my tasks" so the Focus panel and BB Intelligence
@@ -3730,58 +3798,9 @@ async function submitContentAdd() {
   const status = document.getElementById('ca-status').value;
   const scheduled_date = document.getElementById('ca-date').value || null;
   if (!title) { toast('Title required', 'error'); return; }
-  if (!client_id) { toast('Select a client', 'error'); return; }
-  await createContent({ title, client_id: Number(client_id), content_type, status, scheduled_date });
+  await createContent({ title, client_id, content_type, status, scheduled_date });
   document.getElementById('ca-title').value = '';
   closeModal('content-add');
-}
-
-function openContentCard(id) {
-  const item = S.content.find(c => c.id == id);
-  if (!item) return;
-  document.getElementById('ce-id').value = item.id;
-  document.getElementById('ce-title').value = item.title || '';
-  document.getElementById('ce-type').value = item.content_type || 'post';
-  document.getElementById('ce-status').value = item.status || 'brief';
-  document.getElementById('ce-date').value = item.scheduled_date ? item.scheduled_date.split('T')[0] : '';
-  // Populate client dropdown
-  const ceClient = document.getElementById('ce-client');
-  ceClient.innerHTML = S.clients.map(c => `<option value="${c.id}"${c.id == item.client_id ? ' selected' : ''}>${c.name}</option>`).join('');
-  openModal('content-edit');
-}
-
-async function submitContentEdit() {
-  const id = document.getElementById('ce-id').value;
-  const title = document.getElementById('ce-title').value.trim();
-  const client_id = document.getElementById('ce-client').value;
-  const content_type = document.getElementById('ce-type').value;
-  const status = document.getElementById('ce-status').value;
-  const scheduled_date = document.getElementById('ce-date').value || null;
-  if (!title) { toast('Title required', 'error'); return; }
-  const item = S.content.find(c => c.id == id);
-  if (!item) return;
-  const old = { ...item };
-  Object.assign(item, { title, client_id: Number(client_id), content_type, status, scheduled_date });
-  renderContent();
-  closeModal('content-edit');
-  try {
-    const { error } = await sb.from('smm_content').update({ title, client_id: Number(client_id), content_type, status, scheduled_date }).eq('id', id);
-    if (error) throw error;
-    toast('Saved', 'success');
-  } catch (e) { Object.assign(item, old); renderContent(); toast('Save failed', 'error'); }
-}
-
-async function deleteContentCard() {
-  const id = document.getElementById('ce-id').value;
-  if (!confirm('Delete this card? This cannot be undone.')) return;
-  closeModal('content-edit');
-  const idx = S.content.findIndex(c => c.id == id);
-  if (idx > -1) S.content.splice(idx, 1);
-  renderContent();
-  try {
-    await sb.from('smm_content').delete().eq('id', id);
-    toast('Card deleted', 'success');
-  } catch (e) { toast('Delete failed', 'error'); await loadContent(); renderContent(); }
 }
 
 async function submitShootAdd() {
@@ -4407,10 +4426,12 @@ async function init() {
   await loadContentPlans();
   await loadDiary();
   renderToday();
+  updateApprovalBadge();
   renderSOPs();
   // Update My Tasks badge
   if (S.currentUser) {
-    const openCount = myScopedTasks().length;
+    const userCode = USER_ROLES[S.currentUser].code;
+    const openCount = S.tasks.filter(t => t.assign === userCode && !t.done).length;
     const badge = document.getElementById('sb-mytasks-count');
     if (badge) badge.textContent = openCount;
   }
@@ -4624,13 +4645,10 @@ async function renderSmmContentOverview(){
   let clients=[];
   let plans=[];
   try{
-    const scope=currentSmmScope();
-    const ids=S.clients.map(c=>c.id);
-    let cq=sb.from('clients').select('id,name,package,plan_ready').order('name');
-    if(scope&&ids.length) cq=cq.in('id',ids);
-    let pq=sb.from('content_plans').select('*');
-    if(scope&&ids.length) pq=pq.in('client_id',ids);
-    const [cr,pr]=await Promise.all([cq,pq]);
+    const [cr,pr]=await Promise.all([
+      sb.from('clients').select('id,name,package,plan_ready').order('name'),
+      sb.from('content_plans').select('*')
+    ]);
     clients=cr.data||[];
     plans=pr.data||[];
   }catch(e){clients=S.clients||[];}
@@ -4736,8 +4754,15 @@ async function renderSmmContentOverview(){
 }
 
 function smmOpenClientContentPlan(id){
-  nav('client-profile', id);
-  setTimeout(function(){ switchCpTab('content-plan'); }, 250);
+  // Navigate to client profile and switch to content plan tab
+  S.selectedClientId=id;
+  nav('client-profile');
+  setTimeout(function(){
+    const tabs=document.querySelectorAll('.tab-btn');
+    tabs.forEach(function(t){
+      if(t.textContent.trim()==='Content Plan'){t.click();}
+    });
+  },300);
 }
 
 async function duplicateSmmCPlanItem(id){
