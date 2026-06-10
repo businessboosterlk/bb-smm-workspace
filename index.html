@@ -4459,3 +4459,472 @@ function renderSOPs() {
   console.log('[BB Agent] v' + AGENT_VER + ' loaded — chat + error monitor active');
 })();
 </script>
+
+<!-- ============================================================
+     BB SMM AGENTS v1
+     Agent 1: Morning Brief Bot   (renderIntel + focus/top3/cna)
+     Agent 2: Overdue Alert Bot   (background scan + sidebar badges)
+     Agent 3: Shoot Prep Checker  (flags shoots missing script/date)
+     Agent 4: Weekly Report       (generateWeeklyReport + button)
+     ============================================================ -->
+<script>
+// ============================================================
+// BB SMM AGENTS v1
+// Agent 1: Morning Brief Bot      → renderIntel()
+// Agent 2: Overdue Alert Bot      → background scan, sidebar badges
+// Agent 3: Shoot Prep Checker     → part of background scan
+// Agent 4: Weekly Report Generator→ generateWeeklyReport() + button
+// Also defines: renderFocusPanel(), renderTop3(), renderClientsNeedingAttention()
+// ============================================================
+(function () {
+  'use strict';
+
+  // ── AGENT 1 HELPER: renderFocusPanel ──────────────────────
+  window.renderFocusPanel = function () {
+    var el = document.getElementById('focus-panel');
+    var titleEl = document.getElementById('focus-title');
+    if (!el) return;
+    var scope = currentSmmScope();
+    var today = toDateStr(new Date());
+
+    var todayContent = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.scheduled_date === today && c.status !== 'posted';
+    });
+    var overdue = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted';
+    });
+    var pendingApproval = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.status === 'client-approval' || c.status === 'send-client';
+    });
+
+    var items = [];
+    overdue.forEach(function (c) {
+      var cl = c.client_id ? S.clients.find(function (x) { return x.id == c.client_id; }) : null;
+      items.push({ icon: '🔴', label: (cl ? escHtml(cl.name) + ' — ' : '') + escHtml(c.title), sub: 'Overdue · was scheduled ' + c.scheduled_date, color: '#F87171' });
+    });
+    todayContent.forEach(function (c) {
+      var cl = c.client_id ? S.clients.find(function (x) { return x.id == c.client_id; }) : null;
+      items.push({ icon: '📋', label: (cl ? escHtml(cl.name) + ' — ' : '') + escHtml(c.title), sub: 'Post today · ' + (c.status || 'brief'), color: '#00E5FF' });
+    });
+    pendingApproval.slice(0, 3).forEach(function (c) {
+      var cl = c.client_id ? S.clients.find(function (x) { return x.id == c.client_id; }) : null;
+      items.push({ icon: '⏳', label: (cl ? escHtml(cl.name) + ' — ' : '') + escHtml(c.title), sub: 'Waiting client approval', color: '#FBBF24' });
+    });
+
+    if (!items.length) {
+      if (titleEl) titleEl.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    if (titleEl) titleEl.style.display = '';
+    el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px">' +
+      items.map(function (item) {
+        return '<div style="background:' + item.color + '14;border:1px solid ' + item.color + '33;border-radius:10px;padding:8px 12px;display:flex;align-items:flex-start;gap:8px;min-width:200px;flex:1">' +
+          '<span style="font-size:14px;flex-shrink:0;margin-top:1px">' + item.icon + '</span>' +
+          '<div><div style="font-size:11px;font-weight:700;color:#fff;line-height:1.3">' + item.label + '</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px">' + item.sub + '</div></div></div>';
+      }).join('') +
+    '</div>';
+  };
+
+  // ── AGENT 1 HELPER: renderTop3 ────────────────────────────
+  window.renderTop3 = function () {
+    var el = document.getElementById('top3-list');
+    if (!el) return;
+    var priorities = S.top3 || [];
+    if (!priorities.length) {
+      el.innerHTML = '<div style="text-align:center;padding:16px 0">' +
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">No priorities set for today</div>' +
+        '<button onclick="openModal(\'top3\')" style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--cyan);font-size:11px;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit">Set Top 3 →</button>' +
+      '</div>';
+      return;
+    }
+    el.innerHTML = priorities.map(function (p, i) {
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="font-size:11px;font-weight:800;color:var(--accent);min-width:18px">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span style="font-size:13px;font-weight:600;color:#fff">' + escHtml(p) + '</span>' +
+      '</div>';
+    }).join('') +
+    '<div style="margin-top:8px;text-align:right">' +
+      '<button onclick="openModal(\'top3\')" style="background:transparent;border:none;color:var(--text3);font-size:10px;cursor:pointer;font-family:inherit;padding:0">Edit →</button>' +
+    '</div>';
+  };
+
+  // ── AGENT 1 HELPER: renderClientsNeedingAttention ─────────
+  window.renderClientsNeedingAttention = function () {
+    var el = document.getElementById('cna-list');
+    if (!el) return;
+    var scope = currentSmmScope();
+    var today = toDateStr(new Date());
+    var issues = [];
+    var nextWeekStr = toDateStr(new Date(Date.now() + 7 * 86400000));
+
+    S.clients.forEach(function (client) {
+      var cc = S.content.filter(function (c) {
+        if (scope && c.assigned_smm !== scope) return false;
+        return c.client_id == client.id;
+      });
+
+      var pendingApproval = cc.filter(function (c) { return c.status === 'client-approval' || c.status === 'send-client'; });
+      if (pendingApproval.length) {
+        issues.push({ client: client.name, reason: pendingApproval.length + ' item' + (pendingApproval.length > 1 ? 's' : '') + ' awaiting approval', color: '#FBBF24', icon: '⏳' });
+        return;
+      }
+
+      var overdue = cc.filter(function (c) { return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted'; });
+      if (overdue.length) {
+        issues.push({ client: client.name, reason: overdue.length + ' overdue post' + (overdue.length > 1 ? 's' : ''), color: '#F87171', icon: '🔴' });
+        return;
+      }
+
+      var upcoming = cc.filter(function (c) { return c.scheduled_date && c.scheduled_date >= today && c.scheduled_date <= nextWeekStr; });
+      if (!upcoming.length && cc.length > 0) {
+        issues.push({ client: client.name, reason: 'No content scheduled this week', color: '#FB923C', icon: '📅' });
+      }
+    });
+
+    if (!issues.length) {
+      el.innerHTML = '<div style="text-align:center;padding:16px 0;font-size:11px;color:var(--text3)">✅ All clients look good</div>';
+      return;
+    }
+    el.innerHTML = issues.slice(0, 5).map(function (item) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="font-size:12px">' + item.icon + '</span>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(item.client) + '</div>' +
+          '<div style="font-size:10px;color:' + item.color + '">' + item.reason + '</div>' +
+        '</div></div>';
+    }).join('') + (issues.length > 5 ? '<div style="font-size:10px;color:var(--text3);text-align:center;padding-top:4px">+' + (issues.length - 5) + ' more</div>' : '');
+  };
+
+  // ── AGENT 1: MORNING BRIEF BOT (renderIntel) ──────────────
+  window.renderIntel = function () {
+    var el = document.getElementById('intel-panel');
+    if (!el) return;
+    var scope = currentSmmScope();
+    var now = new Date();
+    var today = toDateStr(now);
+    var weekEndStr = toDateStr(new Date(now.getTime() + 7 * 86400000));
+
+    var todayPosts = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.scheduled_date === today && c.status !== 'posted';
+    });
+    var overdue = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted';
+    });
+    var pendingApproval = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.status === 'client-approval' || c.status === 'send-client';
+    });
+    var upcomingShoots = S.shoots.filter(function (s) {
+      if (scope && s.assigned_smm !== scope) return false;
+      return s.shoot_date && s.shoot_date >= today && s.shoot_date <= weekEndStr && s.stage !== 'Shot';
+    });
+
+    function clientName(id) {
+      var cl = id ? S.clients.find(function (x) { return x.id == id; }) : null;
+      return cl ? cl.name : 'Unknown';
+    }
+
+    if (!todayPosts.length && !overdue.length && !pendingApproval.length && !upcomingShoots.length) {
+      el.innerHTML = '<div style="background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(0,229,255,0.02));border:1px solid rgba(0,229,255,0.15);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px">' +
+        '<span style="font-size:22px">✅</span>' +
+        '<div><div style="font-size:13px;font-weight:700;color:#fff">You\'re all caught up</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px">No urgent items · ' + now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + '</div></div>' +
+      '</div>';
+      return;
+    }
+
+    var briefLines = [];
+    if (overdue.length) {
+      briefLines.push({ icon: '🔴', color: '#F87171',
+        text: '<strong style="color:#F87171">' + overdue.length + ' overdue item' + (overdue.length > 1 ? 's' : '') + ' — needs urgent action</strong>',
+        detail: overdue.slice(0, 2).map(function (c) { return clientName(c.client_id) + ' — ' + c.title; }).join(' · ') + (overdue.length > 2 ? ' +' + (overdue.length - 2) + ' more' : '') });
+    }
+    if (todayPosts.length) {
+      briefLines.push({ icon: '📋', color: '#00E5FF',
+        text: '<strong style="color:#00E5FF">' + todayPosts.length + ' post' + (todayPosts.length > 1 ? 's' : '') + ' to go live today</strong>',
+        detail: todayPosts.slice(0, 3).map(function (c) { return clientName(c.client_id) + ' — ' + c.title; }).join(' · ') + (todayPosts.length > 3 ? ' +' + (todayPosts.length - 3) + ' more' : '') });
+    }
+    if (pendingApproval.length) {
+      briefLines.push({ icon: '⏳', color: '#FBBF24',
+        text: '<strong style="color:#FBBF24">' + pendingApproval.length + ' item' + (pendingApproval.length > 1 ? 's' : '') + ' awaiting client approval</strong>',
+        detail: pendingApproval.slice(0, 2).map(function (c) { return clientName(c.client_id) + ' — ' + c.title; }).join(' · ') });
+    }
+    if (upcomingShoots.length) {
+      briefLines.push({ icon: '🎬', color: '#A78BFA',
+        text: '<strong style="color:#A78BFA">' + upcomingShoots.length + ' shoot' + (upcomingShoots.length > 1 ? 's' : '') + ' this week</strong>',
+        detail: upcomingShoots.slice(0, 2).map(function (s) { return clientName(s.client_id) + (s.shoot_date ? ' · ' + s.shoot_date : ''); }).join(' · ') });
+    }
+
+    var headerColor = overdue.length ? '#F87171' : (pendingApproval.length ? '#FBBF24' : '#00E5FF');
+    var headerText = overdue.length ? '⚡ Action Needed Today' : '☀️ Morning Brief';
+
+    el.innerHTML =
+      '<div style="background:linear-gradient(135deg,rgba(0,229,255,0.07),rgba(0,229,255,0.02));border:1px solid rgba(0,229,255,0.15);border-radius:14px;overflow:hidden">' +
+        '<div style="padding:11px 18px 9px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between">' +
+          '<div style="font-size:11px;font-weight:800;color:' + headerColor + ';letter-spacing:0.06em;text-transform:uppercase">' + headerText + '</div>' +
+          '<div style="font-size:10px;color:var(--text3)">' + now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + '</div>' +
+        '</div>' +
+        '<div style="padding:10px 18px 14px;display:flex;flex-direction:column;gap:9px">' +
+          briefLines.map(function (line) {
+            return '<div style="display:flex;align-items:flex-start;gap:10px">' +
+              '<span style="font-size:14px;flex-shrink:0;margin-top:1px">' + line.icon + '</span>' +
+              '<div><div style="font-size:12px;line-height:1.4">' + line.text + '</div>' +
+              (line.detail ? '<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.5">' + escHtml(line.detail) + '</div>' : '') +
+              '</div></div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+  };
+
+  // ── AGENT 2 + 3: OVERDUE ALERT BOT + SHOOT PREP CHECKER ───
+  var _overdueCount = 0;
+  var _shootIssueCount = 0;
+
+  function runBackgroundScan() {
+    if (!S.currentUser) return;
+    var scope = currentSmmScope();
+    var now = new Date();
+    var today = toDateStr(now);
+    var week7Str = toDateStr(new Date(now.getTime() + 7 * 86400000));
+
+    _overdueCount = 0;
+    _shootIssueCount = 0;
+
+    // OVERDUE ALERT: content past scheduled date or stuck 5+ days
+    S.content.forEach(function (c) {
+      if (scope && c.assigned_smm !== scope) return;
+      if (c.status === 'posted') return;
+      if (c.scheduled_date && c.scheduled_date < today) {
+        _overdueCount++;
+        return;
+      }
+      if (c.created_at) {
+        var daysOld = Math.floor((now - new Date(c.created_at)) / 86400000);
+        var stuckStatuses = ['brief', 'ideas', 'editing', 'team-review', 'client-changes'];
+        if (daysOld >= 5 && stuckStatuses.indexOf(c.status) !== -1) _overdueCount++;
+      }
+    });
+
+    // SHOOT PREP: shoots within 7 days missing script or date confirmation
+    S.shoots.forEach(function (s) {
+      if (scope && s.assigned_smm !== scope) return;
+      if (s.stage === 'Shot') return;
+      if (!s.shoot_date) {
+        // Has no date but is in active stages
+        var activeStages = ['Videos Confirmed', 'Script Made', 'Script Changes', 'Final Script', 'Get Shoot Date'];
+        if (activeStages.indexOf(s.stage) !== -1) _shootIssueCount++;
+        return;
+      }
+      if (s.shoot_date >= today && s.shoot_date <= week7Str) {
+        var scriptReady = s.stage === 'Script Made' || s.stage === 'Script Changes' || s.stage === 'Final Script' || s.stage === 'Shoot Date Set' || s.stage === 'Shot';
+        if (!scriptReady) _shootIssueCount++;
+      }
+    });
+
+    // Update sidebar badges
+    _applyBadges();
+  }
+
+  function _applyBadges() {
+    // Content Pipeline badge — red if overdue items exist
+    var pipelineEl = document.getElementById('sb-pipeline-count');
+    if (pipelineEl) {
+      var normalCount = S.content.filter(function (c) { return c.status && c.status !== 'posted'; }).length;
+      if (_overdueCount > 0) {
+        pipelineEl.textContent = _overdueCount + ' ⚠';
+        pipelineEl.style.cssText = 'background:#F87171!important;color:#fff!important;font-size:9px';
+      } else {
+        pipelineEl.textContent = normalCount;
+        pipelineEl.style.cssText = '';
+      }
+      pipelineEl.classList.toggle('has-items', normalCount > 0);
+    }
+
+    // Shoot Pipeline — badge if prep issues
+    var shootBtn = document.querySelector('[data-page="shoot-pipeline"]');
+    if (shootBtn) {
+      var existingBadge = shootBtn.querySelector('.bb-shoot-warn');
+      if (_shootIssueCount > 0) {
+        if (!existingBadge) {
+          var b = document.createElement('span');
+          b.className = 'sb-badge bb-shoot-warn has-items';
+          b.style.cssText = 'background:#F87171!important;color:#fff!important;font-size:9px';
+          shootBtn.appendChild(b);
+          existingBadge = b;
+        }
+        existingBadge.textContent = _shootIssueCount + ' ⚠';
+      } else if (existingBadge) {
+        existingBadge.remove();
+      }
+    }
+  }
+
+  function startBackgroundScan() {
+    if (!S.currentUser) { setTimeout(startBackgroundScan, 2000); return; }
+    setTimeout(function () {
+      // Wait a tick for data to load after login
+      if (!S.content || !S.clients) { setTimeout(startBackgroundScan, 1000); return; }
+      runBackgroundScan();
+      setInterval(runBackgroundScan, 30 * 60 * 1000);
+    }, 3000);
+  }
+  startBackgroundScan();
+
+  // ── AGENT 4: WEEKLY REPORT GENERATOR ──────────────────────
+  function _statCard(label, val, color) {
+    return '<div style="background:' + color + '14;border:1px solid ' + color + '30;border-radius:10px;padding:10px 12px;text-align:center">' +
+      '<div style="font-size:22px;font-weight:800;color:' + color + '">' + val + '</div>' +
+      '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">' + label + '</div>' +
+    '</div>';
+  }
+
+  function _showReportModal(contentHtml) {
+    var old = document.getElementById('bb-weekly-report-modal');
+    if (old) old.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'bb-weekly-report-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9980;display:flex;align-items:center;justify-content:center;padding:20px;font-family:\'Poppins\',sans-serif';
+    overlay.onclick = function (e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML =
+      '<div style="background:#111318;border:1px solid rgba(0,229,255,0.2);border-radius:18px;width:100%;max-width:620px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">' +
+        '<div style="padding:18px 22px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">' +
+          '<div style="font-size:14px;font-weight:800;color:#fff">📊 Weekly Report</div>' +
+          '<button onclick="document.getElementById(\'bb-weekly-report-modal\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text3);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit;line-height:1">✕</button>' +
+        '</div>' +
+        '<div style="padding:18px 22px;overflow-y:auto">' + contentHtml + '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+  }
+
+  window.generateWeeklyReport = function () {
+    var scope = currentSmmScope();
+    var now = new Date();
+    var weekStart = new Date(now);
+    var dow = weekStart.getDay();
+    weekStart.setDate(weekStart.getDate() - (dow === 0 ? 6 : dow - 1));
+    weekStart.setHours(0, 0, 0, 0);
+    var weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    var wsStr = toDateStr(weekStart);
+    var weStr = toDateStr(weekEnd);
+    var todayStr = toDateStr(now);
+    var twoWeeksStr = toDateStr(new Date(now.getTime() + 14 * 86400000));
+
+    function clientName(id) {
+      var cl = id ? S.clients.find(function (x) { return x.id == id; }) : null;
+      return cl ? cl.name : '—';
+    }
+
+    var postedThisWeek = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.status === 'posted' && c.scheduled_date >= wsStr && c.scheduled_date <= weStr;
+    });
+    var pendingThisWeek = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.status !== 'posted' && c.scheduled_date && c.scheduled_date >= wsStr && c.scheduled_date <= weStr;
+    });
+    var awaitingApproval = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.status === 'client-approval' || c.status === 'send-client';
+    });
+    var overdueAll = S.content.filter(function (c) {
+      if (scope && c.assigned_smm !== scope) return false;
+      return c.scheduled_date && c.scheduled_date < todayStr && c.status !== 'posted';
+    });
+    var upcomingShoots = S.shoots.filter(function (s) {
+      if (scope && s.assigned_smm !== scope) return false;
+      return s.shoot_date && s.shoot_date >= todayStr && s.shoot_date <= twoWeeksStr && s.stage !== 'Shot';
+    });
+
+    var weekLabel = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' + weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    var reportDate = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    function rowHtml(c, dotColor, rightText) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+        '<span style="width:7px;height:7px;border-radius:50%;background:' + dotColor + ';flex-shrink:0"></span>' +
+        '<span style="font-size:12px;font-weight:600;color:#fff;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(c.title) + '</span>' +
+        '<span style="font-size:10px;color:' + (rightText.indexOf('was') !== -1 ? '#F87171' : 'var(--text3)') + ';flex-shrink:0;margin-left:8px">' + rightText + '</span>' +
+      '</div>';
+    }
+    function shootRowHtml(s) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+        '<span style="width:7px;height:7px;border-radius:50%;background:#A78BFA;flex-shrink:0"></span>' +
+        '<span style="font-size:12px;font-weight:600;color:#fff;flex:1">' + escHtml(s.title) + '</span>' +
+        '<span style="font-size:10px;color:var(--text3);flex-shrink:0">' + clientName(s.client_id) + ' · ' + (s.shoot_date || 'No date') + ' · ' + (s.stage || '—') + '</span>' +
+      '</div>';
+    }
+
+    var html = '<div style="font-family:\'Poppins\',sans-serif">' +
+      '<div style="background:linear-gradient(135deg,rgba(0,229,255,0.1),rgba(0,229,255,0.03));border:1px solid rgba(0,229,255,0.2);border-radius:12px;padding:16px 20px;margin-bottom:16px">' +
+        '<div style="font-size:11px;font-weight:800;color:#00E5FF;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Weekly Report</div>' +
+        '<div style="font-size:18px;font-weight:800;color:#fff">' + weekLabel + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">Generated ' + reportDate + (scope ? ' · ' + scope : ' · CEO view') + '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">' +
+        _statCard('Posted', postedThisWeek.length, '#00E5FF') +
+        _statCard('Pending', pendingThisWeek.length, '#FBBF24') +
+        _statCard('Awaiting OK', awaitingApproval.length, '#FB923C') +
+        _statCard('Overdue', overdueAll.length, overdueAll.length > 0 ? '#F87171' : '#6B7280') +
+      '</div>';
+
+    if (postedThisWeek.length) {
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#00E5FF;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">✅ Posted This Week (' + postedThisWeek.length + ')</div>' +
+        postedThisWeek.map(function (c) { return rowHtml(c, '#00E5FF', clientName(c.client_id)); }).join('') + '</div>';
+    }
+    if (overdueAll.length) {
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#F87171;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">🔴 Overdue — Action Needed (' + overdueAll.length + ')</div>' +
+        overdueAll.map(function (c) { return rowHtml(c, '#F87171', clientName(c.client_id) + ' · was ' + c.scheduled_date); }).join('') + '</div>';
+    }
+    if (awaitingApproval.length) {
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#FBBF24;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">⏳ Awaiting Client Approval (' + awaitingApproval.length + ')</div>' +
+        awaitingApproval.map(function (c) { return rowHtml(c, '#FBBF24', clientName(c.client_id)); }).join('') + '</div>';
+    }
+    if (pendingThisWeek.length) {
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#FB923C;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">📋 Still Pending This Week (' + pendingThisWeek.length + ')</div>' +
+        pendingThisWeek.map(function (c) { return rowHtml(c, '#FB923C', clientName(c.client_id) + ' · ' + (c.status || '—')); }).join('') + '</div>';
+    }
+    if (upcomingShoots.length) {
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#A78BFA;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">🎬 Upcoming Shoots (next 14 days)</div>' +
+        upcomingShoots.map(shootRowHtml).join('') + '</div>';
+    }
+    if (!postedThisWeek.length && !overdueAll.length && !awaitingApproval.length && !upcomingShoots.length) {
+      html += '<div style="text-align:center;padding:24px 0;color:var(--text3);font-size:12px">No activity found for this period. Make sure content is loaded.</div>';
+    }
+
+    html += '</div>';
+    _showReportModal(html);
+  };
+
+  // ── INJECT WEEKLY REPORT BUTTON INTO DASHBOARD HEADER ─────
+  function injectReportButton() {
+    if (document.getElementById('bb-weekly-report-btn')) return;
+    var ph = document.querySelector('#page-today .ph');
+    if (!ph) return;
+    var right = ph.querySelector('.ph-right');
+    if (!right) { right = document.createElement('div'); right.className = 'ph-right'; ph.appendChild(right); }
+    var btn = document.createElement('button');
+    btn.id = 'bb-weekly-report-btn';
+    btn.innerHTML = '📊 Weekly Report';
+    btn.style.cssText = 'background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:#00E5FF;font-size:11px;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer;font-family:inherit;letter-spacing:0.03em;white-space:nowrap;transition:background 0.2s';
+    btn.onmouseover = function () { btn.style.background = 'rgba(0,229,255,0.16)'; };
+    btn.onmouseout = function () { btn.style.background = 'rgba(0,229,255,0.08)'; };
+    btn.onclick = generateWeeklyReport;
+    right.appendChild(btn);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectReportButton);
+  } else {
+    setTimeout(injectReportButton, 200);
+  }
+
+  console.log('[BB SMM Agents] v1 loaded — Morning Brief · Overdue Alert · Shoot Prep · Weekly Report');
+})();
+</script>
