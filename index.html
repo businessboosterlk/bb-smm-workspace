@@ -2428,9 +2428,9 @@ function renderToday() {
   else if (hour >= 17) greet = 'Good evening';
   const userInfo = USER_ROLES[S.currentUser];
   const displayName = userInfo ? userInfo.name : (S.currentUser ? titleCase(S.currentUser) : '');
-  document.getElementById('today-greeting').textContent = greet + (displayName ? ', ' + displayName : '');
-  document.getElementById('today-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  document.getElementById('today-sub').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const greetEl = document.getElementById('today-greeting'); if (greetEl) greetEl.textContent = greet + (displayName ? ', ' + displayName : '');
+  const dateEl  = document.getElementById('today-date');     if (dateEl)  dateEl.textContent  = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const subEl   = document.getElementById('today-sub');      if (subEl)   subEl.textContent   = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   // Week strip
   const strip = document.getElementById('week-strip');
@@ -2508,10 +2508,10 @@ function renderToday() {
 
   // Stats
   const todayStr = toDateStr(now);
-  document.getElementById('stat-posts').textContent = S.content.filter(c => c.scheduled_date === todayStr).length;
-  document.getElementById('stat-review').textContent = S.content.filter(c => c.status === 'review').length;
+  const statPosts = document.getElementById('stat-posts'); if (statPosts) statPosts.textContent = S.content.filter(c => c.scheduled_date === todayStr).length;
+  const statReview = document.getElementById('stat-review'); if (statReview) statReview.textContent = S.content.filter(c => c.status === 'review').length;
   const weekEnd = new Date(start); weekEnd.setDate(start.getDate() + 6);
-  document.getElementById('stat-shoots').textContent = S.shoots.filter(s => {
+  const statShoots = document.getElementById('stat-shoots'); if (statShoots) statShoots.textContent = S.shoots.filter(s => {
     if (!s.shoot_date) return false;
     const sd = new Date(s.shoot_date);
     return sd >= start && sd <= weekEnd;
@@ -2530,7 +2530,7 @@ function renderToday() {
 function updateEod() {
   const boxes = document.querySelectorAll('.eod-check');
   const done = Array.from(boxes).filter(b => b.checked).length;
-  document.getElementById('eod-progress').textContent = done + ' / ' + boxes.length;
+  const eodEl = document.getElementById('eod-progress'); if (eodEl) eodEl.textContent = done + ' / ' + boxes.length;
 }
 
 function toDateStr(d) {
@@ -2555,7 +2555,7 @@ async function loadClients() {
     const { data, error } = await query;
     if (error) throw error;
     S.clients = data || [];
-    document.getElementById('sb-clients-count').textContent = S.clients.length;
+    const sbClients = document.getElementById('sb-clients-count'); if (sbClients) sbClients.textContent = S.clients.length;
     populateClientDropdowns();
   } catch (e) { console.error(e); toast('Failed to load clients', 'error'); }
 }
@@ -2745,10 +2745,10 @@ function openClientProfile(id) {
   const open = clientTasks.filter(t => !t.done).length;
   const done = clientTasks.filter(t => t.done).length;
   const overdue = clientTasks.filter(t => !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString()).length;
-  document.getElementById('cp-s-open').textContent = open;
-  document.getElementById('cp-s-done').textContent = done;
-  document.getElementById('cp-s-overdue').textContent = overdue;
-  document.getElementById('cp-s-month').textContent = c.month || '—';
+  const cpOpen = document.getElementById('cp-s-open'); if (cpOpen) cpOpen.textContent = open;
+  const cpDone = document.getElementById('cp-s-done'); if (cpDone) cpDone.textContent = done;
+  const cpOvd  = document.getElementById('cp-s-overdue'); if (cpOvd) cpOvd.textContent = overdue;
+  const cpMon  = document.getElementById('cp-s-month'); if (cpMon) cpMon.textContent = c.month || '—';
 
   // Notes
   const notesKey = 'cp-notes-' + id;
