@@ -3995,3 +3995,467 @@ function renderSOPs() {
   }).join('');
 }
 </script>
+<!-- ============================================================
+     BB AI AGENT v1 — SMM WORKSPACE
+     Floating chat assistant + background error monitor
+     ============================================================ -->
+<style id="bb-agent-styles">
+#bb-agent-bubble {
+  position: fixed; bottom: 24px; right: 24px;
+  width: 54px; height: 54px;
+  background: linear-gradient(135deg, #00E5FF, #00B8CC);
+  border-radius: 50%; border: none; cursor: pointer;
+  z-index: 9990; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,229,255,0.4);
+  transition: transform 0.2s, box-shadow 0.2s; outline: none;
+}
+#bb-agent-bubble:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,229,255,0.55); }
+#bb-agent-bubble svg { width: 26px; height: 26px; fill: #000; transition: opacity 0.2s; }
+#bb-agent-error-badge {
+  position: absolute; top: -5px; right: -5px;
+  background: #F87171; color: #fff; font-size: 9px; font-weight: 800;
+  min-width: 18px; height: 18px; border-radius: 9px;
+  display: none; align-items: center; justify-content: center;
+  padding: 0 4px; border: 2px solid #0B0C0F; font-family: 'Poppins', sans-serif;
+}
+#bb-agent-panel {
+  position: fixed; bottom: 90px; right: 24px;
+  width: 344px; max-height: 500px;
+  background: #111318; border: 1px solid rgba(0,229,255,0.22);
+  border-radius: 16px; z-index: 9989;
+  display: none; flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,229,255,0.05);
+  overflow: hidden;
+  font-family: 'Poppins', sans-serif;
+  animation: bbPanelIn 0.22s ease;
+}
+@keyframes bbPanelIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+#bb-agent-panel.open { display: flex; }
+#bb-agent-header {
+  background: linear-gradient(135deg, rgba(0,229,255,0.13), rgba(0,229,255,0.04));
+  border-bottom: 1px solid rgba(0,229,255,0.13);
+  padding: 13px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+#bb-agent-avatar {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #00E5FF, #00B8CC);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #000; flex-shrink: 0; letter-spacing: -0.5px;
+}
+#bb-agent-hinfo { flex: 1; min-width: 0; }
+#bb-agent-hinfo .bb-atitle { font-size: 13px; font-weight: 700; color: #fff; }
+#bb-agent-hinfo .bb-astatus { font-size: 10px; color: rgba(0,229,255,0.75); margin-top: 1px; display: flex; align-items: center; gap: 4px; }
+#bb-agent-hinfo .bb-astatus::before { content: ''; display: inline-block; width: 6px; height: 6px; background: #00E5FF; border-radius: 50%; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+#bb-agent-close {
+  background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.3);
+  font-size: 18px; padding: 4px 6px; line-height: 1; transition: color 0.2s; border-radius: 4px;
+}
+#bb-agent-close:hover { color: #fff; background: rgba(255,255,255,0.06); }
+#bb-agent-messages {
+  flex: 1; overflow-y: auto; padding: 14px 14px 8px; display: flex;
+  flex-direction: column; min-height: 0;
+}
+#bb-agent-messages::-webkit-scrollbar { width: 3px; }
+#bb-agent-messages::-webkit-scrollbar-thumb { background: #1E2230; border-radius: 2px; }
+.bb-msg { max-width: 88%; margin-bottom: 9px; animation: bbMsgIn 0.2s ease; }
+.bb-msg-bot { align-self: flex-start; }
+.bb-msg-user { align-self: flex-end; }
+.bb-msg-bot .bb-bubble {
+  background: #1A1D23; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px 12px 12px 3px; padding: 9px 13px;
+  font-size: 12px; line-height: 1.65; color: #E8EAF0;
+}
+.bb-msg-user .bb-bubble {
+  background: linear-gradient(135deg, rgba(0,229,255,0.18), rgba(0,229,255,0.08));
+  border: 1px solid rgba(0,229,255,0.28);
+  border-radius: 12px 12px 3px 12px; padding: 9px 13px;
+  font-size: 12px; line-height: 1.65; color: #fff;
+}
+@keyframes bbMsgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+.bb-typing-dot { display: inline-block; width: 5px; height: 5px; background: rgba(0,229,255,0.5); border-radius: 50%; margin: 0 2px; animation: bbDot 1.2s ease infinite; }
+.bb-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.bb-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bbDot { 0%,80%,100%{transform:scale(1);opacity:0.5} 40%{transform:scale(1.3);opacity:1} }
+.bb-err-msg {
+  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25);
+  border-radius: 8px; padding: 9px 12px; font-size: 11px; color: #F87171;
+  margin-bottom: 9px; animation: bbMsgIn 0.2s ease;
+}
+#bb-agent-suggestions {
+  padding: 8px 14px 6px; display: flex; flex-wrap: wrap; gap: 5px;
+  flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.04);
+}
+.bb-chip {
+  background: rgba(0,229,255,0.07); border: 1px solid rgba(0,229,255,0.18);
+  color: #00E5FF; font-size: 10px; font-weight: 600; padding: 4px 10px;
+  border-radius: 20px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  font-family: 'Poppins', sans-serif;
+}
+.bb-chip:hover { background: rgba(0,229,255,0.16); transform: translateY(-1px); }
+#bb-agent-input-row {
+  padding: 8px 12px 12px; display: flex; gap: 8px;
+  flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.04);
+}
+#bb-agent-input {
+  flex: 1; background: #0B0C0F; border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 8px; padding: 8px 12px; font-size: 12px;
+  color: #fff; outline: none; transition: border-color 0.2s;
+  font-family: 'Poppins', sans-serif;
+}
+#bb-agent-input:focus { border-color: rgba(0,229,255,0.4); }
+#bb-agent-input::placeholder { color: #3D4260; }
+#bb-agent-send-btn {
+  background: linear-gradient(135deg, #00E5FF, #00B8CC); border: none;
+  border-radius: 8px; width: 34px; height: 34px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+#bb-agent-send-btn:hover { transform: scale(1.07); box-shadow: 0 2px 12px rgba(0,229,255,0.4); }
+#bb-agent-send-btn svg { width: 15px; height: 15px; fill: #000; }
+</style>
+
+<!-- AI Agent HTML -->
+<button id="bb-agent-bubble" onclick="bbAgentToggle()" title="BB AI Assistant — Click to chat">
+  <div id="bb-agent-error-badge">0</div>
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+  </svg>
+</button>
+
+<div id="bb-agent-panel">
+  <div id="bb-agent-header">
+    <div id="bb-agent-avatar">BB</div>
+    <div id="bb-agent-hinfo">
+      <div class="bb-atitle">BB Assistant</div>
+      <div class="bb-astatus">Error Monitor Active</div>
+    </div>
+    <button id="bb-agent-close" onclick="bbAgentToggle()">✕</button>
+  </div>
+  <div id="bb-agent-messages"></div>
+  <div id="bb-agent-suggestions">
+    <span class="bb-chip" onclick="bbChip('daily workflow')">Daily Workflow</span>
+    <span class="bb-chip" onclick="bbChip('content stages')">Content Stages</span>
+    <span class="bb-chip" onclick="bbChip('shoot stages')">Shoot Stages</span>
+    <span class="bb-chip" onclick="bbChip('show errors')">Show Errors</span>
+    <span class="bb-chip" onclick="bbChip('help')">Help</span>
+  </div>
+  <div id="bb-agent-input-row">
+    <input id="bb-agent-input" type="text" placeholder="Ask anything about the system..."
+      onkeydown="if(event.key==='Enter')bbAgentSend()">
+    <button id="bb-agent-send-btn" onclick="bbAgentSend()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// BB AI AGENT v1 — SMM WORKSPACE
+// Floating chat assistant + background JS/Supabase error monitor
+// ============================================================
+(function() {
+  'use strict';
+
+  var AGENT_VER = '1.0';
+  var MAX_ERR = 50;
+  var _errLog = [];
+  var _errCount = 0;
+  var _open = false;
+  var _greeted = false;
+
+  // ===== KNOWLEDGE BASE =====
+  var KB = [
+    {
+      keys: ['hello','hi','hey','good morning','what can you do','help me','how are you','sup'],
+      ans: 'Hey Nirvana! 👋 I\'m your <strong>BB Assistant</strong>. I know this workspace inside out and I\'m watching for errors in the background 24/7.\n\nAsk me anything — or tap a quick chip below to get started!'
+    },
+    {
+      keys: ['help','what can','capabilities','overview','what do you know'],
+      ans: '<strong>I can help you with:</strong>\n\n• <strong>Navigation</strong> — Finding pages and features\n• <strong>Daily Workflow</strong> — Morning to end-of-day checklist\n• <strong>Content Pipeline</strong> — All 10 stages explained\n• <strong>Shoot Pipeline</strong> — 7 shoot stages\n• <strong>Clients</strong> — How client management works\n• <strong>Approval Queue</strong> — How approvals flow\n• <strong>Diary</strong> — Logging your daily work\n• <strong>Ideas</strong> — Capturing content ideas\n• <strong>Error Log</strong> — Type "show errors" to see detected bugs\n• <strong>Troubleshooting</strong> — When things go wrong\n\nJust ask in plain English — I\'ll figure out what you need.'
+    },
+    {
+      keys: ['daily workflow','morning routine','what do i do today','start my day','checklist','daily routine','my day','workday'],
+      ans: '<strong>🗓 Daily Workflow — Nirvana\'s Checklist:</strong>\n\n<strong>🌅 Morning (Start here first)</strong>\n1. Open <strong>Dashboard</strong> → click "Set Top 3" → lock in your 3 priorities\n2. Open <strong>Calendar</strong> → check what\'s scheduled for today\n3. Open <strong>Approval Queue</strong> → anything from clients?\n4. Post any client-approved content on time ✅\n\n<strong>☀️ Midday (Keep things moving)</strong>\n5. Update <strong>Content</strong> cards — push stages forward\n6. Check <strong>Shoots</strong> — any scripts to write, dates to confirm?\n7. Reply to any client changes or feedback\n8. Capture new <strong>Ideas</strong> from client calls\n\n<strong>🌙 End of Day (Close out strong)</strong>\n9. Write a <strong>Diary</strong> entry — what did you do today?\n10. Check tomorrow\'s calendar — anything to prep tonight?\n11. Set tomorrow\'s Top 3 if you know them'
+    },
+    {
+      keys: ['content','content stages','content pipeline','content status','posting','pipeline','what are the stages','brief','editing'],
+      ans: '<strong>📋 Content Pipeline — 10 Stages:</strong>\n\n1. <strong>Brief</strong> — New card created, brief written\n2. <strong>Ideas</strong> — Brainstorming content ideas\n3. <strong>Editing</strong> — Content being created/edited\n4. <strong>Team Review</strong> — Internal check before client sees it\n5. <strong>Content Plan</strong> — Added to the monthly content plan\n6. <strong>Send Client</strong> — Sent to client for approval\n7. <strong>Client Changes</strong> — Client wants changes\n8. <strong>Client Approval</strong> — Client approved ✅\n9. <strong>Drive</strong> — Uploaded to Google Drive\n10. <strong>Posted</strong> — Live on social media 🎉\n\nTo update a card\'s stage: click the status badge on the content card and select the new stage.'
+    },
+    {
+      keys: ['shoot','shoots','shoot stages','shoot pipeline','video shoot','filming','script','shoot date'],
+      ans: '<strong>🎬 Shoot Pipeline — 7 Stages:</strong>\n\n1. <strong>Videos Confirmed</strong> — Videos agreed with client\n2. <strong>Script Made</strong> — Script written by SMM\n3. <strong>Script Changes</strong> — Client wants script edits\n4. <strong>Final Script</strong> — Script approved by client ✅\n5. <strong>Get Shoot Date</strong> — Coordinating a date with client\n6. <strong>Shoot Date Set</strong> — Date locked in 📅\n7. <strong>Shot</strong> — Shoot completed! 🎬\n\nFilter by client on the Shoots page using the dropdown. Click any shoot card to update its stage.'
+    },
+    {
+      keys: ['pages','navigation','menu','sidebar','sections','navigate','where is'],
+      ans: '<strong>📱 The 9 Pages of SMM Workspace:</strong>\n\n• <strong>Dashboard</strong> — Daily overview, Top 3, upcoming items\n• <strong>Content</strong> — Your full content pipeline\n• <strong>Shoots</strong> — Video shoot tracker\n• <strong>Calendar</strong> — All scheduled content & shoots\n• <strong>Clients</strong> — Client list and details\n• <strong>Approval Queue</strong> — Content awaiting client approval\n• <strong>Ideas</strong> — Capture random content ideas\n• <strong>Diary</strong> — Daily work log\n• <strong>SOPs</strong> — Standard Operating Procedures\n\nClick any item in the <strong>left sidebar</strong> to navigate.'
+    },
+    {
+      keys: ['calendar','schedule','events','upcoming','what\'s scheduled','today\'s content'],
+      ans: '<strong>📅 Calendar Page:</strong>\n\nShows all content posts and shoots by date.\n\n• Click any <strong>day</strong> to see what\'s scheduled for that day\n• Content items appear as cards on their scheduled date\n• Use the <strong>← →</strong> arrows to navigate months\n• Today is always highlighted in <strong style="color:#00E5FF">cyan</strong>\n• Click an event to open its details and make updates\n\nAlways check the calendar first thing in the morning so you know what needs to go out today!'
+    },
+    {
+      keys: ['client','clients','my clients','assigned','client list','who are my clients'],
+      ans: '<strong>👥 Clients Page:</strong>\n\nShows all clients assigned to you (Nirvana sees only her assigned clients — Thulaib and Shiara see everyone).\n\n• Each card shows the client name, package, and assigned SMM\n• Click a client card to see their full details — content, shoots, tasks\n• Clients are linked to all your content cards, shoot cards, and diary entries\n\nIf you don\'t see a client who should be there, ask Thulaib — they may need to be assigned to you in the system.'
+    },
+    {
+      keys: ['approval','approval queue','approve','awaiting approval','client approved','send to client','client review'],
+      ans: '<strong>✅ Approval Queue:</strong>\n\nShows all content going through the client review process.\n\n• <strong>Awaiting tab</strong> — Content sent to client, waiting on their response\n• <strong>Approved tab</strong> — Content the client has approved, ready to go live\n\n<strong>The flow:</strong>\n1. Move content to "Send Client" → it appears in Awaiting\n2. Client approves → move to "Client Approval"\n3. Upload to Drive → move to "Drive"\n4. Post it → move to "Posted" ✅\n\nCheck this page every morning — client approvals can come in overnight.'
+    },
+    {
+      keys: ['idea','ideas','capture idea','brainstorm','new idea','content idea'],
+      ans: '<strong>💡 Ideas Page:</strong>\n\nCapture any content idea the moment it hits you — during a client call, scrolling for inspiration, or from a brief.\n\n<strong>To add an idea:</strong>\n1. Click "Capture Idea"\n2. Type the idea (be specific — the more detail the better)\n3. Optionally link it to a client\n4. Save\n\nReview your Ideas regularly and turn the good ones into Content cards. Ideas expire if you don\'t act on them — aim to review weekly.'
+    },
+    {
+      keys: ['diary','log','daily notes','journal','entry','add entry','what did i do'],
+      ans: '<strong>📓 Daily Diary:</strong>\n\nYour private work log. Write a short entry every day before you finish.\n\n<strong>To add an entry:</strong>\n1. Click "Add Entry"\n2. Select today\'s date\n3. Optionally link to a specific client\n4. Write what you did, what happened, any issues\n5. Save\n\n<strong>Why it matters:</strong> Your diary protects you. If a client ever says "you didn\'t post that" or "nothing happened last week" — your diary is your proof. Make it a habit, takes 2 minutes.'
+    },
+    {
+      keys: ['top 3','priorities','priority','today\'s priorities','set priorities','what to focus'],
+      ans: '<strong>🎯 Top 3 Priorities:</strong>\n\nThe Top 3 widget is on your <strong>Dashboard</strong>.\n\n• Every morning: click "Set Top 3"\n• Enter your 3 most important tasks for the day\n• This keeps you from getting distracted by low-priority work\n\n<strong>Best practice:</strong> Set your Top 3 BEFORE checking messages or opening content cards. Decide what matters first, then work that list. Don\'t finish the day without completing at least 2 of your 3.'
+    },
+    {
+      keys: ['sop','standard operating','procedure','guide','process','rules','how do i','official process'],
+      ans: '<strong>📋 SOPs (Standard Operating Procedures):</strong>\n\nThe SOPs page contains the official BB playbook — step-by-step guides for every process.\n\nAlways check SOPs before doing something for the first time, or if you\'re unsure how BB wants it handled.\n\nSOPs cover: how to post content, how to handle client changes, shoot processes, approval workflows, and more.\n\nIf a process isn\'t in the SOPs and it should be, flag it to Thulaib.'
+    },
+    {
+      keys: ['quick add','add new','new content','new shoot','new task','create','+ button'],
+      ans: '<strong>⚡ Quick Add:</strong>\n\nThe <strong>"+"</strong> button in the top navigation bar opens Quick Add.\n\nYou can instantly create:\n• A new <strong>Content</strong> card\n• A new <strong>Shoot</strong>\n• A new <strong>Idea</strong>\n\nFill in the title, pick the client, and hit Add. The item drops straight into the right section.\n\nUse Quick Add when you\'re on a call and need to capture something fast — don\'t let it slip.'
+    },
+    {
+      keys: ['login','pin','password','sign in','credentials','forgot pin','my pin'],
+      ans: '<strong>🔐 Your Login Details:</strong>\n\n• <strong>Username:</strong> NIRVANA\n• <strong>PIN:</strong> 1010\n\nIf you get logged out just enter these on the login screen. Your data is always safe in Supabase — nothing is lost if you log out.'
+    },
+    {
+      keys: ['not working','broken','error','bug','issue','problem','crash','loading','something wrong','not loading','cant see','not showing'],
+      ans: '<strong>🔧 Troubleshooting Checklist:</strong>\n\n1. <strong>Hard refresh first</strong> — Cmd+Shift+R (clears cache)\n2. <strong>Check your internet</strong> — Supabase needs a connection\n3. <strong>Read the red toast</strong> — The error message at the bottom tells you exactly what broke\n4. <strong>Check error log</strong> — Type "show errors" here to see what I\'ve caught\n5. <strong>Open console</strong> — Cmd+Option+J in Chrome, look for red errors\n\nIf it\'s still broken after all that, screenshot the console and send it to Thulaib with what you were doing when it broke.'
+    },
+    {
+      keys: ['show errors','error log','errors','what errors','detected errors','bugs found','system errors'],
+      ans: '__SHOW_ERRORS__'
+    },
+    {
+      keys: ['clear errors','reset errors','clear error log'],
+      ans: '__CLEAR_ERRORS__'
+    },
+    {
+      keys: ['what is this','what is bb','business booster','about this','workspace','about the system'],
+      ans: '<strong>About BB SMM Workspace:</strong>\n\nThis is the <strong>Business Booster Social Media Manager Workspace</strong> — your central hub for managing all client social media work.\n\nBuilt to manage:\n• Content creation → approval → posting pipeline\n• Video shoot coordination\n• Client scheduling and calendar\n• Task and diary management\n• Ideas capture\n\nPowered by <strong>Supabase</strong> (real-time cloud database) and hosted on GitHub Pages. Data is shared live between all BB team members.'
+    },
+    {
+      keys: ['dashboard','home','overview','stats','summary'],
+      ans: '<strong>📊 Dashboard:</strong>\n\nYour home base. Shows at a glance:\n\n• <strong>Top 3 Priorities</strong> — Set these every morning\n• <strong>Today\'s Content</strong> — What needs to go out today\n• <strong>Upcoming Shoots</strong> — Shoots in the next 7 days\n• <strong>Recent Activity</strong> — Latest updates across the system\n\nAlways start and end your day on the Dashboard. It\'s your command center.'
+    }
+  ];
+
+  // ===== MATCHING ENGINE =====
+  function matchKB(input) {
+    var q = input.toLowerCase().replace(/[?!.,]/g, '').trim();
+    var best = null, bestScore = 0;
+
+    for (var i = 0; i < KB.length; i++) {
+      var entry = KB[i];
+      var score = 0;
+      for (var j = 0; j < entry.keys.length; j++) {
+        var kw = entry.keys[j].toLowerCase();
+        if (q === kw) { score = 200; break; }
+        if (q.indexOf(kw) !== -1) score = Math.max(score, kw.length * 3);
+        if (kw.indexOf(q) !== -1 && q.length > 3) score = Math.max(score, q.length * 2);
+        // Word overlap
+        var qWords = q.split(/\s+/);
+        var kWords = kw.split(/\s+/);
+        for (var a = 0; a < qWords.length; a++) {
+          if (qWords[a].length < 3) continue;
+          for (var b = 0; b < kWords.length; b++) {
+            if (qWords[a] === kWords[b]) score = Math.max(score, 10);
+          }
+        }
+      }
+      if (score > bestScore) { bestScore = score; best = entry; }
+    }
+
+    if (bestScore >= 9) return best;
+    return null;
+  }
+
+  function buildAnswer(entry) {
+    if (!entry) return null;
+    if (entry.ans === '__SHOW_ERRORS__') return buildErrorReport();
+    if (entry.ans === '__CLEAR_ERRORS__') {
+      _errLog = []; _errCount = 0; updateBadge();
+      return '<span style="color:#4ADE80">✅ Error log cleared. Watching fresh from now.</span>';
+    }
+    return entry.ans.replace(/\n/g, '<br>');
+  }
+
+  function fallback() {
+    return 'I\'m not sure about that one. Here\'s what I know best:<br><br>Try asking about: <strong style="color:#00E5FF">daily workflow</strong>, <strong style="color:#00E5FF">content stages</strong>, <strong style="color:#00E5FF">shoot stages</strong>, <strong style="color:#00E5FF">clients</strong>, <strong style="color:#00E5FF">troubleshooting</strong>, or <strong style="color:#00E5FF">show errors</strong>.<br><br>Or press <strong>Cmd+Option+J</strong> to open Chrome console for technical details.';
+  }
+
+  function buildErrorReport() {
+    if (_errLog.length === 0) {
+      return '<span style="color:#4ADE80">✅ No errors detected. System is running clean!</span>';
+    }
+    var html = '<strong style="color:#F87171">⚠️ ' + _errLog.length + ' error(s) detected:</strong><br><br>';
+    var show = _errLog.slice(-8);
+    for (var i = 0; i < show.length; i++) {
+      var e = show[i];
+      html += '<div style="background:rgba(248,113,113,0.1);border-radius:6px;padding:7px 10px;margin-bottom:5px;font-size:11px">';
+      html += '<span style="color:#F87171;font-weight:700">[' + e.type + ']</span> ';
+      html += _esc(e.msg);
+      html += ' <span style="color:#3D4260">(' + e.time + ')</span></div>';
+    }
+    if (_errLog.length > 8) html += '<div style="color:#3D4260;font-size:11px;margin-top:4px">...and ' + (_errLog.length - 8) + ' more. Type <strong>clear errors</strong> to reset.</div>';
+    else html += '<div style="color:#3D4260;font-size:11px;margin-top:6px">Type <strong>clear errors</strong> to reset the log.</div>';
+    return html;
+  }
+
+  // ===== ERROR MONITOR =====
+  function logErr(type, msg) {
+    if (_errLog.length >= MAX_ERR) _errLog.shift();
+    _errLog.push({ type: type, msg: String(msg).slice(0, 200), time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) });
+    _errCount++;
+    updateBadge();
+    if (_open) {
+      var el = document.getElementById('bb-agent-messages');
+      if (el) {
+        var d = document.createElement('div');
+        d.className = 'bb-err-msg';
+        d.innerHTML = '⚠️ <strong>' + type + ':</strong> ' + _esc(msg);
+        el.appendChild(d);
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+  }
+
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function updateBadge() {
+    var b = document.getElementById('bb-agent-error-badge');
+    if (!b) return;
+    if (_errCount > 0) {
+      b.textContent = _errCount > 9 ? '9+' : String(_errCount);
+      b.style.display = 'flex';
+    } else {
+      b.style.display = 'none';
+    }
+  }
+
+  // Wire up JS error hooks
+  var _origErr = window.onerror;
+  window.onerror = function(msg, src, line, col, err) {
+    var srcShort = src ? src.split('/').pop() : '';
+    logErr('JS Error', msg + (srcShort ? ' — ' + srcShort + ':' + line : ''));
+    if (_origErr) return _origErr.apply(this, arguments);
+    return false;
+  };
+
+  window.addEventListener('unhandledrejection', function(ev) {
+    var reason = ev.reason;
+    var msg = reason ? (reason.message || String(reason)) : 'Unhandled promise rejection';
+    logErr('Promise', msg.slice(0, 180));
+  });
+
+  // Intercept fetch to catch Supabase API failures
+  var _origFetch = window.fetch;
+  window.fetch = function() {
+    var args = arguments;
+    var url = '';
+    try { url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || ''; } catch(e) {}
+    var isSupabase = url.indexOf('supabase.co') !== -1;
+    return _origFetch.apply(this, args).then(function(res) {
+      if (isSupabase && !res.ok && res.status >= 400) {
+        logErr('Supabase ' + res.status, url.split('/').slice(-2).join('/'));
+      }
+      return res;
+    }).catch(function(err) {
+      if (isSupabase) logErr('Supabase Network', err.message || 'Fetch failed');
+      throw err;
+    });
+  };
+
+  // ===== CHAT FUNCTIONS (global) =====
+  window.bbAgentToggle = function() {
+    _open = !_open;
+    var panel = document.getElementById('bb-agent-panel');
+    if (!panel) return;
+
+    if (_open) {
+      panel.classList.add('open');
+      // Welcome message on first open
+      var msgs = document.getElementById('bb-agent-messages');
+      if (msgs && msgs.children.length === 0) {
+        _addMsg('Hey Nirvana! 👋 I\'m your <strong>BB Assistant</strong>.<br><br>I know this workspace inside out and I\'m silently watching for bugs in the background. Ask me anything — or tap a chip below!', 'bot');
+        if (_errCount > 0) {
+          setTimeout(function() {
+            _addMsg('⚠️ I\'ve caught <strong style="color:#F87171">' + _errCount + ' error(s)</strong> since you loaded the app. Tap <strong style="color:#00E5FF">Show Errors</strong> to see them.', 'bot');
+          }, 600);
+        }
+      }
+      var input = document.getElementById('bb-agent-input');
+      if (input) setTimeout(function() { input.focus(); }, 150);
+    } else {
+      panel.classList.remove('open');
+    }
+  };
+
+  window.bbChip = function(text) {
+    var input = document.getElementById('bb-agent-input');
+    if (input) { input.value = text; }
+    bbAgentSend();
+  };
+
+  window.bbAgentSend = function() {
+    var inputEl = document.getElementById('bb-agent-input');
+    if (!inputEl) return;
+    var q = inputEl.value.trim();
+    if (!q) return;
+    inputEl.value = '';
+
+    _addMsg(q, 'user');
+
+    // Typing indicator
+    var typing = _addTyping();
+
+    setTimeout(function() {
+      if (typing && typing.parentNode) typing.parentNode.removeChild(typing);
+      var match = matchKB(q);
+      var answer = match ? buildAnswer(match) : fallback();
+      _addMsg(answer, 'bot');
+    }, 280 + Math.floor(Math.random() * 200));
+  };
+
+  function _addMsg(html, role) {
+    var list = document.getElementById('bb-agent-messages');
+    if (!list) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'bb-msg bb-msg-' + (role === 'user' ? 'user' : 'bot');
+    var bubble = document.createElement('div');
+    bubble.className = 'bb-bubble';
+    if (role === 'user') bubble.textContent = html;
+    else bubble.innerHTML = html;
+    wrap.appendChild(bubble);
+    list.appendChild(wrap);
+    list.scrollTop = list.scrollHeight;
+    return wrap;
+  }
+
+  function _addTyping() {
+    var list = document.getElementById('bb-agent-messages');
+    if (!list) return null;
+    var wrap = document.createElement('div');
+    wrap.className = 'bb-msg bb-msg-bot';
+    wrap.innerHTML = '<div class="bb-bubble"><span class="bb-typing-dot"></span><span class="bb-typing-dot"></span><span class="bb-typing-dot"></span></div>';
+    list.appendChild(wrap);
+    list.scrollTop = list.scrollHeight;
+    return wrap;
+  }
+
+  console.log('[BB Agent] v' + AGENT_VER + ' loaded — chat + error monitor active');
+})();
+</script>
