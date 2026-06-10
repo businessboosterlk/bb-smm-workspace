@@ -4174,6 +4174,10 @@ function renderSOPs() {
       ans: 'Hey Nirvana! 👋 I\'m your <strong>BB Assistant</strong>. I know this workspace inside out and I\'m watching for errors in the background 24/7.\n\nAsk me anything — or tap a quick chip below to get started!'
     },
     {
+      keys: ['what should i look into','what needs attention','what to do','what is urgent','urgent','overdue','priorities','what should i work on','whats next','what next','status update','what is going on','whats happening','action items','anything overdue'],
+      ans: '__LIVE_URGENT__'
+    },
+    {
       keys: ['help','what can','capabilities','overview','what do you know'],
       ans: '<strong>I can help you with:</strong>\n\n• <strong>Navigation</strong> — Finding pages and features\n• <strong>Daily Workflow</strong> — Morning to end-of-day checklist\n• <strong>Content Pipeline</strong> — All 10 stages explained\n• <strong>Shoot Pipeline</strong> — 7 shoot stages\n• <strong>Clients</strong> — How client management works\n• <strong>Approval Queue</strong> — How approvals flow\n• <strong>Diary</strong> — Logging your daily work\n• <strong>Ideas</strong> — Capturing content ideas\n• <strong>Error Log</strong> — Type "show errors" to see detected bugs\n• <strong>Troubleshooting</strong> — When things go wrong\n\nJust ask in plain English — I\'ll figure out what you need.'
     },
@@ -4281,9 +4285,79 @@ function renderSOPs() {
     return null;
   }
 
+  // ===== LIVE DATA ANSWERS =====
+  function buildLiveAnswer(type) {
+    var today = toDateStr ? toDateStr(new Date()) : new Date().toISOString().slice(0,10);
+    var scope = (typeof currentSmmScope === 'function') ? currentSmmScope() : null;
+    var content = (typeof S !== 'undefined' && S.content) ? S.content : [];
+    var shoots = (typeof S !== 'undefined' && S.shoots) ? S.shoots : [];
+
+    if (type === 'urgent') {
+      var overdue = content.filter(function(c) {
+        if (scope && c.assigned_smm !== scope) return false;
+        return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted';
+      });
+      var todayPosts = content.filter(function(c) {
+        if (scope && c.assigned_smm !== scope) return false;
+        return c.scheduled_date === today && c.status !== 'posted';
+      });
+      var pendingApproval = content.filter(function(c) {
+        if (scope && c.assigned_smm !== scope) return false;
+        return c.status === 'send-client' || c.status === 'client-changes';
+      });
+      var upcomingShoots = shoots.filter(function(sh) {
+        if (scope && sh.assigned_smm !== scope) return false;
+        if (!sh.shoot_date) return false;
+        var diff = (new Date(sh.shoot_date) - new Date(today)) / 86400000;
+        return diff >= 0 && diff <= 7 && sh.stage !== 'Shot';
+      });
+
+      if (!overdue.length && !todayPosts.length && !pendingApproval.length) {
+        return '✅ <strong>You\'re all caught up!</strong><br><br>No overdue content and nothing urgent right now. Use this time to work on upcoming briefs or ideas.';
+      }
+
+      var msg = '📋 <strong>Here\'s what needs your attention:</strong><br><br>';
+
+      if (overdue.length) {
+        msg += '🔴 <strong>' + overdue.length + ' overdue:</strong><br>';
+        overdue.slice(0, 3).forEach(function(c) {
+          msg += '&nbsp;&nbsp;• ' + (c.post_name || 'Untitled') + ' — ' + (c.client_name || 'Unknown') + ' (' + c.scheduled_date + ')<br>';
+        });
+        if (overdue.length > 3) msg += '&nbsp;&nbsp;• ...and ' + (overdue.length - 3) + ' more<br>';
+        msg += '<br>';
+      }
+
+      if (todayPosts.length) {
+        msg += '📅 <strong>' + todayPosts.length + ' due today:</strong><br>';
+        todayPosts.slice(0, 3).forEach(function(c) {
+          msg += '&nbsp;&nbsp;• ' + (c.post_name || 'Untitled') + ' — ' + (c.client_name || 'Unknown') + '<br>';
+        });
+        msg += '<br>';
+      }
+
+      if (pendingApproval.length) {
+        msg += '⏳ <strong>' + pendingApproval.length + ' waiting for client:</strong><br>';
+        pendingApproval.slice(0, 3).forEach(function(c) {
+          msg += '&nbsp;&nbsp;• ' + (c.post_name || 'Untitled') + ' — ' + (c.client_name || 'Unknown') + '<br>';
+        });
+        msg += '<br>';
+      }
+
+      if (upcomingShoots.length) {
+        msg += '🎬 <strong>' + upcomingShoots.length + ' shoot(s) this week</strong> — check Shoot Pipeline<br><br>';
+      }
+
+      msg += '<span style="color:#3D4260;font-size:11px">Open Dashboard for full details.</span>';
+      return msg;
+    }
+
+    return fallback();
+  }
+
   function buildAnswer(entry) {
-    if (!entry) return null;
+    if (!entry) return fallback();
     if (entry.ans === '__SHOW_ERRORS__') return buildErrorReport();
+    if (entry.ans === '__LIVE_URGENT__') return buildLiveAnswer('urgent');
     if (entry.ans === '__CLEAR_ERRORS__') {
       _errLog = []; _errCount = 0; updateBadge();
       return '<span style="color:#4ADE80">✅ Error log cleared. Watching fresh from now.</span>';
@@ -4423,10 +4497,15 @@ function renderSOPs() {
     var typing = _addTyping();
 
     setTimeout(function() {
-      if (typing && typing.parentNode) typing.parentNode.removeChild(typing);
-      var match = matchKB(q);
-      var answer = match ? buildAnswer(match) : fallback();
-      _addMsg(answer, 'bot');
+      try {
+        if (typing && typing.parentNode) typing.parentNode.removeChild(typing);
+        var match = matchKB(q);
+        var answer = match ? buildAnswer(match) : fallback();
+        _addMsg(answer || fallback(), 'bot');
+      } catch(e) {
+        try { if (typing && typing.parentNode) typing.parentNode.removeChild(typing); } catch(x){}
+        _addMsg('Something went wrong on my end. Try asking again or tap a chip below.', 'bot');
+      }
     }, 280 + Math.floor(Math.random() * 200));
   };
 
