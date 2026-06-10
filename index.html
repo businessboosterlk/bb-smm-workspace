@@ -3399,4 +3399,599 @@ async function duplicateSmmCPlanItem(id){
   }
   renderContentPlan();
 }
+
+// ============ TOAST ============
+function toast(msg, type) {
+  type = type || 'success';
+  var colors = { success: '#00E5FF', error: '#FF5252', info: '#FBBF24' };
+  var c = colors[type] || colors.success;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1A1D23;border:1px solid ' + c + ';color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 24px rgba(0,0,0,0.5);transition:opacity 0.4s;max-width:320px;font-family:inherit';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 400); }, 2800);
+}
+
+// ============ MODALS ============
+function openModal(id) {
+  var el = document.getElementById('modal-' + id);
+  if (!el) return;
+  el.style.display = 'flex';
+  populateClientDropdowns();
+}
+function closeModal(id) {
+  var el = document.getElementById('modal-' + id);
+  if (el) el.style.display = 'none';
+}
+
+// ============ CALENDAR ============
+function calNav(dir) {
+  if (!S.calDate) S.calDate = new Date();
+  S.calDate = new Date(S.calDate.getFullYear(), S.calDate.getMonth() + dir, 1);
+  renderCalendar();
+}
+function wireCalFilters() {
+  ['cal-filter-assignee','cal-filter-client','cal-filter-type'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.onchange = renderCalendar;
+  });
+}
+function clearCalFilters() {
+  ['cal-filter-assignee','cal-filter-client','cal-filter-type'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = 'all';
+  });
+  renderCalendar();
+}
+function renderCalendar() {
+  if (!S.calDate) S.calDate = new Date();
+  var year = S.calDate.getFullYear();
+  var month = S.calDate.getMonth();
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var titleEl = document.getElementById('cal-month-title');
+  if (titleEl) titleEl.textContent = MONTHS[month] + ' ' + year;
+  var dowEl = document.getElementById('cal-dows');
+  if (dowEl) dowEl.innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(function(d) { return '<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:6px 0">' + d + '</div>'; }).join('');
+  var cellsEl = document.getElementById('cal-cells');
+  if (!cellsEl) return;
+  var fClient = (document.getElementById('cal-filter-client') || {}).value || 'all';
+  var fType = (document.getElementById('cal-filter-type') || {}).value || 'all';
+  var byDate = {};
+  function addItem(ds, item) { if (!byDate[ds]) byDate[ds] = []; byDate[ds].push(item); }
+  (S.events || []).forEach(function(e) {
+    if (!e.date) return;
+    if (fType !== 'all' && fType !== 'event') return;
+    addItem(e.date.substring(0, 10), { label: e.title || 'Event', color: '#FBBF24' });
+  });
+  (S.shoots || []).forEach(function(s) {
+    if (!s.shoot_date) return;
+    if (fType !== 'all' && fType !== 'shoot') return;
+    if (fClient !== 'all' && String(s.client_id) !== String(fClient)) return;
+    var cl = S.clients.find(function(c) { return c.id == s.client_id; });
+    addItem(s.shoot_date.substring(0, 10), { label: (cl ? cl.name + ' — ' : '') + (s.title || 'Shoot'), color: '#FF2D78' });
+  });
+  (S.content || []).forEach(function(c) {
+    if (!c.scheduled_date) return;
+    if (fType !== 'all' && fType !== 'content') return;
+    if (fClient !== 'all' && String(c.client_id) !== String(fClient)) return;
+    var cl = S.clients.find(function(x) { return x.id == c.client_id; });
+    addItem(c.scheduled_date.substring(0, 10), { label: (cl ? cl.name + ' — ' : '') + (c.title || 'Post'), color: '#00E5FF' });
+  });
+  (S.tasks || []).forEach(function(t) {
+    if (!t.due_date) return;
+    if (fType !== 'all' && fType !== 'task') return;
+    if (fClient !== 'all' && String(t.client_id) !== String(fClient)) return;
+    addItem(t.due_date.substring(0, 10), { label: t.title || 'Task', color: '#A855F7' });
+  });
+  var firstDay = new Date(year, month, 1).getDay();
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var today = toDateStr(new Date());
+  var html = '';
+  for (var i = 0; i < firstDay; i++) { html += '<div style="min-height:70px;border-radius:8px;background:rgba(255,255,255,0.01);padding:6px 8px"></div>'; }
+  for (var d = 1; d <= daysInMonth; d++) {
+    var ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    var isToday = ds === today;
+    var items = byDate[ds] || [];
+    var itemHtml = items.slice(0, 3).map(function(it) { return '<div style="font-size:10px;background:' + it.color + '22;color:' + it.color + ';padding:1px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + escHtml(it.label) + '</div>'; }).join('');
+    var moreHtml = items.length > 3 ? '<div style="font-size:9px;color:var(--text3);margin-top:2px">+' + (items.length - 3) + ' more</div>' : '';
+    var bg = isToday ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.03)';
+    var bc = isToday ? 'var(--accent)' : 'var(--border)';
+    html += '<div onclick="openDayDetail(\'' + ds + '\')" style="min-height:70px;border-radius:8px;background:' + bg + ';border:1px solid ' + bc + ';padding:6px 8px;cursor:pointer"><div style="font-size:12px;font-weight:' + (isToday ? '800' : '600') + ';color:' + (isToday ? 'var(--accent)' : 'var(--text2)') + '">' + d + '</div>' + itemHtml + moreHtml + '</div>';
+  }
+  cellsEl.innerHTML = html;
+  renderUpcoming();
+}
+function renderUpcoming() {
+  var el = document.getElementById('cal-upcoming');
+  if (!el) return;
+  var today = new Date();
+  var in30 = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+  var todayStr = toDateStr(today);
+  var in30Str = toDateStr(in30);
+  var items = [];
+  (S.events || []).forEach(function(e) {
+    if (e.date && e.date >= todayStr && e.date <= in30Str) items.push({ date: e.date, label: e.title || 'Event', color: '#FBBF24', type: 'Event' });
+  });
+  (S.shoots || []).forEach(function(s) {
+    var d = s.shoot_date ? s.shoot_date.substring(0, 10) : null;
+    if (d && d >= todayStr && d <= in30Str) {
+      var cl = S.clients.find(function(c) { return c.id == s.client_id; });
+      items.push({ date: d, label: (cl ? cl.name + ' — ' : '') + (s.title || 'Shoot'), color: '#FF2D78', type: 'Shoot' });
+    }
+  });
+  items.sort(function(a, b) { return a.date.localeCompare(b.date); });
+  if (!items.length) {
+    el.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:20px;font-size:13px">No upcoming events in the next 30 days.</div>';
+    return;
+  }
+  var MONTHS_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  el.innerHTML = items.slice(0, 6).map(function(it) {
+    var d = new Date(it.date + 'T00:00:00');
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid ' + it.color + ';border-radius:8px;padding:12px 14px"><div style="font-size:11px;color:' + it.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.06em">' + it.type + ' · ' + MONTHS_S[d.getMonth()] + ' ' + d.getDate() + '</div><div style="font-size:13px;font-weight:600;color:#fff;margin-top:4px">' + escHtml(it.label) + '</div></div>';
+  }).join('');
+}
+function openDayDetail(dateStr) {
+  var titleEl = document.getElementById('dd-title');
+  var contentEl = document.getElementById('dd-content');
+  if (!titleEl || !contentEl) return;
+  var d = new Date(dateStr + 'T00:00:00');
+  var MONTHS_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  titleEl.textContent = MONTHS_S[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  S._dayDetailDate = dateStr;
+  var html = '';
+  var shoots = (S.shoots || []).filter(function(s) { return s.shoot_date && s.shoot_date.substring(0, 10) === dateStr; });
+  if (shoots.length) {
+    html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Shoots</div>';
+    shoots.forEach(function(s) {
+      var cl = S.clients.find(function(c) { return c.id == s.client_id; });
+      html += '<div style="background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.3);border-radius:8px;padding:10px 14px;margin-bottom:6px"><div style="font-weight:600;color:#FF2D78">' + escHtml(s.title || 'Shoot') + '</div><div style="font-size:12px;color:var(--text3);margin-top:3px">' + (cl ? cl.name : 'No client') + ' · ' + (s.stage || s.status || '') + '</div></div>';
+    });
+    html += '</div>';
+  }
+  var cnt = (S.content || []).filter(function(c) { return c.scheduled_date && c.scheduled_date.substring(0, 10) === dateStr; });
+  if (cnt.length) {
+    html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Content</div>';
+    cnt.forEach(function(c) {
+      var cl = S.clients.find(function(x) { return x.id == c.client_id; });
+      html += '<div style="background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);border-radius:8px;padding:10px 14px;margin-bottom:6px"><div style="font-weight:600;color:var(--accent)">' + escHtml(c.title || 'Post') + '</div><div style="font-size:12px;color:var(--text3);margin-top:3px">' + (cl ? cl.name : '') + ' · ' + (c.content_type || 'Post') + ' · ' + (c.status || '') + '</div></div>';
+    });
+    html += '</div>';
+  }
+  var evts = (S.events || []).filter(function(e) { return e.date && e.date.substring(0, 10) === dateStr; });
+  if (evts.length) {
+    html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Events</div>';
+    evts.forEach(function(e) { html += '<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:10px 14px;margin-bottom:6px"><div style="font-weight:600;color:#FBBF24">' + escHtml(e.title || 'Event') + '</div>' + (e.description ? '<div style="font-size:12px;color:var(--text3);margin-top:3px">' + escHtml(e.description) + '</div>' : '') + '</div>'; });
+    html += '</div>';
+  }
+  if (!html) html = '<div style="text-align:center;color:var(--text3);padding:32px 0;font-size:14px">Nothing scheduled for this day.</div>';
+  html += '<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-primary" style="flex:1;justify-content:center;font-size:12px" onclick="dayDetailAddContent()">+ Content</button><button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px" onclick="dayDetailAddShoot()">+ Shoot</button><button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px" onclick="dayDetailAddTask()">+ Task</button></div>';
+  contentEl.innerHTML = html;
+  openModal('day-detail');
+}
+
+// ============ SHOOT PIPELINE ============
+var SHOOT_STAGE_MAP = {
+  'videos-confirmed':'Videos Confirmed','script-made':'Script Made','script-changes':'Script Changes',
+  'final-script':'Final Script','get-shoot-date':'Get Shoot Date','shoot-date-set':'Shoot Date Set','shot':'Shot'
+};
+function stageToKey(s) {
+  return (s || 'videos-confirmed').toLowerCase().replace(/\s+/g, '-');
+}
+function renderShoots() {
+  var board = document.getElementById('shoot-board');
+  if (!board) return;
+  var fClient = (document.getElementById('sp-client-filter') || {}).value || 'all';
+  var scope = currentSmmScope();
+  var shoots = (S.shoots || []).filter(function(s) {
+    if (scope && s.assigned_smm !== scope) return false;
+    if (fClient !== 'all' && String(s.client_id) !== String(fClient)) return false;
+    return true;
+  });
+  board.querySelectorAll('.kanban-cards').forEach(function(col) { col.innerHTML = ''; });
+  Object.keys(SHOOT_STAGE_MAP).forEach(function(key) {
+    var cnt = document.getElementById('sc-' + key);
+    if (cnt) cnt.textContent = shoots.filter(function(s) { return stageToKey(s.stage || s.status) === key; }).length;
+  });
+  shoots.forEach(function(shoot) {
+    var key = stageToKey(shoot.stage || shoot.status);
+    var col = board.querySelector('[data-sdrop="' + key + '"]');
+    if (!col) { col = board.querySelector('[data-sdrop="videos-confirmed"]'); }
+    if (!col) return;
+    var cl = S.clients.find(function(c) { return c.id == shoot.client_id; });
+    var card = document.createElement('div');
+    card.className = 'kanban-card';
+    card.draggable = true;
+    card.dataset.id = shoot.id;
+    var ds = shoot.shoot_date ? new Date(shoot.shoot_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'No date';
+    card.innerHTML = '<div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:5px;cursor:pointer" onclick="openShootCard(' + shoot.id + ')">' + escHtml(shoot.title || 'Untitled') + '</div>' + (cl ? '<div style="font-size:11px;color:var(--accent);margin-bottom:3px;font-weight:600">' + escHtml(cl.name) + '</div>' : '') + '<div style="font-size:11px;color:var(--text3)">' + ds + '</div>';
+    card.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', JSON.stringify({ id: shoot.id, type: 'shoot' })); });
+    col.appendChild(card);
+  });
+  board.querySelectorAll('[data-sdrop]').forEach(function(zone) {
+    zone.ondragover = function(e) { e.preventDefault(); zone.style.background = 'rgba(0,229,255,0.05)'; };
+    zone.ondragleave = function() { zone.style.background = ''; };
+    zone.ondrop = async function(e) {
+      e.preventDefault(); zone.style.background = '';
+      try {
+        var data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        if (data.type !== 'shoot') return;
+        var newKey = zone.dataset.sdrop;
+        var newLabel = SHOOT_STAGE_MAP[newKey] || newKey;
+        var r = await sb.from('smm_shoots').update({ stage: newLabel }).eq('id', data.id);
+        if (!r.error) { var idx = S.shoots.findIndex(function(s) { return s.id == data.id; }); if (idx !== -1) S.shoots[idx].stage = newLabel; renderShoots(); toast('Moved to ' + newLabel, 'success'); }
+      } catch(err) {}
+    };
+  });
+}
+function renderUpcomingShoots() { renderSmmShootWeekly(); }
+function openShootCard(id) {
+  var shoot = (S.shoots || []).find(function(s) { return s.id == id; });
+  if (!shoot) return;
+  var e = function(eid) { return document.getElementById(eid); };
+  if (e('sa-title')) e('sa-title').value = shoot.title || '';
+  if (e('sa-client')) e('sa-client').value = shoot.client_id || '';
+  if (e('sa-date')) e('sa-date').value = shoot.shoot_date || '';
+  if (e('sa-status')) e('sa-status').value = stageToKey(shoot.stage || shoot.status);
+  if (e('sa-notes')) e('sa-notes').value = shoot.notes || '';
+  if (e('sa-edit-id')) e('sa-edit-id').value = shoot.id;
+  if (e('sa-submit-btn')) e('sa-submit-btn').textContent = 'Save Changes';
+  if (e('sa-delete-btn')) e('sa-delete-btn').style.display = 'inline-flex';
+  openModal('shoot-add');
+}
+function resetShootModal() {
+  ['sa-title','sa-date','sa-notes'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  var e = function(eid) { return document.getElementById(eid); };
+  if (e('sa-edit-id')) e('sa-edit-id').value = '';
+  if (e('sa-submit-btn')) e('sa-submit-btn').textContent = 'Schedule';
+  if (e('sa-delete-btn')) e('sa-delete-btn').style.display = 'none';
+}
+async function submitShootAdd() {
+  var title = (document.getElementById('sa-title') || {}).value || '';
+  title = title.trim();
+  var clientId = (document.getElementById('sa-client') || {}).value;
+  var date = (document.getElementById('sa-date') || {}).value;
+  var stageKey = (document.getElementById('sa-status') || {}).value || 'videos-confirmed';
+  var notes = ((document.getElementById('sa-notes') || {}).value || '').trim();
+  var editId = (document.getElementById('sa-edit-id') || {}).value;
+  if (!title) { toast('Shoot name is required', 'error'); return; }
+  var payload = { title: title, client_id: clientId || null, shoot_date: date || null, stage: SHOOT_STAGE_MAP[stageKey] || 'Videos Confirmed', notes: notes || null, assigned_smm: currentSmmScope() || null };
+  try {
+    if (editId) {
+      var r = await sb.from('smm_shoots').update(payload).eq('id', editId);
+      if (r.error) throw r.error;
+      var idx = S.shoots.findIndex(function(s) { return s.id == editId; });
+      if (idx !== -1) S.shoots[idx] = Object.assign(S.shoots[idx], payload);
+      toast('Shoot updated', 'success');
+    } else {
+      var r2 = await sb.from('smm_shoots').insert([payload]).select();
+      if (r2.error) throw r2.error;
+      if (r2.data && r2.data[0]) S.shoots.push(r2.data[0]);
+      toast('Shoot scheduled', 'success');
+    }
+    closeModal('shoot-add'); resetShootModal(); renderShoots(); updateBadges();
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+async function deleteShootCard() {
+  var editId = (document.getElementById('sa-edit-id') || {}).value;
+  if (!editId) return;
+  if (!confirm('Delete this shoot?')) return;
+  try {
+    var r = await sb.from('smm_shoots').delete().eq('id', editId);
+    if (r.error) throw r.error;
+    S.shoots = S.shoots.filter(function(s) { return s.id != editId; });
+    toast('Shoot deleted', 'success'); closeModal('shoot-add'); resetShootModal(); renderShoots(); updateBadges();
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+
+// ============ CONTENT CARD CRUD ============
+function resetContentModal() {
+  ['ca-title','ca-date'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  var e = function(eid) { return document.getElementById(eid); };
+  if (e('ca-edit-id')) e('ca-edit-id').value = '';
+  if (e('ca-submit-btn')) e('ca-submit-btn').textContent = 'Add Card';
+  if (e('ca-delete-btn')) e('ca-delete-btn').style.display = 'none';
+}
+async function submitContentAdd() {
+  var title = ((document.getElementById('ca-title') || {}).value || '').trim();
+  var clientId = (document.getElementById('ca-client') || {}).value;
+  var ctype = (document.getElementById('ca-type') || {}).value || 'post';
+  var status = (document.getElementById('ca-status') || {}).value || 'brief';
+  var date = (document.getElementById('ca-date') || {}).value;
+  var editId = (document.getElementById('ca-edit-id') || {}).value;
+  if (!title) { toast('Title is required', 'error'); return; }
+  var payload = { title: title, client_id: clientId || null, content_type: ctype, status: status, scheduled_date: date || null, assigned_smm: currentSmmScope() || null };
+  try {
+    if (editId) {
+      var r = await sb.from('smm_content').update(payload).eq('id', editId);
+      if (r.error) throw r.error;
+      var idx = S.content.findIndex(function(c) { return c.id == editId; });
+      if (idx !== -1) S.content[idx] = Object.assign(S.content[idx], payload);
+      toast('Content updated', 'success');
+    } else {
+      var r2 = await sb.from('smm_content').insert([payload]).select();
+      if (r2.error) throw r2.error;
+      if (r2.data && r2.data[0]) S.content.push(r2.data[0]);
+      toast('Content card added', 'success');
+    }
+    closeModal('content-add'); resetContentModal(); renderContent(); updateBadges();
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+async function deleteContentCard() {
+  var editId = (document.getElementById('ca-edit-id') || {}).value;
+  if (!editId) return;
+  if (!confirm('Delete this content card?')) return;
+  try {
+    var r = await sb.from('smm_content').delete().eq('id', editId);
+    if (r.error) throw r.error;
+    S.content = S.content.filter(function(c) { return c.id != editId; });
+    toast('Content card deleted', 'success'); closeModal('content-add'); resetContentModal(); renderContent(); updateBadges();
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+
+// ============ MY TASKS ============
+function renderMyTasks() {
+  var el = document.getElementById('my-tasks-content');
+  if (!el) return;
+  var scope = currentSmmScope();
+  var fClient = (document.getElementById('mt-filter-client') || {}).value || 'all';
+  var fPriority = (document.getElementById('mt-filter-priority') || {}).value || 'all';
+  var fCat = (document.getElementById('mt-filter-category') || {}).value || 'all';
+  var tasks = (S.tasks || []).filter(function(t) {
+    if (scope && t.assigned_smm !== scope && t.assigned_to !== scope) return false;
+    if (fClient !== 'all' && String(t.client_id) !== String(fClient)) return false;
+    if (fPriority !== 'all' && t.priority !== fPriority) return false;
+    if (fCat !== 'all' && t.category !== fCat) return false;
+    return true;
+  });
+  if (!tasks.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">No tasks. Click + Add Task to get started.</div>'; return; }
+  var active = tasks.filter(function(t) { return t.status !== 'done' && t.status !== 'cancelled'; });
+  var done = tasks.filter(function(t) { return t.status === 'done' || t.status === 'cancelled'; });
+  var prioColors = { high: '#FF5252', medium: '#FBBF24', low: '#4ADE80' };
+  function renderTaskRow(t) {
+    var cl = S.clients.find(function(c) { return c.id == t.client_id; });
+    var isDone = t.status === 'done' || t.status === 'cancelled';
+    var pc = prioColors[t.priority] || 'var(--text3)';
+    var checkInner = isDone ? '<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 7L9 1" stroke="#0B0C0F" stroke-width="2" stroke-linecap="round"/></svg>' : '';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px' + (isDone ? ';opacity:0.55' : '') + '"><div onclick="toggleTask(' + t.id + ')" style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (isDone ? '#4ADE80' : 'var(--border)') + ';background:' + (isDone ? '#4ADE80' : 'transparent') + ';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">' + checkInner + '</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff' + (isDone ? ';text-decoration:line-through' : '') + '">' + escHtml(t.title || 'Untitled') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + (t.priority ? '<span style="font-size:10px;background:' + pc + '22;color:' + pc + ';padding:2px 7px;border-radius:20px;font-weight:700;text-transform:uppercase">' + t.priority + '</span>' : '') + (t.category ? '<span style="font-size:10px;color:var(--text3)">' + escHtml(t.category) + '</span>' : '') + (t.due_date ? '<span style="font-size:11px;color:var(--text3)">Due: ' + t.due_date.substring(0,10) + '</span>' : '') + '</div></div><button onclick="deleteTask(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;line-height:1">×</button></div>';
+  }
+  var html = active.length ? '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">' + active.map(renderTaskRow).join('') + '</div>' : '';
+  if (done.length) html += '<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Completed (' + done.length + ')</div><div style="display:flex;flex-direction:column;gap:6px">' + done.slice(0, 10).map(renderTaskRow).join('') + '</div></div>';
+  el.innerHTML = html;
+}
+function wireMyTasksFilters() {
+  ['mt-filter-client','mt-filter-priority','mt-filter-category'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.onchange = renderMyTasks;
+  });
+}
+function clearMyTasksFilters() {
+  ['mt-filter-client','mt-filter-priority','mt-filter-category'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = 'all'; });
+  renderMyTasks();
+}
+
+// ============ APPROVAL QUEUE ============
+function renderApprovalQueue() {
+  var fClient = (document.getElementById('aq-client-filter') || {}).value || 'all';
+  var scope = currentSmmScope();
+  var content = (S.content || []).filter(function(c) {
+    if (scope && c.assigned_smm !== scope) return false;
+    if (fClient !== 'all' && String(c.client_id) !== String(fClient)) return false;
+    return true;
+  });
+  var sendItems = content.filter(function(c) { return c.status === 'send-client'; });
+  var changesItems = content.filter(function(c) { return c.status === 'client-changes'; });
+  var approvedItems = content.filter(function(c) { return c.status === 'client-approval'; });
+  function setCnt(id, n) { var el = document.getElementById(id); if (el) el.textContent = n; }
+  setCnt('aq-cnt-send', sendItems.length); setCnt('aq-cnt-changes', changesItems.length); setCnt('aq-cnt-approved', approvedItems.length);
+  function renderCard(item, color, nextStatus, nextLabel) {
+    var cl = S.clients.find(function(c) { return c.id == item.client_id; });
+    var btn = nextStatus ? '<button class="btn btn-primary" style="font-size:11px;padding:6px 12px;white-space:nowrap;flex-shrink:0" onclick="updateContentStatus(' + item.id + ',\'' + nextStatus + '\');setTimeout(renderApprovalQueue,200)">' + nextLabel + '</button>' : '';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid ' + color + ';border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px"><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">' + escHtml(item.title || 'Untitled') + '</div><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + '<span style="font-size:11px;color:var(--text3)">' + (item.content_type || 'Post') + '</span>' + (item.scheduled_date ? '<span style="font-size:11px;color:var(--text3)">' + item.scheduled_date.substring(0,10) + '</span>' : '') + '</div></div>' + btn + '</div>';
+  }
+  function setList(listId, items, color, ns, nl) {
+    var el = document.getElementById(listId);
+    if (!el) return;
+    el.innerHTML = items.length ? items.map(function(it) { return renderCard(it, color, ns, nl); }).join('') : '<div style="color:var(--text3);font-size:13px;padding:10px 0">Nothing here</div>';
+  }
+  setList('aq-list-send', sendItems, '#60A5FA', 'client-approval', 'Mark Sent');
+  setList('aq-list-changes', changesItems, '#FF5252', 'send-client', 'Resend');
+  setList('aq-list-approved', approvedItems, '#A3E635', 'drive', 'Add to Drive');
+  var fEl = document.getElementById('aq-client-filter');
+  if (fEl) fEl.onchange = renderApprovalQueue;
+}
+
+// ============ IDEAS ============
+async function renderIdeas() {
+  var el = document.getElementById('ideas-list');
+  if (!el) return;
+  var scope = currentSmmScope();
+  if (!S.ideas || !S.ideas.length) {
+    try {
+      var q = sb.from('ideas').select('*').order('created_at', { ascending: false });
+      if (scope) q = q.eq('assigned_smm', scope);
+      var r = await q;
+      S.ideas = r.data || [];
+    } catch(e) { S.ideas = []; }
+  }
+  if (!S.ideas.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;font-size:14px">No ideas yet. Click Capture Idea to add one.</div>'; return; }
+  el.innerHTML = S.ideas.map(function(idea) {
+    var cl = S.clients.find(function(c) { return c.id == idea.client_id; });
+    var date = idea.created_at ? new Date(idea.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px"><div style="font-size:13px;color:#fff;font-weight:500;line-height:1.6">' + escHtml(idea.text || idea.title || '') + '</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '<span style="font-size:11px;color:var(--text3)">General</span>') + (date ? '<span style="font-size:11px;color:var(--text3)">' + date + '</span>' : '') + '</div></div>';
+  }).join('');
+}
+async function submitIdeaAdd() {
+  var text = ((document.getElementById('ia-text') || {}).value || '').trim();
+  var clientId = (document.getElementById('ia-client') || {}).value;
+  if (!text) { toast('Type your idea first', 'error'); return; }
+  var payload = { text: text, client_id: clientId || null, assigned_smm: currentSmmScope() || null };
+  try {
+    var r = await sb.from('ideas').insert([payload]).select();
+    if (r.error) throw r.error;
+    if (r.data && r.data[0]) { if (!S.ideas) S.ideas = []; S.ideas.unshift(r.data[0]); }
+    toast('Idea captured!', 'success');
+    closeModal('idea-add');
+    var iaText = document.getElementById('ia-text'); if (iaText) iaText.value = '';
+    var iaClient = document.getElementById('ia-client'); if (iaClient) iaClient.value = '';
+    renderIdeas(); updateBadges();
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+
+// ============ DIARY ============
+async function renderDiary() {
+  var el = document.getElementById('diary-list');
+  if (!el) return;
+  var scope = currentSmmScope();
+  var fClient = (document.getElementById('diary-filter-client') || {}).value || 'all';
+  if (!S.diary || !S.diary.length) {
+    try {
+      var r = await sb.from('smm_diary').select('*').order('date', { ascending: false });
+      S.diary = r.data || [];
+    } catch(e) { S.diary = []; }
+  }
+  var entries = (S.diary || []).filter(function(e) {
+    if (scope && e.author !== scope) return false;
+    if (fClient !== 'all' && String(e.client_id) !== String(fClient)) return false;
+    return true;
+  });
+  if (!entries.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;font-size:14px">No diary entries yet. Click Add Entry to start your daily log.</div>'; return; }
+  el.innerHTML = entries.map(function(entry) {
+    var cl = S.clients.find(function(c) { return c.id == entry.client_id; });
+    var date = entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) : '';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:var(--accent)">' + date + '</div>' + (cl ? '<span style="font-size:11px;color:var(--text2);background:rgba(0,229,255,0.1);padding:2px 8px;border-radius:20px">' + escHtml(cl.name) + '</span>' : '') + '</div><div style="font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap">' + escHtml(entry.body || entry.content || '') + '</div></div>';
+  }).join('');
+}
+function openDiaryModal() {
+  var dateEl = document.getElementById('d-date'); if (dateEl) dateEl.value = toDateStr(new Date());
+  var bodyEl = document.getElementById('d-body'); if (bodyEl) bodyEl.value = '';
+  var clEl = document.getElementById('d-client'); if (clEl) clEl.value = '';
+  openModal('diary');
+  if (bodyEl) setTimeout(function() { bodyEl.focus(); }, 100);
+}
+async function saveDiarySubmit() {
+  var date = (document.getElementById('d-date') || {}).value;
+  var clientId = (document.getElementById('d-client') || {}).value;
+  var body = ((document.getElementById('d-body') || {}).value || '').trim();
+  if (!body) { toast('Write something before saving', 'error'); return; }
+  if (!date) { toast('Date is required', 'error'); return; }
+  var payload = { date: date, client_id: clientId || null, body: body, author: currentSmmScope() || S.currentUser || null };
+  try {
+    var r = await sb.from('smm_diary').insert([payload]).select();
+    if (r.error) throw r.error;
+    if (r.data && r.data[0]) { if (!S.diary) S.diary = []; S.diary.unshift(r.data[0]); }
+    toast('Diary entry saved', 'success'); closeModal('diary'); renderDiary();
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+
+// ============ SMM MISSIONS ============
+function renderSmmMissions() {
+  var grid = document.getElementById('smm-missions-people-grid');
+  var detail = document.getElementById('smm-missions-view-detail');
+  var people = document.getElementById('smm-missions-view-people');
+  if (!grid) return;
+  if (detail) detail.style.display = 'none';
+  if (people) people.style.display = 'block';
+  var smms = Object.entries(USER_ROLES).filter(function(entry) { return entry[1].smm !== null; });
+  grid.innerHTML = smms.map(function(entry) {
+    var key = entry[0], info = entry[1], scope = info.smm;
+    var clientCount = S.clients.filter(function(c) { return c.assigned_smm === scope; }).length;
+    var tasksDue = (S.tasks || []).filter(function(t) { return t.assigned_smm === scope && t.status !== 'done' && t.status !== 'cancelled'; }).length;
+    var contentActive = (S.content || []).filter(function(c) { return c.assigned_smm === scope && c.status !== 'posted'; }).length;
+    return '<div onclick="openSmmMissionModal(\'' + key + '\')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor=\'var(--accent)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'none\'"><div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#FF2D78);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#000;flex-shrink:0">' + info.code + '</div><div><div style="font-size:14px;font-weight:700;color:#fff">' + info.name + '</div><div style="font-size:11px;color:var(--text3)">' + info.role + '</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><div style="text-align:center;background:rgba(0,229,255,0.08);border-radius:8px;padding:8px"><div style="font-size:18px;font-weight:800;color:var(--accent)">' + clientCount + '</div><div style="font-size:10px;color:var(--text3)">Clients</div></div><div style="text-align:center;background:rgba(251,191,36,0.08);border-radius:8px;padding:8px"><div style="font-size:18px;font-weight:800;color:#FBBF24">' + tasksDue + '</div><div style="font-size:10px;color:var(--text3)">Tasks</div></div><div style="text-align:center;background:rgba(255,45,120,0.08);border-radius:8px;padding:8px"><div style="font-size:18px;font-weight:800;color:#FF2D78">' + contentActive + '</div><div style="font-size:10px;color:var(--text3)">Content</div></div></div></div>';
+  }).join('');
+}
+function openSmmMissionModal(userKey) {
+  var info = USER_ROLES[userKey];
+  if (!info) return;
+  var detail = document.getElementById('smm-missions-view-detail');
+  var people = document.getElementById('smm-missions-view-people');
+  var nameEl = document.getElementById('smm-missions-detail-name');
+  var roleEl = document.getElementById('smm-missions-detail-role');
+  var listEl = document.getElementById('smm-missions-list');
+  if (detail) detail.style.display = 'block';
+  if (people) people.style.display = 'none';
+  if (nameEl) nameEl.textContent = info.name;
+  if (roleEl) roleEl.textContent = info.role;
+  if (!listEl) return;
+  var scope = info.smm;
+  var clients = S.clients.filter(function(c) { return !scope || c.assigned_smm === scope; });
+  var tasks = (S.tasks || []).filter(function(t) { return (!scope || t.assigned_smm === scope) && t.status !== 'done' && t.status !== 'cancelled'; });
+  var html = '<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Assigned Clients (' + clients.length + ')</div>';
+  html += clients.length ? clients.map(function(c) { return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:13px;font-weight:600;color:#fff">' + escHtml(c.name) + ' <span style="font-size:11px;color:var(--text3);font-weight:400">' + (c.package || '') + '</span></div>'; }).join('') : '<div style="color:var(--text3);font-size:13px">No clients assigned</div>';
+  html += '</div><div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Active Tasks (' + tasks.length + ')</div>';
+  html += tasks.length ? tasks.slice(0, 10).map(function(t) { var cl = S.clients.find(function(c) { return c.id == t.client_id; }); return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px"><div style="font-size:13px;font-weight:600;color:#fff">' + escHtml(t.title || 'Task') + '</div>' + (cl ? '<div style="font-size:11px;color:var(--accent);margin-top:3px">' + escHtml(cl.name) + '</div>' : '') + '</div>'; }).join('') : '<div style="color:var(--text3);font-size:13px">No active tasks</div>';
+  html += '</div>';
+  listEl.innerHTML = html;
+}
+function smmMissionsBack() {
+  var detail = document.getElementById('smm-missions-view-detail');
+  var people = document.getElementById('smm-missions-view-people');
+  if (detail) detail.style.display = 'none';
+  if (people) people.style.display = 'block';
+}
+
+// ============ DAY DETAIL ACTIONS ============
+function dayDetailAddContent() {
+  closeModal('day-detail'); resetContentModal();
+  if (S._dayDetailDate) { var el = document.getElementById('ca-date'); if (el) el.value = S._dayDetailDate; }
+  openModal('content-add');
+}
+function dayDetailAddShoot() {
+  closeModal('day-detail'); resetShootModal();
+  if (S._dayDetailDate) { var el = document.getElementById('sa-date'); if (el) el.value = S._dayDetailDate; }
+  openModal('shoot-add');
+}
+function dayDetailAddTask() { closeModal('day-detail'); openTaskModal(); }
+
+// ============ QUICK ADD ============
+async function submitQuickAdd() {
+  var type = (document.getElementById('qa-type') || {}).value || 'content';
+  var title = ((document.getElementById('qa-title') || {}).value || '').trim();
+  var clientId = (document.getElementById('qa-client') || {}).value;
+  var ctype = (document.getElementById('qa-content-type') || {}).value || 'post';
+  if (!title) { toast('Title is required', 'error'); return; }
+  try {
+    if (type === 'content') {
+      var r = await sb.from('smm_content').insert([{ title: title, client_id: clientId || null, content_type: ctype, status: 'brief', assigned_smm: currentSmmScope() || null }]).select();
+      if (r.error) throw r.error;
+      if (r.data && r.data[0]) S.content.push(r.data[0]);
+      toast('Content card added', 'success');
+    } else if (type === 'shoot') {
+      var r2 = await sb.from('smm_shoots').insert([{ title: title, client_id: clientId || null, stage: 'Videos Confirmed', assigned_smm: currentSmmScope() || null }]).select();
+      if (r2.error) throw r2.error;
+      if (r2.data && r2.data[0]) S.shoots.push(r2.data[0]);
+      toast('Shoot added', 'success');
+    } else if (type === 'idea') {
+      var r3 = await sb.from('ideas').insert([{ text: title, client_id: clientId || null, assigned_smm: currentSmmScope() || null }]).select();
+      if (r3.error) throw r3.error;
+      if (r3.data && r3.data[0]) { if (!S.ideas) S.ideas = []; S.ideas.unshift(r3.data[0]); }
+      toast('Idea captured', 'success');
+    }
+    closeModal('quick-add');
+    var qaTitle = document.getElementById('qa-title'); if (qaTitle) qaTitle.value = '';
+    updateBadges();
+    if (S.currentPage) nav(S.currentPage);
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+
+// ============ TOP 3 ============
+function saveTop3Submit() {
+  var priorities = [1,2,3].map(function(n) { var el = document.getElementById('top3-' + n); return el ? el.value.trim() : ''; }).filter(Boolean);
+  if (!priorities.length) { toast('Add at least one priority', 'error'); return; }
+  S.top3 = priorities;
+  var listEl = document.getElementById('top3-list');
+  if (listEl) listEl.innerHTML = priorities.map(function(p, i) { return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;font-weight:800;color:var(--accent);min-width:18px">' + String(i+1).padStart(2,'0') + '</span><span style="font-size:13px;font-weight:600;color:#fff">' + escHtml(p) + '</span></div>'; }).join('');
+  closeModal('top3');
+  toast("Top 3 locked. Let's go.", 'success');
+}
+
+// ============ SOPs ============
+function renderSOPs() {
+  var el = document.getElementById('sop-grid');
+  if (!el) return;
+  if (!window.SOPS || !SOPS.length) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px">SOPs loading...</div>'; return; }
+  el.innerHTML = SOPS.map(function(sop) {
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 24px;cursor:pointer;transition:all 0.2s" onclick="openModal(\'sop\')" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'"><div style="display:flex;align-items:flex-start;gap:14px"><div style="background:linear-gradient(135deg,var(--accent),#00B8CC);color:#000;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">' + escHtml(sop.num) + '</div><div><div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px">' + escHtml(sop.name) + '</div><div style="font-size:12px;color:var(--text3);line-height:1.5">' + escHtml(sop.desc) + '</div>' + (sop.when ? '<div style="font-size:11px;color:var(--accent);margin-top:8px;font-weight:600">When: ' + escHtml(sop.when) + '</div>' : '') + '</div></div></div>';
+  }).join('');
+}
 </script>
