@@ -5019,6 +5019,16 @@ function renderSOPs() {
 (function() {
   'use strict';
 
+  function isAlertTime() {
+    var now = new Date();
+    var slt = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    var day = slt.getUTCDay();
+    var hour = slt.getUTCHours();
+    var min = slt.getUTCMinutes();
+    if (day === 0) return false;
+    return (hour === 9 && min < 15) || (hour === 18 && min < 15);
+  }
+
   var SUPABASE_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
   var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dmlpd25xZ3BoeWtsY29panlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjE5OTEsImV4cCI6MjA5MTI5Nzk5MX0.I8YiBr-rfLVcc6DE8Z1PxEP2oxXCelv6mxqAY_wY7lc';
   var ALERT_URL = SUPABASE_URL + '/functions/v1/bb-alert';
@@ -5048,7 +5058,8 @@ function renderSOPs() {
   function logEntry(agentName, status, detail) {
     agentLog.unshift({ time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), agent: agentName, status: status, detail: detail || '' });
     if (agentLog.length > 60) agentLog.pop();
-    renderLog();
+    renderLog()
+    updateSMMDashSection();;
   }
 
   // Agent 1: Content Gap
@@ -5064,7 +5075,7 @@ function renderSOPs() {
         if (gaps.length > 0) {
           var names = gaps.map(function(c) { return c.name; }).join(', ');
           logEntry('📋 Content Gap', 'ALERT', gaps.length + ' client(s) no posts in 3 days: ' + names);
-          if (Date.now() - a1Alert > 300000) { sendAlert('📋 Content Gap: ' + names + ' have NO posts in next 3 days.', 'Content Plans'); a1Alert = Date.now(); }
+          if (isAlertTime() && Date.now() - a1Alert > 3600000) { sendAlert('📋 Content Gap: ' + names + ' have NO posts in next 3 days.', 'Content Plans'); a1Alert = Date.now(); }
         } else { logEntry('📋 Content Gap', 'OK', 'All ' + clients.length + ' clients covered'); }
       });
     });
@@ -5078,7 +5089,7 @@ function renderSOPs() {
       if (stuck.length > 0) {
         var titles = stuck.slice(0,3).map(function(s){ return '"' + s.title + '" [' + s.status + ']'; }).join(', ');
         logEntry('⏰ Approval Stuck', 'ALERT', stuck.length + ' item(s) stuck 24h+: ' + titles);
-        if (Date.now() - a2Alert > 300000) { sendAlert('⏰ Approval Bottleneck: ' + stuck.length + ' items stuck 24h+ — ' + titles, 'Content Pipeline'); a2Alert = Date.now(); }
+        if (isAlertTime() && Date.now() - a2Alert > 3600000) { sendAlert('⏰ Approval Bottleneck: ' + stuck.length + ' items stuck 24h+ — ' + titles, 'Content Pipeline'); a2Alert = Date.now(); }
       } else { logEntry('⏰ Approval Stuck', 'OK', 'No content stuck in pipeline'); }
     });
   }
@@ -5091,7 +5102,7 @@ function renderSOPs() {
       if (overdue.length > 5) {
         var sample = overdue.slice(0,3).map(function(t){ return '"' + t.title + '"'; }).join(', ');
         logEntry('📥 Overdue Tasks', 'ALERT', overdue.length + ' overdue. E.g.: ' + sample);
-        if (Date.now() - a3Alert > 300000) { sendAlert('📥 Task Overload: ' + overdue.length + ' tasks overdue! Check: ' + sample, 'My Tasks'); a3Alert = Date.now(); }
+        if (isAlertTime() && Date.now() - a3Alert > 3600000) { sendAlert('📥 Task Overload: ' + overdue.length + ' tasks overdue! Check: ' + sample, 'My Tasks'); a3Alert = Date.now(); }
       } else { logEntry('📥 Overdue Tasks', 'OK', overdue.length + ' overdue (under threshold)'); }
     });
   }
@@ -5104,7 +5115,7 @@ function renderSOPs() {
       if (stalled.length > 0) {
         var titles = stalled.slice(0,3).map(function(s){ return '"' + s.title + '"'; }).join(', ');
         logEntry('📸 Shoot Stall', 'ALERT', stalled.length + ' shoot(s) stuck "Requested" 48h+: ' + titles);
-        if (Date.now() - a4Alert > 300000) { sendAlert('📸 Shoot Stall: ' + stalled.length + ' shoots still Requested 48h+: ' + titles, 'Shoot Pipeline'); a4Alert = Date.now(); }
+        if (isAlertTime() && Date.now() - a4Alert > 3600000) { sendAlert('📸 Shoot Stall: ' + stalled.length + ' shoots still Requested 48h+: ' + titles, 'Shoot Pipeline'); a4Alert = Date.now(); }
       } else { logEntry('📸 Shoot Stall', 'OK', 'No shoots stalled'); }
     });
   }
@@ -5117,7 +5128,7 @@ function renderSOPs() {
       if (missed.length > 0) {
         var sample = missed.slice(0,3).map(function(p){ return '"' + p.title + '" (' + p.scheduled_date + ')'; }).join(', ');
         logEntry('🔔 Missed Post', 'ALERT', missed.length + ' post(s) past due: ' + sample);
-        if (Date.now() - a5Alert > 300000) { sendAlert('🔔 Missed Posts: ' + missed.length + ' past schedule, not posted: ' + sample, 'Content Plans'); a5Alert = Date.now(); }
+        if (isAlertTime() && Date.now() - a5Alert > 3600000) { sendAlert('🔔 Missed Posts: ' + missed.length + ' past schedule, not posted: ' + sample, 'Content Plans'); a5Alert = Date.now(); }
       } else { logEntry('🔔 Missed Post', 'OK', 'All scheduled posts published'); }
     });
   }
@@ -5151,9 +5162,39 @@ function renderSOPs() {
     }).join('');
   }
 
-  window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runApproval: runApprovalAgent, runTasks: runTasksAgent, runShoots: runShootAgent, runMissedPost: runMissedPostAgent, getLog: function() { return agentLog; } };
+  
 
-  function init() { buildUI(); setTimeout(runAll, 3000); setInterval(runAll, POLL_MS); }
+  // ── Dashboard Section ──
+  function injectSMMDashSection() {
+    var target = document.getElementById('pageContent') || document.querySelector('.page-content') || document.querySelector('main');
+    if (!target || document.getElementById('bbs-agent-alerts-section')) return;
+    var section = document.createElement('div');
+    section.id = 'bbs-agent-alerts-section';
+    section.innerHTML = '<div id="bbs-alerts-header"><span id="bbs-alerts-title">\uD83E\uDD16 Agent Alerts</span><button id="bbs-alerts-run-btn">\u25B6 Run All</button></div><div id="bbs-alert-grid"><div style="color:#475569;font-size:12px;grid-column:1/-1;padding:8px 0;">Starting scan...</div></div>';
+    target.insertBefore(section, target.firstChild);
+    document.getElementById('bbs-alerts-run-btn').addEventListener('click', window.BB_SMM_AGENTS ? window.BB_SMM_AGENTS.runAll : function(){});
+  }
+
+  function updateSMMDashSection() {
+    var grid = document.getElementById('bbs-alert-grid');
+    if (!grid) return;
+    var seen = {}, cards = [];
+    agentLog.forEach(function(e) { if (!seen[e.agent]) { seen[e.agent] = true; cards.push(e); } });
+    if (!cards.length) return;
+    grid.innerHTML = cards.map(function(e) {
+      var c = e.status === 'ALERT' ? 'alert' : 'ok';
+      var detail = e.status === 'ALERT' ? e.detail.substring(0,55) + (e.detail.length > 55 ? '\u2026' : '') : '\u2713 All clear';
+      return '<div class="bbs-alert-card ' + c + '"><div class="bbs-alert-card-name">' + e.agent + '</div><div class="bbs-alert-card-detail ' + c + '">' + detail + '</div><div class="bbs-alert-card-time">' + e.time + '</div></div>';
+    }).join('');
+  }
+
+  var bbsStyle = document.createElement('style');
+  bbsStyle.textContent = '#bbs-agent-alerts-section{margin:0 0 20px;padding:16px 18px;background:var(--surface-1,#0d0d1a);border:1px solid var(--border,#1e293b);border-radius:12px;}#bbs-alerts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}#bbs-alerts-title{font-size:13px;font-weight:700;color:#FF6B00;letter-spacing:.8px;text-transform:uppercase;}#bbs-alerts-run-btn{background:#FF6B00;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;}#bbs-alerts-run-btn:hover{background:#e05a00;}#bbs-alert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}.bbs-alert-card{padding:10px 12px;border-radius:8px;background:var(--surface-2,#111122);border:1px solid #1e293b;}.bbs-alert-card.alert{border-color:#ef4444;background:#180d0d;}.bbs-alert-card.ok{border-color:#22c55e;}.bbs-alert-card-name{font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:4px;}.bbs-alert-card-detail{font-size:10px;color:#94a3b8;line-height:1.4;margin-bottom:4px;}.bbs-alert-card-detail.alert{color:#fca5a5;}.bbs-alert-card-detail.ok{color:#4ade80;}.bbs-alert-card-time{font-size:9px;color:#475569;}';
+  document.head.appendChild(bbsStyle);
+window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runApproval: runApprovalAgent, runTasks: runTasksAgent, runShoots: runShootAgent, runMissedPost: runMissedPostAgent, getLog: function() { return agentLog; } };
+
+  function init() { buildUI(); setTimeout(runAll, 3000); setInterval(runAll, POLL_MS);
+    injectSMMDashSection(); }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } else { init(); }
 })();
 </script>
