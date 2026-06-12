@@ -1431,23 +1431,42 @@ tr:last-child td { border-bottom: none; }
 
     <!-- LEGEND REMOVED -->
 
-    <div class="cal-month">
-      <div class="cal-month-head">
-        <div class="cal-month-title" id="cal-month-title">—</div>
-        <div class="ph-right">
-          <button class="btn btn-ghost btn-sm" onclick="calNav(-1)">‹ Prev</button>
-          <button class="btn btn-ghost btn-sm" onclick="calNav(0)">Today</button>
-          <button class="btn btn-ghost btn-sm" onclick="calNav(1)">Next ›</button>
-        </div>
-      </div>
-      <div class="cal-grid" id="cal-dows"></div>
-      <div class="cal-grid" id="cal-cells" style="margin-top:4px"></div>
+    <!-- VIEW TOGGLE -->
+    <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:16px;width:fit-content">
+      <button id="cal-view-schedule" onclick="switchCalView('schedule')" style="background:var(--accent);color:var(--bg);border-radius:6px;padding:6px 16px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.04em">Schedule</button>
+      <button id="cal-view-month"    onclick="switchCalView('month')"    style="background:transparent;color:var(--text2);border-radius:6px;padding:6px 16px;font-size:11px;font-weight:600;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.04em">Month</button>
     </div>
 
-    <!-- UPCOMING SECTION -->
-    <div class="card" style="padding:16px 20px;margin-top:16px">
-      <div class="stitle" style="margin-bottom:14px">Upcoming — Next 30 Days</div>
-      <div id="cal-upcoming" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+    <!-- SCHEDULE VIEW -->
+    <div id="cal-schedule-wrap">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px">
+        <button class="btn btn-ghost btn-sm" onclick="schedNav(-1)">‹ Prev</button>
+        <div id="cal-sched-label" style="flex:1;text-align:center;font-size:13px;font-weight:700;color:var(--text)">—</div>
+        <button class="btn btn-ghost btn-sm" onclick="schedNav(0)">This Week</button>
+        <button class="btn btn-ghost btn-sm" onclick="schedNav(1)">Next ›</button>
+      </div>
+      <div id="cal-sched-grid"></div>
+    </div>
+
+    <!-- MONTH VIEW -->
+    <div id="cal-month-wrap" style="display:none">
+      <div class="cal-month">
+        <div class="cal-month-head">
+          <div class="cal-month-title" id="cal-month-title">—</div>
+          <div class="ph-right">
+            <button class="btn btn-ghost btn-sm" onclick="calNav(-1)">‹ Prev</button>
+            <button class="btn btn-ghost btn-sm" onclick="calNav(0)">Today</button>
+            <button class="btn btn-ghost btn-sm" onclick="calNav(1)">Next ›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-dows"></div>
+        <div class="cal-grid" id="cal-cells" style="margin-top:4px"></div>
+      </div>
+      <!-- UPCOMING SECTION -->
+      <div class="card" style="padding:16px 20px;margin-top:16px">
+        <div class="stitle" style="margin-bottom:14px">Upcoming — Next 30 Days</div>
+        <div id="cal-upcoming" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+      </div>
     </div>
   </section>
 
@@ -2017,7 +2036,10 @@ const S = {
   top3: [],
   // My Diary
   diary: [],
-  diaryEditId: null
+  diaryEditId: null,
+  // Calendar view
+  calView: 'schedule',
+  schedWeekOffset: 0
 };
 
 // ============ USER ROLES ============
@@ -2284,13 +2306,14 @@ function doLogin() {
     document.getElementById('login').classList.add('gone');
     S.currentUser = name;
     // Write login to team_login_logs so CC Team page can see it
-    if (name === 'NIRVANA') {
-      const _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dmlpd25xZ3BoeWtsY29panlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjE5OTEsImV4cCI6MjA5MTI5Nzk5MX0.I8YiBr-rfLVcc6DE8Z1PxEP2oxXCelv6mxqAY_wY7lc';
-      fetch('https://yyviiwnqgphyklcoijyd.supabase.co/rest/v1/team_login_logs', {
-        method: 'POST',
-        headers: { 'apikey': _anonKey, 'Authorization': 'Bearer ' + _anonKey, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ team_member_id: 12, member_name: 'NIRVANA', logged_in_at: new Date().toISOString(), app: 'smm-workspace' })
-      }).catch(function() {});
+    if (sb) {
+      const _memberIds = { THULAIB: 1, SHIARA: 2, NIRVANA: 12 };
+      sb.from('team_login_logs').insert([{
+        team_member_id: _memberIds[name] || null,
+        member_name: name,
+        logged_in_at: new Date().toISOString(),
+        app: 'smm-workspace'
+      }]).then(function(){}).catch(function(){});
     }
     // Update sidebar date
     const sbd = document.getElementById('sb-date');
@@ -2405,7 +2428,7 @@ function nav(page, data) {
   window.scrollTo(0,0);
 
   if (page === 'today') renderToday();
-  if (page === 'calendar') { renderCalendar(); renderUpcoming(); wireCalFilters(); populateCalFilterDropdowns(); }
+  if (page === 'calendar') { wireCalFilters(); populateCalFilterDropdowns(); switchCalView(S.calView || 'schedule'); }
   if (page === 'content-pipeline') renderContent();
   if (page === 'shoot-pipeline') { renderShoots(); renderUpcomingShoots(); }
   if (page === 'approval-queue') renderApprovalQueue();
@@ -2500,8 +2523,10 @@ function renderToday() {
     cb.addEventListener('change', () => {
       localStorage.setItem(k, cb.checked ? '1' : '0');
       cb.closest('.pillar-task').classList.toggle('done', cb.checked);
+      syncPillarsToDb(now);
     });
   });
+  loadPillarsFromDb(now);
 
   // EOD
   document.querySelectorAll('.eod-check').forEach((cb, i) => {
@@ -2546,6 +2571,145 @@ function toDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function titleCase(s) { return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); }
+
+// ============ PILLAR SUPABASE SYNC ============
+async function syncPillarsToDb(date) {
+  if (!sb || !S.currentUser) return;
+  var dateStr = toDateStr(date);
+  var state = {};
+  document.querySelectorAll('.pillar-check').forEach(function(cb) {
+    state[cb.dataset.key] = cb.checked;
+  });
+  try {
+    await sb.from('daily_pillar_state').upsert({
+      user_name: S.currentUser,
+      pillar_date: dateStr,
+      state: state,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_name,pillar_date' });
+  } catch(e) { console.warn('Pillar sync failed:', e); }
+}
+
+async function loadPillarsFromDb(date) {
+  if (!sb || !S.currentUser) return;
+  var dateStr = toDateStr(date);
+  try {
+    var result = await sb.from('daily_pillar_state').select('state').eq('user_name', S.currentUser).eq('pillar_date', dateStr).maybeSingle();
+    if (result.data && result.data.state) {
+      document.querySelectorAll('.pillar-check').forEach(function(cb) {
+        var k = cb.dataset.key;
+        if (result.data.state[k] !== undefined) {
+          cb.checked = result.data.state[k];
+          cb.closest('.pillar-task').classList.toggle('done', cb.checked);
+          localStorage.setItem('pillar-' + k + '-' + dateStr, cb.checked ? '1' : '0');
+        }
+      });
+    }
+  } catch(e) { /* not critical */ }
+}
+
+// ============ CALENDAR SCHEDULE VIEW ============
+function switchCalView(view) {
+  S.calView = view;
+  var monthWrap = document.getElementById('cal-month-wrap');
+  var schedWrap = document.getElementById('cal-schedule-wrap');
+  var monthBtn  = document.getElementById('cal-view-month');
+  var schedBtn  = document.getElementById('cal-view-schedule');
+  if (monthWrap) monthWrap.style.display = view === 'month' ? '' : 'none';
+  if (schedWrap) schedWrap.style.display = view === 'schedule' ? '' : 'none';
+  var activeStyle  = 'background:var(--accent);color:var(--bg);border-radius:6px;padding:6px 16px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.04em';
+  var inactiveStyle= 'background:transparent;color:var(--text2);border-radius:6px;padding:6px 16px;font-size:11px;font-weight:600;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.04em';
+  if (monthBtn) monthBtn.style.cssText = view === 'month'    ? activeStyle : inactiveStyle;
+  if (schedBtn) schedBtn.style.cssText = view === 'schedule' ? activeStyle : inactiveStyle;
+  if (view === 'month') { renderCalendar(); renderUpcoming(); }
+  else renderScheduleView();
+}
+
+function schedNav(dir) {
+  if (dir === 0) { S.schedWeekOffset = 0; }
+  else { S.schedWeekOffset = (S.schedWeekOffset || 0) + dir; }
+  renderScheduleView();
+}
+
+function renderScheduleView() {
+  var grid  = document.getElementById('cal-sched-grid');
+  var label = document.getElementById('cal-sched-label');
+  if (!grid) return;
+  var today = new Date();
+  var weekStart = new Date(today);
+  var dow = weekStart.getDay();
+  var mondayOffset = dow === 0 ? -6 : 1 - dow;
+  weekStart.setDate(weekStart.getDate() + mondayOffset + (S.schedWeekOffset || 0) * 7);
+  weekStart.setHours(0,0,0,0);
+  var weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+  var MTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DAYS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  if (label) label.textContent = MTHS[weekStart.getMonth()] + ' ' + weekStart.getDate() + ' — ' + MTHS[weekEnd.getMonth()] + ' ' + weekEnd.getDate() + ', ' + weekEnd.getFullYear();
+  var fClient = (document.getElementById('cal-filter-client') || {}).value || 'all';
+  var fType   = (document.getElementById('cal-filter-type')  || {}).value || 'all';
+  var todayStr = toDateStr(today);
+  var html = '<div class="sched-grid">';
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+    var ds = toDateStr(d);
+    var isToday = ds === todayStr;
+    var dayContent = (S.content || []).filter(function(c) {
+      if (!c.scheduled_date || c.scheduled_date.substring(0,10) !== ds) return false;
+      if (fClient !== 'all' && String(c.client_id) !== String(fClient)) return false;
+      if (fType !== 'all' && fType !== 'content' && fType !== (c.content_type||'').toLowerCase()) return false;
+      return true;
+    });
+    var dayShoots = (S.shoots || []).filter(function(s) {
+      if (!s.shoot_date || s.shoot_date.substring(0,10) !== ds) return false;
+      if (fClient !== 'all' && String(s.client_id) !== String(fClient)) return false;
+      if (fType !== 'all' && fType !== 'shoot') return false;
+      return true;
+    });
+    var dayEvents = (S.events || []).filter(function(e) {
+      if (!e.date || e.date.substring(0,10) !== ds) return false;
+      if (fType !== 'all' && fType !== 'event') return false;
+      return true;
+    });
+    var cards = '';
+    dayEvents.forEach(function(e) {
+      cards += '<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);border-left:3px solid #FBBF24;border-radius:6px;padding:7px 9px;margin-bottom:4px">'
+        + '<div style="font-size:9px;font-weight:700;color:#FBBF24;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">EVENT</div>'
+        + '<div style="font-size:11px;font-weight:600;color:var(--text);line-height:1.3">' + escHtml(e.title||'Event') + '</div></div>';
+    });
+    dayShoots.forEach(function(s) {
+      var cl = S.clients.find(function(c){return c.id==s.client_id;});
+      cards += '<div style="background:rgba(255,45,120,0.08);border:1px solid rgba(255,45,120,0.25);border-left:3px solid #FF2D78;border-radius:6px;padding:7px 9px;margin-bottom:4px;cursor:pointer" onclick="openShootCard('+s.id+')">'
+        + '<div style="font-size:9px;font-weight:700;color:#FF2D78;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">' + escHtml(cl?cl.name:'SHOOT') + '</div>'
+        + '<div style="font-size:11px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:4px">' + escHtml(s.title||'Shoot') + '</div>'
+        + '<span style="font-size:9px;background:rgba(255,45,120,0.15);color:#FF2D78;padding:1px 5px;border-radius:3px;font-weight:700">SHOOT</span></div>';
+    });
+    dayContent.forEach(function(c) {
+      var cl = S.clients.find(function(x){return x.id==c.client_id;});
+      var ct = (c.content_type||'post').toLowerCase();
+      var tc = ct==='video'?'var(--pink)':ct==='story'?'var(--purple)':'var(--cyan)';
+      var tb = ct==='video'?'rgba(255,45,120,0.08)':ct==='story'?'rgba(168,85,247,0.08)':'rgba(0,229,255,0.06)';
+      var tbd= ct==='video'?'rgba(255,45,120,0.25)':ct==='story'?'rgba(168,85,247,0.25)':'rgba(0,229,255,0.25)';
+      var st = (c.status||'').toLowerCase();
+      var sc = st==='posted'?'var(--green)':st==='client-approval'||st==='send-client'?'var(--yellow)':st==='team-review'?'var(--orange)':st==='brief'?'var(--cyan)':'var(--text3)';
+      cards += '<div style="background:'+tb+';border:1px solid '+tbd+';border-left:3px solid '+tc+';border-radius:6px;padding:7px 9px;margin-bottom:4px;cursor:pointer" onclick="openDayDetail(\''+ds+'\')">'
+        + '<div style="font-size:9px;font-weight:700;color:'+tc+';text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(cl?cl.name:'—') + '</div>'
+        + '<div style="font-size:11px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:5px">' + escHtml(c.title||'Post') + '</div>'
+        + '<div style="display:flex;gap:4px;flex-wrap:wrap">'
+        + '<span style="font-size:9px;background:'+tc+'22;color:'+tc+';padding:1px 5px;border-radius:3px;font-weight:700">' + ct.toUpperCase() + '</span>'
+        + '<span style="font-size:9px;color:'+sc+';font-weight:600;text-transform:uppercase">' + escHtml(c.status||'') + '</span>'
+        + '</div></div>';
+    });
+    var totalItems = dayContent.length + dayShoots.length + dayEvents.length;
+    if (!totalItems) cards = '<div style="font-size:10px;color:var(--text3);text-align:center;padding:18px 0;font-weight:300">—</div>';
+    html += '<div class="sched-day'+(isToday?' today-col':'')+'">'
+      + '<div class="sched-day-hdr"><div class="sched-day-name">'+DAYS[i]+'</div><div class="sched-day-num" style="'+(isToday?'color:var(--cyan)':'')+'">'+d.getDate()+'</div>'
+      + (totalItems?'<div style="font-size:9px;font-weight:700;color:var(--cyan);margin-left:auto">'+totalItems+'</div>':'')
+      + '</div>'
+      + '<div class="sched-day-cards">'+cards+'</div></div>';
+  }
+  html += '</div>';
+  grid.innerHTML = html;
+}
 function escHtml(s) { return s ? String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])) : ''; }
 
 // ============ SUPABASE LOADERS ============
@@ -3435,8 +3599,8 @@ function closeModal(id) {
 
 // ============ CALENDAR ============
 function calNav(dir) {
-  if (!S.calDate) S.calDate = new Date();
-  S.calDate = new Date(S.calDate.getFullYear(), S.calDate.getMonth() + dir, 1);
+  if (dir === 0) { S.calDate = new Date(); }
+  else { if (!S.calDate) S.calDate = new Date(); S.calDate = new Date(S.calDate.getFullYear(), S.calDate.getMonth() + dir, 1); }
   renderCalendar();
 }
 function wireCalFilters() {
@@ -3481,7 +3645,7 @@ function renderCalendar() {
   });
   (S.content || []).forEach(function(c) {
     if (!c.scheduled_date) return;
-    if (fType !== 'all' && fType !== 'content') return;
+    if (fType !== 'all' && fType !== 'content' && fType !== (c.content_type||'').toLowerCase()) return;
     if (fClient !== 'all' && String(c.client_id) !== String(fClient)) return;
     var cl = S.clients.find(function(x) { return x.id == c.client_id; });
     addItem(c.scheduled_date.substring(0, 10), { label: (cl ? cl.name + ' — ' : '') + (c.title || 'Post'), color: '#00E5FF' });
