@@ -896,6 +896,15 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .vh-card-move:hover{border-color:var(--cyan);color:var(--cyan)}
 .vh-card-menu{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3);font-size:16px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1;z-index:2;transition:all .12s}
 .vh-card-menu:hover{background:rgba(255,255,255,0.06);color:var(--text1)}
+.vh-comment-img{margin-top:8px;max-width:100%;max-height:280px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in}
+.vh-img-attach{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px dashed var(--border2,var(--border));border-radius:8px;flex-wrap:wrap;margin-top:8px}
+.vh-img-attach.img-drop-hot{border-color:var(--cyan);background:rgba(0,229,255,0.06);border-style:solid}
+.vh-img-attach-btn{padding:7px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.vh-img-attach-btn:hover{background:rgba(0,229,255,0.1);color:var(--cyan);border-color:var(--cyan)}
+.vh-img-hint{font-size:11px;color:var(--text3);font-style:italic}
+.vh-img-preview-wrap{position:relative;display:inline-block;margin-top:6px}
+.vh-img-preview{max-width:200px;max-height:160px;border-radius:6px;border:1px solid var(--border);display:block}
+.vh-img-preview-remove{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#ef4444;color:white;font-size:14px;font-weight:700;display:grid;place-items:center;cursor:pointer;border:2px solid var(--bg);box-shadow:0 2px 8px rgba(0,0,0,0.3)}
 .vh-d-section{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 .vh-d-section:last-of-type{border-bottom:none}
 .vh-d-stitle{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px}
@@ -4008,8 +4017,10 @@ async function vhOpenDetail(pid) {
   } else {
     html += '<div style="color:var(--text3);font-size:12px;padding:12px 0;font-style:italic;">No comments yet</div>';
   }
+  var cmtHost = 'vh-cmt-' + pid;
   html += '<div style="margin-top:10px;">'
     + '<textarea id="vh-new-comment" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:13px;padding:10px 12px;resize:vertical;font-family:inherit;" rows="2" placeholder="Add a comment..."></textarea>'
+    + vhImageAttachHtml(cmtHost)
     + '<div style="display:flex;justify-content:flex-end;margin-top:8px;"><button class="btn btn-primary btn-sm" onclick="vhPostComment(' + pid + ')">Post Comment</button></div>'
     + '</div></div>';
 
@@ -4030,6 +4041,8 @@ async function vhOpenDetail(pid) {
 
   document.getElementById('vh-detail-body').innerHTML = html;
   openModal('vh-detail');
+  var cmtHost = 'vh-cmt-' + pid;
+  vhWireImageAttach(cmtHost, 'vh-new-comment');
 }
 
 function vhMetaItem(label, value) {
@@ -4120,19 +4133,95 @@ async function vhDeleteLink(linkId, pid) {
   } catch(err) { toast('Delete failed', 'error'); }
 }
 
+var VH_PENDING_IMG = {};
+
+function vhImageAttachHtml(hostId) {
+  return '<div class="vh-img-attach" data-vh-drop-host="' + hostId + '">'
+    + '<button type="button" class="vh-img-attach-btn" data-vh-attach-host="' + hostId + '">📎 Attach image</button>'
+    + '<input type="file" accept="image/*" hidden id="' + hostId + '-file">'
+    + '<span class="vh-img-hint">paste (Cmd/Ctrl+V) or drag & drop an image here</span>'
+    + '</div>'
+    + '<div id="' + hostId + '-preview"></div>';
+}
+
+function vhWireImageAttach(hostId, textareaId) {
+  var btn = document.querySelector('[data-vh-attach-host="' + hostId + '"]');
+  var file = document.getElementById(hostId + '-file');
+  if (btn && file) {
+    btn.addEventListener('click', function() { file.click(); });
+    file.addEventListener('change', function(e) { var f = e.target.files[0]; if (f) vhReadImageFile(f, hostId); e.target.value = ''; });
+  }
+  var ta = textareaId ? document.getElementById(textareaId) : null;
+  if (ta) {
+    ta.addEventListener('paste', function(e) {
+      var items = (e.clipboardData || window.clipboardData).items;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') === 0) {
+          var f = items[i].getAsFile();
+          if (f) { e.preventDefault(); vhReadImageFile(f, hostId); }
+          break;
+        }
+      }
+    });
+  }
+  var dropZones = [document.querySelector('[data-vh-drop-host="' + hostId + '"]'), ta].filter(Boolean);
+  dropZones.forEach(function(zone) {
+    zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('img-drop-hot'); });
+    zone.addEventListener('dragleave', function() { zone.classList.remove('img-drop-hot'); });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault(); zone.classList.remove('img-drop-hot');
+      var files = e.dataTransfer ? e.dataTransfer.files : [];
+      if (!files.length) return;
+      var f = files[0];
+      if (!f.type.startsWith('image/')) { toast('Only images can be dropped here', 'error'); return; }
+      vhReadImageFile(f, hostId);
+    });
+  });
+}
+
+function vhReadImageFile(file, hostId) {
+  if (file.size > 3 * 1024 * 1024) { toast('Image too large (max 3MB)', 'error'); return; }
+  if (VH_PENDING_IMG[hostId]) toast('Replaced previous image', 'info');
+  var r = new FileReader();
+  r.onerror = function() { toast('Could not read image file', 'error'); };
+  r.onload = function(ev) {
+    VH_PENDING_IMG[hostId] = ev.target.result;
+    var pv = document.getElementById(hostId + '-preview');
+    if (pv) {
+      pv.innerHTML = '<div class="vh-img-preview-wrap"><img class="vh-img-preview" src="' + ev.target.result + '"><div class="vh-img-preview-remove" onclick="vhClearPendingImg(\'' + hostId + '\')" title="Remove image">×</div></div>';
+    }
+  };
+  r.readAsDataURL(file);
+}
+
+function vhClearPendingImg(hostId) {
+  delete VH_PENDING_IMG[hostId];
+  var pv = document.getElementById(hostId + '-preview');
+  if (pv) pv.innerHTML = '';
+  var f = document.getElementById(hostId + '-file');
+  if (f) f.value = '';
+}
+
 async function vhPostComment(pid) {
   var el = document.getElementById('vh-new-comment');
   if (!el) return;
   var body = el.value.trim();
-  if (!body) return;
+  var img = VH_PENDING_IMG['vh-cmt-' + pid] || null;
+  if (!body && !img) return;
+  var btn = document.querySelector('[onclick="vhPostComment(' + pid + ')"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; }
   try {
     var res = await sb.from('video_project_comments').insert({
-      video_project_id: pid, body: body,
+      video_project_id: pid, body: body || '', image_url: img,
       author: S.user ? S.user.name : 'SMM'
     });
     if (res.error) throw res.error;
+    vhClearPendingImg('vh-cmt-' + pid);
     vhOpenDetail(pid);
-  } catch(err) { toast('Comment failed: ' + (err.message || ''), 'error'); }
+  } catch(err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Post Comment'; }
+    toast('Comment failed: ' + (err.message || ''), 'error');
+  }
 }
 
 function openVHProjectForm(editPid) {
