@@ -1820,10 +1820,52 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ VIDEO HUB ============ -->
   <section class="page" id="page-video-hub">
     <div class="ph">
-      <div><div class="ph-title">Video Hub</div><div class="ph-sub">Live video production tracker — all active projects by stage</div></div>
-      <div class="ph-right"><button class="btn btn-ghost btn-sm" onclick="renderVideoHub()">↻ Refresh</button></div>
+      <div><div class="ph-title">Video Hub</div><div class="ph-sub">Full video pipeline — move projects between stages</div></div>
+      <div class="ph-right">
+        <button class="btn btn-ghost btn-sm" onclick="renderVideoHub()">↻ Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="openVHProjectForm()">+ New Project</button>
+      </div>
     </div>
-    <div id="vh-root"><div class="loading-row">Loading video projects...</div></div>
+    <div id="vh-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
+    <div id="vh-root" style="overflow-x:auto;"><div class="loading-row">Loading video projects...</div></div>
+    <!-- Video project detail modal -->
+    <div class="modal-bg" id="modal-vh-detail" style="display:none">
+      <div class="modal" style="max-width:600px;max-height:90vh;display:flex;flex-direction:column">
+        <div class="modal-head"><div class="modal-title" id="vh-detail-title"></div><button class="modal-close" onclick="closeModal('vh-detail')">×</button></div>
+        <div id="vh-detail-body" style="padding:16px;overflow-y:auto;flex:1;"></div>
+      </div>
+    </div>
+    <!-- Video project create/edit modal -->
+    <div class="modal-bg" id="modal-vh-form" style="display:none">
+      <div class="modal" style="max-width:520px">
+        <div class="modal-head"><div class="modal-title" id="vh-form-title">New Video Project</div><button class="modal-close" onclick="closeModal('vh-form')">×</button></div>
+        <form id="vh-project-form" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div><label class="fl">Title *</label><input class="fi" id="vh-f-title" required></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label class="fl">Client</label><select class="fi" id="vh-f-client"></select></div>
+            <div><label class="fl">Editor</label><select class="fi" id="vh-f-editor"></select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label class="fl">Priority</label><select class="fi" id="vh-f-priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+            <div><label class="fl">Type</label><select class="fi" id="vh-f-type"><option value="reel">Reel</option><option value="ad">Ad</option><option value="testimonial">Testimonial</option><option value="product">Product</option><option value="educational">Educational</option></select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label class="fl">Stage</label><select class="fi" id="vh-f-stage"></select></div>
+            <div><label class="fl">Deadline</label><input class="fi" id="vh-f-deadline" type="date"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label class="fl">Month *</label><select class="fi" id="vh-f-month" required><option value="">— Select —</option></select></div>
+            <div><label class="fl">Formula</label><input class="fi" id="vh-f-formula"></div>
+          </div>
+          <div><label class="fl">Notes</label><textarea class="fi" id="vh-f-notes" rows="2" style="resize:vertical;"></textarea></div>
+          <input type="hidden" id="vh-f-id" value="">
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('vh-form')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="vh-f-submit">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </section>
 
   <!-- ============ IDEAS ============ -->
@@ -3657,63 +3699,312 @@ async function duplicateSmmCPlanItem(id){
   renderContentPlan();
 }
 
-// ============ VIDEO HUB ============
+// ============ VIDEO HUB — FULL INTERACTIVE PIPELINE ============
+var VH_STAGES = [
+  { key: 'video_shot',         label: 'Video Shot',       color: '#6366f1' },
+  { key: 'cutting_color_grading', label: 'Cutting & Color', color: '#a855f7' },
+  { key: 'rendering',          label: 'Rendering',        color: 'var(--cyan)' },
+  { key: 'editing',            label: 'Editing',          color: 'var(--orange)' },
+  { key: 'video_head_review',  label: 'VH Review',        color: 'var(--purple,#a855f7)' },
+  { key: 'team_review',        label: 'Team Review',      color: 'var(--pink)' },
+  { key: 'changes',            label: 'Changes',          color: 'var(--red)' },
+  { key: 'client_review',      label: 'Client Review',    color: 'var(--yellow)' },
+  { key: 'client_changes',     label: 'Client Changes',   color: '#ef4444' },
+  { key: 'coo_check',          label: 'COO Check',        color: '#ec4899' },
+  { key: 'sent_to_client',     label: 'Sent to Client',   color: '#22d3ee' },
+  { key: 'add_to_drive',       label: 'Add to Drive',     color: 'var(--green)' },
+  { key: 'posted',             label: 'Posted',           color: '#10b981' }
+];
+var VH_projects = [];
+var VH_teamMembers = [];
+var VH_stageHistory = [];
+var MONTHS_VH = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 async function renderVideoHub() {
   var root = document.getElementById('vh-root');
+  var stats = document.getElementById('vh-stats');
   if (!root) return;
   root.innerHTML = '<div class="loading-row loading-dots">Loading</div>';
   try {
     var r = await sb.from('video_projects').select('*').eq('is_archived', false).order('created_at', { ascending: false });
     if (r.error) throw r.error;
-    var projects = r.data || [];
-    var STAGES = [
-      { key: 'editing',           label: 'Editing',          color: 'var(--orange)' },
-      { key: 'team_review',       label: 'Team Review',      color: 'var(--pink)' },
-      { key: 'video_head_review', label: 'VH Review',        color: 'var(--purple)' },
-      { key: 'changes',           label: 'Changes',          color: 'var(--red)' },
-      { key: 'client_review',     label: 'Client Review',    color: 'var(--yellow)' },
-      { key: 'client_changes',    label: 'Client Changes',   color: 'var(--red)' },
-      { key: 'rendering',         label: 'Rendering',        color: 'var(--cyan)' },
-      { key: 'add_to_drive',      label: 'Add to Drive',     color: 'var(--green)' }
-    ];
+    VH_projects = r.data || [];
+    var tr = await sb.from('team_members').select('id,name,role');
+    VH_teamMembers = tr.data || [];
+    try { var shr = await sb.from('video_stage_history').select('*').order('entered_at',{ascending:true}); VH_stageHistory = shr.data || []; } catch(_) { VH_stageHistory = []; }
+
     var byStage = {};
-    projects.forEach(function(p) { var s = p.current_stage || 'editing'; if (!byStage[s]) byStage[s] = []; byStage[s].push(p); });
+    VH_projects.forEach(function(p) { var s = p.current_stage || 'editing'; if (!byStage[s]) byStage[s] = []; byStage[s].push(p); });
     var inReview = ((byStage['client_review']||[]).length + (byStage['team_review']||[]).length + (byStage['video_head_review']||[]).length);
-    var html = '<div class="g4" style="margin-bottom:20px">'
-      + '<div class="stat"><div class="stat-lbl">Active Projects</div><div class="stat-val c-cyan">'+projects.length+'</div><div class="stat-note">In production now</div></div>'
-      + '<div class="stat"><div class="stat-lbl">In Editing</div><div class="stat-val c-orange">'+((byStage['editing']||[]).length)+'</div><div class="stat-note">Being cut</div></div>'
-      + '<div class="stat"><div class="stat-lbl">In Review</div><div class="stat-val c-yellow">'+inReview+'</div><div class="stat-note">Awaiting approval</div></div>'
-      + '<div class="stat"><div class="stat-lbl">Ready for Drive</div><div class="stat-val c-green">'+((byStage['add_to_drive']||[]).length)+'</div><div class="stat-note">Final — upload needed</div></div>'
-      + '</div>';
-    STAGES.forEach(function(stage) {
+
+    // Stats bar
+    if (stats) {
+      stats.innerHTML = '<div class="stat"><div class="stat-lbl">Active</div><div class="stat-val c-cyan">' + VH_projects.length + '</div></div>'
+        + '<div class="stat"><div class="stat-lbl">Editing</div><div class="stat-val c-orange">' + ((byStage['editing']||[]).length) + '</div></div>'
+        + '<div class="stat"><div class="stat-lbl">In Review</div><div class="stat-val c-yellow">' + inReview + '</div></div>'
+        + '<div class="stat"><div class="stat-lbl">Drive</div><div class="stat-val c-green">' + ((byStage['add_to_drive']||[]).length) + '</div></div>'
+        + '<div class="stat"><div class="stat-lbl">Posted</div><div class="stat-val" style="color:#10b981">' + ((byStage['posted']||[]).length) + '</div></div>';
+    }
+
+    // Kanban board
+    var html = '<div class="kanban-board" style="grid-template-columns:repeat(' + VH_STAGES.length + ',minmax(180px,1fr));">';
+    VH_STAGES.forEach(function(stage) {
       var items = byStage[stage.key] || [];
-      if (!items.length) return;
-      html += '<div class="my-tasks-section" style="margin-bottom:14px">'
-        + '<div class="my-tasks-section-hdr"><div style="width:8px;height:8px;border-radius:50%;background:'+stage.color+';flex-shrink:0"></div>'
-        + '<div class="my-tasks-section-title" style="color:'+stage.color+'">'+stage.label+'</div>'
-        + '<div class="my-tasks-section-cnt">'+items.length+'</div></div>';
-      items.forEach(function(p) {
-        var cl = S.clients.find(function(c) { return c.id == p.client_id; });
-        var prio = (p.priority||'').toLowerCase();
-        var pc = prio==='high'?'var(--red)':prio==='medium'?'var(--yellow)':'var(--text3)';
-        var dl = p.deadline ? new Date(p.deadline+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : null;
-        var ov = p.deadline && new Date(p.deadline) < new Date();
-        html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">'+escHtml(p.title||'Untitled')+'</div>'
-          + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-          + (cl?'<span style="font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase">'+escHtml(cl.name)+'</span>':'')
-          + '<span style="font-size:9px;background:rgba(255,255,255,0.06);color:var(--text2);padding:1px 6px;border-radius:3px;font-weight:600">'+escHtml((p.type||'reel').toUpperCase())+'</span>'
-          + (dl?'<span style="font-size:9px;color:'+(ov?'var(--red)':'var(--text3)')+';font-weight:600">'+(ov?'⚠ OVERDUE · ':'')+dl+'</span>':'')
-          + '</div></div>'
-          + (prio?'<span style="font-size:9px;font-weight:700;color:'+pc+';text-transform:uppercase;flex-shrink:0">'+prio+'</span>':'')
-          + '</div>';
-      });
-      html += '</div>';
+      html += '<div class="kanban-col" style="border-top:2px solid ' + stage.color + ';">';
+      html += '<div class="kanban-col-hdr"><div class="kanban-col-title" style="color:' + stage.color + '">' + stage.label + '</div><div class="kanban-col-cnt">' + items.length + '</div></div>';
+      html += '<div class="kanban-cards" data-vh-stage="' + stage.key + '">';
+      if (!items.length) {
+        html += '<div style="color:var(--text3);font-size:11px;text-align:center;padding:20px 0;">—</div>';
+      } else {
+        items.forEach(function(p) {
+          var cl = S.clients.find(function(c) { return c.id == p.client_id; });
+          var ed = VH_teamMembers.find(function(m) { return m.id == p.assigned_editor_id; });
+          var prio = (p.priority || 'medium').toLowerCase();
+          var pc = prio === 'urgent' ? '#ef4444' : prio === 'high' ? 'var(--red)' : prio === 'medium' ? 'var(--yellow)' : 'var(--text3)';
+          var dl = p.deadline ? new Date(p.deadline + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+          var ov = p.deadline && new Date(p.deadline) < new Date();
+          html += '<div class="kanban-card" data-vh-pid="' + p.id + '" draggable="true" style="cursor:pointer;">';
+          html += '<div class="card-status-header" style="border-left:3px solid ' + pc + ';">';
+          html += '<span style="font-size:9px;font-weight:700;color:' + pc + ';text-transform:uppercase;">' + prio + '</span>';
+          if (dl) html += '<span style="font-size:9px;color:' + (ov ? 'var(--red)' : 'var(--text3)') + ';font-weight:600;">' + (ov ? '⚠ ' : '') + dl + '</span>';
+          html += '</div>';
+          html += '<div style="padding:8px 10px;">';
+          html += '<div style="font-size:12px;font-weight:700;color:var(--text1);margin-bottom:4px;line-height:1.3;">' + escHtml(p.title || 'Untitled') + '</div>';
+          html += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">';
+          if (cl) html += '<span style="font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase;">' + escHtml(cl.name) + '</span>';
+          html += '<span style="font-size:9px;background:rgba(255,255,255,0.06);color:var(--text2);padding:1px 6px;border-radius:3px;font-weight:600;">' + escHtml((p.type || 'reel').toUpperCase()) + '</span>';
+          html += '</div>';
+          if (ed) html += '<div style="font-size:10px;color:var(--text3);margin-top:4px;">✂ ' + escHtml(ed.name) + '</div>';
+          html += '<div style="margin-top:6px;"><select class="fi" style="font-size:10px;padding:3px 6px;height:auto;background:var(--bg2);" onchange="vhMoveProject(' + p.id + ',this.value)" onclick="event.stopPropagation();">';
+          VH_STAGES.forEach(function(s) {
+            html += '<option value="' + s.key + '"' + (s.key === p.current_stage ? ' selected' : '') + '>' + s.label + '</option>';
+          });
+          html += '</select></div>';
+          html += '</div></div>';
+        });
+      }
+      html += '</div></div>';
     });
-    if (!projects.length) html = '<div class="loading-row">No active video projects found.</div>';
+    html += '</div>';
+    if (!VH_projects.length) html = '<div class="loading-row" style="text-align:center;padding:40px;">No active video projects. Click + New Project to start.</div>';
     root.innerHTML = html;
-  } catch(e) { root.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load: '+escHtml(e.message||String(e))+'</div>'; }
+
+    // Wire card clicks
+    root.querySelectorAll('.kanban-card[data-vh-pid]').forEach(function(card) {
+      card.addEventListener('click', function(e) {
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
+        vhOpenDetail(parseInt(card.dataset.vhPid));
+      });
+      // Drag support
+      card.addEventListener('dragstart', function(e) { card.classList.add('dragging'); e.dataTransfer.setData('text/vhpid', card.dataset.vhPid); });
+      card.addEventListener('dragend', function() { card.classList.remove('dragging'); });
+    });
+    // Wire drop zones
+    root.querySelectorAll('.kanban-cards[data-vh-stage]').forEach(function(zone) {
+      zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.background = 'rgba(0,229,255,0.08)'; });
+      zone.addEventListener('dragleave', function() { zone.style.background = ''; });
+      zone.addEventListener('drop', function(e) {
+        e.preventDefault(); zone.style.background = '';
+        var pid = parseInt(e.dataTransfer.getData('text/vhpid'));
+        var newStage = zone.dataset.vhStage;
+        vhMoveProject(pid, newStage);
+      });
+    });
+
+  } catch(e) { root.innerHTML = '<div style="color:var(--red);padding:20px;">Failed to load: ' + escHtml(e.message || String(e)) + '</div>'; }
+}
+
+async function vhMoveProject(pid, newStage) {
+  var p = VH_projects.find(function(x) { return x.id == pid; });
+  if (!p || p.current_stage === newStage) return;
+  var oldStage = p.current_stage;
+  p.current_stage = newStage;
+
+  try {
+    // Close open stage history
+    var openHist = await sb.from('video_stage_history').select('*').eq('video_project_id', pid).is('exited_at', null);
+    if (openHist.data && openHist.data.length) {
+      var o = openHist.data[0];
+      var ex = new Date();
+      var en = new Date(o.entered_at);
+      await sb.from('video_stage_history').update({ exited_at: ex.toISOString(), duration_seconds: Math.floor((ex - en) / 1000) }).eq('id', o.id);
+    }
+    // Insert new stage entry
+    await sb.from('video_stage_history').insert({ video_project_id: pid, stage: newStage, moved_by: S.user ? S.user.name : 'SMM' });
+    // Update project
+    var upd = { current_stage: newStage, updated_at: new Date().toISOString() };
+    if (newStage === 'posted') upd.completed_at = new Date().toISOString();
+    var res = await sb.from('video_projects').update(upd).eq('id', pid);
+    if (res.error) throw res.error;
+    toast('Moved to ' + (VH_STAGES.find(function(s) { return s.key === newStage; }) || {}).label, 'success');
+    renderVideoHub();
+  } catch(err) {
+    p.current_stage = oldStage;
+    toast('Move failed: ' + (err.message || ''), 'error');
+    renderVideoHub();
+  }
+}
+
+function vhOpenDetail(pid) {
+  var p = VH_projects.find(function(x) { return x.id == pid; });
+  if (!p) return;
+  var cl = S.clients.find(function(c) { return c.id == p.client_id; });
+  var ed = VH_teamMembers.find(function(m) { return m.id == p.assigned_editor_id; });
+  var st = VH_STAGES.find(function(s) { return s.key === p.current_stage; });
+  var dl = p.deadline ? new Date(p.deadline + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  var ov = p.deadline && new Date(p.deadline) < new Date();
+
+  document.getElementById('vh-detail-title').textContent = p.title || 'Untitled';
+  var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'
+    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Client</div><div style="font-size:13px;font-weight:600;">' + escHtml(cl ? cl.name : '—') + '</div></div>'
+    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Editor</div><div style="font-size:13px;font-weight:600;">' + escHtml(ed ? ed.name : 'Unassigned') + '</div></div>'
+    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Stage</div><div style="font-size:13px;font-weight:600;color:' + (st ? st.color : 'var(--text1)') + ';">' + escHtml(st ? st.label : p.current_stage) + '</div></div>'
+    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Priority</div><div style="font-size:13px;font-weight:600;text-transform:capitalize;">' + escHtml(p.priority || 'medium') + '</div></div>'
+    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Deadline</div><div style="font-size:13px;font-weight:600;' + (ov ? 'color:var(--red);' : '') + '">' + dl + (ov ? ' (OVERDUE)' : '') + '</div></div>'
+    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Type</div><div style="font-size:13px;font-weight:600;text-transform:capitalize;">' + escHtml(p.type || 'reel') + '</div></div>'
+    + '</div>';
+
+  if (p.description) {
+    html += '<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Notes</div><div style="font-size:13px;line-height:1.5;white-space:pre-wrap;">' + escHtml(p.description) + '</div></div>';
+  }
+
+  // Stage history
+  var hist = VH_stageHistory.filter(function(h) { return h.video_project_id == pid; });
+  if (hist.length) {
+    html += '<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px;">Stage History</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    hist.forEach(function(h) {
+      var lbl = (VH_STAGES.find(function(s) { return s.key === h.stage; }) || {}).label || h.stage;
+      var entered = h.entered_at ? new Date(h.entered_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+      var durStr = '';
+      if (h.duration_seconds) { var m = Math.round(h.duration_seconds / 60); durStr = m < 60 ? m + 'm' : Math.round(m / 60) + 'h'; }
+      else if (!h.exited_at) { durStr = '⏱ now'; }
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0;">'
+        + '<span style="color:var(--text3);">' + entered + '</span>'
+        + '<span style="font-weight:700;color:var(--text1);">' + escHtml(lbl) + '</span>'
+        + (durStr ? '<span style="color:var(--cyan);font-weight:600;">' + durStr + '</span>' : '')
+        + (h.moved_by ? '<span style="color:var(--text3);font-size:10px;">by ' + escHtml(h.moved_by) + '</span>' : '')
+        + '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Move stage dropdown
+  html += '<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px;">Move to Stage</div>';
+  html += '<select class="fi" onchange="vhMoveProject(' + pid + ',this.value);closeModal(\'vh-detail\');" style="max-width:240px;">';
+  VH_STAGES.forEach(function(s) {
+    html += '<option value="' + s.key + '"' + (s.key === p.current_stage ? ' selected' : '') + '>' + s.label + '</option>';
+  });
+  html += '</select></div>';
+
+  // Edit / Archive buttons
+  html += '<div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:14px;">'
+    + '<button class="btn btn-primary btn-sm" onclick="closeModal(\'vh-detail\');openVHProjectForm(' + pid + ');">✏ Edit</button>'
+    + '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="vhArchiveProject(' + pid + ')">🗄 Archive</button>'
+    + '</div>';
+
+  document.getElementById('vh-detail-body').innerHTML = html;
+  openModal('vh-detail');
+}
+
+function openVHProjectForm(editPid) {
+  var p = editPid ? VH_projects.find(function(x) { return x.id == editPid; }) : null;
+  document.getElementById('vh-form-title').textContent = p ? 'Edit Video Project' : 'New Video Project';
+  document.getElementById('vh-f-id').value = p ? p.id : '';
+  document.getElementById('vh-f-title').value = p ? (p.title || '') : '';
+  document.getElementById('vh-f-deadline').value = p ? (p.deadline || '') : '';
+  document.getElementById('vh-f-formula').value = p ? (p.formula || '') : '';
+  document.getElementById('vh-f-notes').value = p ? (p.description || '') : '';
+  document.getElementById('vh-f-submit').textContent = p ? 'Save' : 'Create';
+
+  // Populate client dropdown
+  var cSel = document.getElementById('vh-f-client');
+  cSel.innerHTML = '<option value="">— None —</option>' + S.clients.map(function(c) {
+    return '<option value="' + c.id + '"' + (p && p.client_id == c.id ? ' selected' : '') + '>' + escHtml(c.name) + '</option>';
+  }).join('');
+
+  // Populate editor dropdown
+  var eSel = document.getElementById('vh-f-editor');
+  var editors = VH_teamMembers.filter(function(m) { var r = (m.role || '').toLowerCase(); return r === 'editor' || r === 'video_editor' || r === 'video_head'; });
+  eSel.innerHTML = '<option value="">— Unassigned —</option>' + editors.map(function(m) {
+    return '<option value="' + m.id + '"' + (p && p.assigned_editor_id == m.id ? ' selected' : '') + '>' + escHtml(m.name) + '</option>';
+  }).join('');
+
+  // Populate stage dropdown
+  var sSel = document.getElementById('vh-f-stage');
+  sSel.innerHTML = VH_STAGES.map(function(s) {
+    return '<option value="' + s.key + '"' + (p && p.current_stage === s.key ? ' selected' : ((!p && s.key === 'video_shot') ? ' selected' : '')) + '>' + s.label + '</option>';
+  }).join('');
+
+  // Priority + Type
+  if (p) {
+    document.getElementById('vh-f-priority').value = p.priority || 'medium';
+    document.getElementById('vh-f-type').value = p.type || 'reel';
+  } else {
+    document.getElementById('vh-f-priority').value = 'medium';
+    document.getElementById('vh-f-type').value = 'reel';
+  }
+
+  // Month dropdown
+  var mSel = document.getElementById('vh-f-month');
+  mSel.innerHTML = '<option value="">— Select —</option>' + MONTHS_VH.map(function(m, i) {
+    return '<option value="' + (i + 1) + '"' + (p && parseInt(p.target_month) === i + 1 ? ' selected' : '') + '>' + m + '</option>';
+  }).join('');
+
+  openModal('vh-form');
+}
+
+document.getElementById('vh-project-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var id = document.getElementById('vh-f-id').value;
+  var d = {
+    title: document.getElementById('vh-f-title').value.trim(),
+    client_id: document.getElementById('vh-f-client').value ? parseInt(document.getElementById('vh-f-client').value) : null,
+    assigned_editor_id: document.getElementById('vh-f-editor').value ? parseInt(document.getElementById('vh-f-editor').value) : null,
+    priority: document.getElementById('vh-f-priority').value,
+    type: document.getElementById('vh-f-type').value,
+    current_stage: document.getElementById('vh-f-stage').value,
+    deadline: document.getElementById('vh-f-deadline').value || null,
+    formula: document.getElementById('vh-f-formula').value.trim() || null,
+    description: document.getElementById('vh-f-notes').value.trim() || null,
+    target_month: document.getElementById('vh-f-month').value ? parseInt(document.getElementById('vh-f-month').value) : null
+  };
+  if (!d.title) { toast('Title required', 'error'); return; }
+  if (!d.target_month) { toast('Month is required', 'error'); return; }
+  if (d.target_month) d.target_year = new Date().getFullYear();
+
+  try {
+    if (id) {
+      // Check if stage changed
+      var orig = VH_projects.find(function(x) { return x.id == parseInt(id); });
+      if (orig && orig.current_stage !== d.current_stage) {
+        await vhMoveProject(parseInt(id), d.current_stage);
+      }
+      d.updated_at = new Date().toISOString();
+      var res = await sb.from('video_projects').update(d).eq('id', parseInt(id));
+      if (res.error) throw res.error;
+      toast('Project updated', 'success');
+    } else {
+      d.created_by = S.user ? S.user.name : 'SMM';
+      var ins = await sb.from('video_projects').insert(d).select().single();
+      if (ins.error) throw ins.error;
+      await sb.from('video_stage_history').insert({ video_project_id: ins.data.id, stage: d.current_stage, moved_by: d.created_by });
+      toast('Project created', 'success');
+    }
+    closeModal('vh-form');
+    renderVideoHub();
+  } catch(err) { toast('Save failed: ' + (err.message || ''), 'error'); }
+});
+
+async function vhArchiveProject(pid) {
+  if (!confirm('Archive this video project?')) return;
+  try {
+    var res = await sb.from('video_projects').update({ is_archived: true, updated_at: new Date().toISOString() }).eq('id', pid);
+    if (res.error) throw res.error;
+    toast('Archived', 'success');
+    closeModal('vh-detail');
+    renderVideoHub();
+  } catch(err) { toast('Archive failed: ' + (err.message || ''), 'error'); }
 }
 
 // ============ GRAPHIC HUB ============
