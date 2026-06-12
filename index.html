@@ -1241,6 +1241,11 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
       Inspo Hub ↗
     </button>
+    <button class="sb-item" data-page="agents">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 2a3 3 0 0 1 3 3v3H9V5a3 3 0 0 1 3-3z"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
+      🤖 Agents
+      <span class="sb-badge" id="sb-agents-unread" style="display:none"></span>
+    </button>
   </nav>
 
   <div class="sb-footer">
@@ -1756,17 +1761,26 @@ tr:last-child td { border-bottom: none; }
         <select class="fi" id="cplan-year" style="padding:7px 12px;font-size:13px;font-weight:600;width:95px" onchange="renderContentPlan()">
           <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
         </select>
+        <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;flex-shrink:0">
+          <button id="cplan-list-btn" onclick="setCPlanView('list')" style="padding:6px 14px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:var(--accent);color:#fff;letter-spacing:0.05em">LIST</button>
+          <button id="cplan-cal-btn" onclick="setCPlanView('cal')" style="padding:6px 14px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:var(--bg3);color:var(--text3);letter-spacing:0.05em">CALENDAR</button>
+        </div>
         <div id="cplan-inline-summary" style="flex:1;font-size:12px;color:var(--text2);font-weight:500"></div>
         <button class="btn btn-ghost btn-sm" onclick="openCPlanModal('post')">+ Post</button>
         <button class="btn btn-primary btn-sm" onclick="openCPlanModal('video')">+ Video</button>
       </div>
-      <div style="margin-bottom:20px">
-        <div class="stitle" style="margin-bottom:8px">Posts <span class="cnt" id="cplan-post-cnt">0</span></div>
-        <div id="cplan-posts"></div>
+      <div id="cplan-list-view">
+        <div style="margin-bottom:20px">
+          <div class="stitle" style="margin-bottom:8px">Posts <span class="cnt" id="cplan-post-cnt">0</span></div>
+          <div id="cplan-posts"></div>
+        </div>
+        <div>
+          <div class="stitle" style="margin-bottom:8px">Videos <span class="cnt" id="cplan-video-cnt">0</span></div>
+          <div id="cplan-videos"></div>
+        </div>
       </div>
-      <div>
-        <div class="stitle" style="margin-bottom:8px">Videos <span class="cnt" id="cplan-video-cnt">0</span></div>
-        <div id="cplan-videos"></div>
+      <div id="cplan-cal-view" style="display:none">
+        <div id="cplan-cal-grid"></div>
       </div>
     </div>
 
@@ -1845,6 +1859,19 @@ tr:last-child td { border-bottom: none; }
         <div class="ph-right"><button class="btn btn-primary" onclick="openSmmMissionModal()">+ New Mission</button></div>
       </div>
       <div id="smm-missions-list"></div>
+    </div>
+  </section>
+
+  <section class="page" id="page-agents">
+    <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div><div class="ph-title">🤖 Agents</div><div class="ph-sub">Live alerts from all BB agents</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="loadSmmAgentAlerts()">↻ Refresh</button>
+        <button class="btn btn-ghost btn-sm" onclick="markAllSmmAlertsRead()">Mark all read</button>
+      </div>
+    </div>
+    <div id="smm-agents-list">
+      <div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">Loading...</div>
     </div>
   </section>
 
@@ -2000,7 +2027,7 @@ let sb = null;
 try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) { console.warn(e); }
 
 // ============ USERS (login) ============
-const USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '1010' };
+const USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '2222' };
 
 // ============ STATE ============
 const S = {
@@ -2436,6 +2463,7 @@ function nav(page, data) {
   if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
   if (page === 'diary') renderDiary();
+  if (page === 'agents') loadSmmAgentAlerts();
 }
 
 function populateCalFilterDropdowns() {
@@ -3247,6 +3275,63 @@ async function loadContentPlans() {
   } catch (e) { console.error('Content plans load failed:', e); S.contentPlans = []; }
 }
 
+var S_cpView = 'list';
+
+function setCPlanView(v) {
+  S_cpView = v;
+  var lv = document.getElementById('cplan-list-view');
+  var cv = document.getElementById('cplan-cal-view');
+  var lb = document.getElementById('cplan-list-btn');
+  var cb = document.getElementById('cplan-cal-btn');
+  if (lv) lv.style.display = v === 'list' ? '' : 'none';
+  if (cv) cv.style.display = v === 'cal' ? '' : 'none';
+  if (lb) { lb.style.background = v === 'list' ? 'var(--accent)' : 'var(--bg3)'; lb.style.color = v === 'list' ? '#fff' : 'var(--text3)'; }
+  if (cb) { cb.style.background = v === 'cal' ? 'var(--accent)' : 'var(--bg3)'; cb.style.color = v === 'cal' ? '#fff' : 'var(--text3)'; }
+  if (v === 'cal') renderContentPlanCal();
+}
+
+function renderContentPlanCal() {
+  var month = parseInt(document.getElementById('cplan-month')?.value || new Date().getMonth() + 1);
+  var year = parseInt(document.getElementById('cplan-year')?.value || new Date().getFullYear());
+  var cid = S.currentClientId;
+  var plans = (S.contentPlans || []).filter(function(p) { return p.client_id == cid && p.month === month && p.year === year; });
+  var firstDay = new Date(year, month - 1, 1).getDay();
+  var daysInMonth = new Date(year, month, 0).getDate();
+  var td = new Date();
+  var todayStr = td.getFullYear() + '-' + String(td.getMonth()+1).padStart(2,'0') + '-' + String(td.getDate()).padStart(2,'0');
+  var byDay = {};
+  plans.forEach(function(p) {
+    if (p.scheduled_date) {
+      var d = new Date(p.scheduled_date + 'T00:00').getDate();
+      if (!byDay[d]) byDay[d] = [];
+      byDay[d].push(p);
+    }
+  });
+  var dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">';
+  dayLabels.forEach(function(d) { html += '<div style="font-size:9px;font-weight:700;color:var(--text3);text-align:center;padding:4px 0;text-transform:uppercase">' + d + '</div>'; });
+  html += '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+  for (var i = 0; i < firstDay; i++) {
+    html += '<div style="min-height:72px;background:var(--bg2);border-radius:6px;border:1px solid var(--border);opacity:0.4"></div>';
+  }
+  for (var day = 1; day <= daysInMonth; day++) {
+    var ds = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    var isToday = ds === todayStr;
+    var items = byDay[day] || [];
+    html += '<div style="min-height:72px;background:var(--bg3);border-radius:6px;border:1px solid ' + (isToday ? 'var(--accent)' : 'var(--border)') + ';padding:5px 4px">';
+    html += '<div style="font-size:10px;font-weight:700;color:' + (isToday ? 'var(--accent)' : 'var(--text2)') + ';margin-bottom:3px">' + day + '</div>';
+    items.forEach(function(p) {
+      var color = p.type === 'post' ? 'var(--cyan)' : 'var(--pink)';
+      var bg = p.type === 'post' ? 'rgba(6,182,212,0.12)' : 'rgba(236,72,153,0.12)';
+      html += '<div onclick="openCPlanModal(\'' + p.type + '\',' + p.id + ')" style="font-size:9px;font-weight:600;padding:2px 5px;margin-bottom:2px;border-radius:4px;background:' + (p.posted ? 'var(--bg4)' : bg) + ';color:' + (p.posted ? 'var(--text3)' : color) + ';cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;' + (p.posted ? 'text-decoration:line-through' : '') + '" title="' + escHtml(p.title||'Untitled') + '">' + escHtml(p.title||'Untitled') + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  var el = document.getElementById('cplan-cal-grid');
+  if (el) el.innerHTML = html;
+}
+
 function renderContentPlan() {
   const month = parseInt(document.getElementById('cplan-month')?.value || new Date().getMonth() + 1);
   const year = parseInt(document.getElementById('cplan-year')?.value || new Date().getFullYear());
@@ -3276,6 +3361,7 @@ function renderContentPlan() {
   if (postsEl) postsEl.innerHTML = posts.length ? posts.map((p, i) => renderCPlanRow(p, i + 1, 'post')).join('') : '<div style="font-size:12px;color:var(--text3);padding:14px 0;text-align:center">No posts added. Click + Post.</div>';
   const videosEl = document.getElementById('cplan-videos');
   if (videosEl) videosEl.innerHTML = videos.length ? videos.map((p, i) => renderCPlanRow(p, i + 1, 'video')).join('') : '<div style="font-size:12px;color:var(--text3);padding:14px 0;text-align:center">No videos added. Click + Video.</div>';
+  if (S_cpView === 'cal') renderContentPlanCal();
 }
 
 function renderCPlanRow(p, num, type) {
@@ -4275,6 +4361,81 @@ function renderSOPs() {
     return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 24px;cursor:pointer;transition:all 0.2s" onclick="openModal(\'sop\')" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'"><div style="display:flex;align-items:flex-start;gap:14px"><div style="background:linear-gradient(135deg,var(--accent),#00B8CC);color:#000;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">' + escHtml(sop.num) + '</div><div><div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px">' + escHtml(sop.name) + '</div><div style="font-size:12px;color:var(--text3);line-height:1.5">' + escHtml(sop.desc) + '</div>' + (sop.when ? '<div style="font-size:11px;color:var(--accent);margin-top:8px;font-weight:600">When: ' + escHtml(sop.when) + '</div>' : '') + '</div></div></div>';
   }).join('');
 }
+
+// ============ AGENTS TAB ============
+const SMM_SB_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
+const SMM_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dmlpd25xZ3BoeWtsY29panlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjE5OTEsImV4cCI6MjA5MTI5Nzk5MX0.I8YiBr-rfLVcc6DE8Z1PxEP2oxXCelv6mxqAY_wY7lc';
+
+async function loadSmmAgentAlerts() {
+  const el = document.getElementById('smm-agents-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">Loading...</div>';
+  try {
+    const resp = await fetch(`${SMM_SB_URL}/rest/v1/agent_alerts?or=(system.eq.smm,system.eq.all)&order=created_at.desc&limit=50&select=*`, {
+      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY }
+    });
+    const alerts = resp.ok ? await resp.json() : [];
+    if (!alerts || alerts.length === 0) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">✅ No alerts — everything running smoothly.</div>';
+      updateSmmAgentsBadge(0);
+      return;
+    }
+    const sevColor = { critical: 'var(--red,#ef4444)', warning: 'var(--amber,#f59e0b)', info: '#3b82f6' };
+    const sevLabel = { critical: '🔴 CRITICAL', warning: '🟡 WARNING', info: '🔵 INFO' };
+    const agentLabel = { 'finance': 'Finance', 'stuck-video': 'Stuck Video', 'client-health': 'Client Health', 'content-overdue': 'Content Overdue', 'shoot-tracker': 'Shoot Tracker' };
+    el.innerHTML = alerts.map(a => {
+      const d = new Date(a.created_at);
+      const fmt = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const col = sevColor[a.severity] || 'var(--text2)';
+      const unread = !a.read_at;
+      return `<div id="smm-alert-${a.id}" style="border-left:3px solid ${unread ? col : 'var(--border)'};padding:12px 16px;background:var(--bg2);border-radius:8px;margin-bottom:10px;cursor:pointer;" onclick="markSmmAlertRead(${a.id})">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;">${sevLabel[a.severity] || a.severity}</span>
+          ${unread ? `<span style="font-size:10px;font-weight:700;background:${col};color:#fff;padding:2px 6px;border-radius:4px;">NEW</span>` : ''}
+          <span style="font-size:11px;color:var(--text3);margin-left:auto;">${agentLabel[a.agent] || a.agent} · ${fmt}</span>
+        </div>
+        <div style="font-size:13px;white-space:pre-wrap;line-height:1.5;">${escHtml(a.message)}</div>
+      </div>`;
+    }).join('');
+    updateSmmAgentsBadge(alerts.filter(a => !a.read_at).length);
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;">Could not load alerts.</div>';
+  }
+}
+
+async function markSmmAlertRead(id) {
+  const card = document.getElementById('smm-alert-' + id);
+  if (!card) return;
+  try {
+    await fetch(`${SMM_SB_URL}/rest/v1/agent_alerts?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ read_at: new Date().toISOString() })
+    });
+    card.style.borderLeftColor = 'var(--border)';
+    const badge = card.querySelector('span[style*="NEW"]');
+    if (badge) badge.remove();
+    updateSmmAgentsBadge(document.querySelectorAll('[id^="smm-alert-"] span[style*="NEW"]').length);
+  } catch (e) {}
+}
+
+async function markAllSmmAlertsRead() {
+  try {
+    await fetch(`${SMM_SB_URL}/rest/v1/agent_alerts?read_at=is.null`, {
+      method: 'PATCH',
+      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ read_at: new Date().toISOString() })
+    });
+    document.querySelectorAll('[id^="smm-alert-"]').forEach(c => c.style.borderLeftColor = 'var(--border)');
+    document.querySelectorAll('[id^="smm-alert-"] span[style*="NEW"]').forEach(b => b.remove());
+    updateSmmAgentsBadge(0);
+  } catch (e) {}
+}
+
+function updateSmmAgentsBadge(count) {
+  const b = document.getElementById('sb-agents-unread');
+  if (b) { b.textContent = count; b.style.display = count > 0 ? '' : 'none'; }
+}
 </script>
 <!-- ============================================================
      BB AI AGENT v1 — SMM WORKSPACE
@@ -4512,7 +4673,7 @@ function renderSOPs() {
     },
     {
       keys: ['login','pin','password','sign in','credentials','forgot pin','my pin'],
-      ans: '<strong>🔐 Your Login Details:</strong>\n\n• <strong>Username:</strong> NIRVANA\n• <strong>PIN:</strong> 1010\n\nIf you get logged out just enter these on the login screen. Your data is always safe in Supabase — nothing is lost if you log out.'
+      ans: '<strong>🔐 Your Login Details:</strong>\n\n• <strong>Username:</strong> NIRVANA\n• <strong>PIN:</strong> 2222\n\nIf you get logged out just enter these on the login screen. Your data is always safe in Supabase — nothing is lost if you log out.'
     },
     {
       keys: ['not working','broken','error','bug','issue','problem','crash','loading','something wrong','not loading','cant see','not showing'],
@@ -5434,7 +5595,7 @@ function renderSOPs() {
     document.body.appendChild(fab);
     var panel = document.createElement('div');
     panel.id = 'bb-smm-panel';
-    panel.innerHTML = '<div id="bb-smm-ph"><span id="bb-smm-ph-title">🤖 BB SMM AGENTS</span><button id="bb-smm-run-btn">▶ Run All</button></div><div id="bb-smm-log"><div style="color:#475569;font-size:12px;padding:24px;text-align:center;">Click ▶ Run All to scan now.<br><span style="font-size:10px;color:#334155;">Auto-scans every 5 min</span></div></div><div id="bb-smm-footer">5 agents active • Alerts → WhatsApp (SMM + CEO)</div>';
+    panel.innerHTML = '<div id="bb-smm-ph"><span id="bb-smm-ph-title">🤖 BB SMM AGENTS</span><button id="bb-smm-run-btn">▶ Run All</button></div><div id="bb-smm-log"><div style="color:#475569;font-size:12px;padding:24px;text-align:center;">Click ▶ Run All to scan now.<br><span style="font-size:10px;color:#334155;">Auto-scans every 5 min</span></div></div><div id="bb-smm-footer">5 agents active • Alerts → Gmail (SMM + CEO)</div>';
     document.body.appendChild(panel);
     fab.addEventListener('click', function() { panelOpen = !panelOpen; panel.classList.toggle('open', panelOpen); });
     document.getElementById('bb-smm-run-btn').addEventListener('click', function() { runAll(); });
