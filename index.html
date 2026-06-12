@@ -1306,7 +1306,7 @@ tr:last-child td { border-bottom: none; }
     <div class="stitle" style="margin-top:4px">Seven Pillars <span class="cnt">Complete in order</span></div>
     <div class="pillars-grid" id="pillars-grid" style="margin-bottom:18px"></div>
 
-    <div class="stitle">Daily Client Tasks <span class="cnt">Stories + WhatsApp sweep</span></div>
+    <div class="stitle">Daily Client Tasks <span class="cnt">Stories + Gmail sweep</span></div>
     <div class="card" style="margin-bottom:14px;padding:16px">
       <div class="daily-tasks-wrap">
         <div class="task-mini">
@@ -1317,7 +1317,7 @@ tr:last-child td { border-bottom: none; }
           <label class="task-mini-row"><input type="checkbox"> Post daily stories per client</label>
         </div>
         <div class="task-mini">
-          <div class="task-mini-head">WhatsApp Sweep</div>
+          <div class="task-mini-head">Gmail Sweep</div>
           <label class="task-mini-row"><input type="checkbox"> Reply to all client messages</label>
           <label class="task-mini-row"><input type="checkbox"> Share scheduled posts for approval</label>
           <label class="task-mini-row"><input type="checkbox"> Update shoot schedules</label>
@@ -2820,11 +2820,12 @@ function populateClientDropdowns() {
   ['qa-client', 'ca-client', 'sa-client'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = opts; });
   const ia = document.getElementById('ia-client');
   if (ia) ia.innerHTML = '<option value="">No specific client</option>' + opts;
-  const ctf = document.getElementById('ct-client-filter');
-  const spf = document.getElementById('sp-client-filter');
   const allOpts = '<option value="all">All Clients</option>' + opts;
-  if (ctf) ctf.innerHTML = allOpts;
-  if (spf) spf.innerHTML = allOpts;
+  ['ct-client-filter','sp-client-filter','mt-filter-client','aq-client-filter','diary-filter-client'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.innerHTML = allOpts;
+  });
+  const dc = document.getElementById('d-client');
+  if (dc) dc.innerHTML = '<option value="">No specific client</option>' + opts;
 }
 
 // ============ CLIENT TABS ============
@@ -3060,12 +3061,13 @@ async function toggleTask(id) {
   const t = S.tasks.find(x => x.id === id);
   if (!t) return;
   t.done = !t.done;
-  renderClientTasks(S.currentClientId);
+  if (S.currentPage === 'my-tasks') renderMyTasks();
+  else { renderClientTasks(S.currentClientId); }
   if (!sb) return;
   try {
     await sb.from('tasks').update({ done: t.done }).eq('id', id);
     toast(t.done ? 'Marked done' : 'Marked open', 'success');
-    openClientProfile(S.currentClientId);
+    if (S.currentPage !== 'my-tasks') openClientProfile(S.currentClientId);
   } catch (e) { console.error(e); toast('Failed', 'error'); }
 }
 
@@ -3950,7 +3952,6 @@ function renderShoots() {
   var fClient = (document.getElementById('sp-client-filter') || {}).value || 'all';
   var scope = currentSmmScope();
   var shoots = (S.shoots || []).filter(function(s) {
-    if (scope && s.assigned_smm !== scope) return false;
     if (fClient !== 'all' && String(s.client_id) !== String(fClient)) return false;
     return true;
   });
@@ -4021,7 +4022,7 @@ async function submitShootAdd() {
   var notes = ((document.getElementById('sa-notes') || {}).value || '').trim();
   var editId = (document.getElementById('sa-edit-id') || {}).value;
   if (!title) { toast('Shoot name is required', 'error'); return; }
-  var payload = { title: title, client_id: clientId || null, shoot_date: date || null, stage: SHOOT_STAGE_MAP[stageKey] || 'Videos Confirmed', notes: notes || null, assigned_smm: currentSmmScope() || null };
+  var payload = { title: title, client_id: clientId || null, shoot_date: date || null, stage: SHOOT_STAGE_MAP[stageKey] || 'Videos Confirmed', notes: notes || null };
   try {
     if (editId) {
       var r = await sb.from('smm_shoots').update(payload).eq('id', editId);
@@ -4066,7 +4067,7 @@ async function submitContentAdd() {
   var date = (document.getElementById('ca-date') || {}).value;
   var editId = (document.getElementById('ca-edit-id') || {}).value;
   if (!title) { toast('Title is required', 'error'); return; }
-  var payload = { title: title, client_id: clientId || null, content_type: ctype, status: status, scheduled_date: date || null, assigned_smm: currentSmmScope() || null };
+  var payload = { title: title, client_id: clientId || null, content_type: ctype, status: status, scheduled_date: date || null };
   try {
     if (editId) {
       var r = await sb.from('smm_content').update(payload).eq('id', editId);
@@ -4104,22 +4105,21 @@ function renderMyTasks() {
   var fPriority = (document.getElementById('mt-filter-priority') || {}).value || 'all';
   var fCat = (document.getElementById('mt-filter-category') || {}).value || 'all';
   var tasks = (S.tasks || []).filter(function(t) {
-    if (scope && t.assigned_smm !== scope && t.assigned_to !== scope) return false;
     if (fClient !== 'all' && String(t.client_id) !== String(fClient)) return false;
-    if (fPriority !== 'all' && t.priority !== fPriority) return false;
+    if (fPriority !== 'all' && (t.priority || '').toUpperCase() !== fPriority) return false;
     if (fCat !== 'all' && t.category !== fCat) return false;
     return true;
   });
   if (!tasks.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px;font-size:14px">No tasks. Click + Add Task to get started.</div>'; return; }
-  var active = tasks.filter(function(t) { return t.status !== 'done' && t.status !== 'cancelled'; });
-  var done = tasks.filter(function(t) { return t.status === 'done' || t.status === 'cancelled'; });
+  var active = tasks.filter(function(t) { return !t.done; });
+  var done = tasks.filter(function(t) { return !!t.done; });
   var prioColors = { high: '#FF5252', medium: '#FBBF24', low: '#4ADE80' };
   function renderTaskRow(t) {
     var cl = S.clients.find(function(c) { return c.id == t.client_id; });
-    var isDone = t.status === 'done' || t.status === 'cancelled';
+    var isDone = !!t.done;
     var pc = prioColors[t.priority] || 'var(--text3)';
     var checkInner = isDone ? '<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 7L9 1" stroke="#0B0C0F" stroke-width="2" stroke-linecap="round"/></svg>' : '';
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px' + (isDone ? ';opacity:0.55' : '') + '"><div onclick="toggleTask(' + t.id + ')" style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (isDone ? '#4ADE80' : 'var(--border)') + ';background:' + (isDone ? '#4ADE80' : 'transparent') + ';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">' + checkInner + '</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff' + (isDone ? ';text-decoration:line-through' : '') + '">' + escHtml(t.title || 'Untitled') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + (t.priority ? '<span style="font-size:10px;background:' + pc + '22;color:' + pc + ';padding:2px 7px;border-radius:20px;font-weight:700;text-transform:uppercase">' + t.priority + '</span>' : '') + (t.category ? '<span style="font-size:10px;color:var(--text3)">' + escHtml(t.category) + '</span>' : '') + (t.due_date ? '<span style="font-size:11px;color:var(--text3)">Due: ' + t.due_date.substring(0,10) + '</span>' : '') + '</div></div><button onclick="deleteTask(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;line-height:1">×</button></div>';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px' + (isDone ? ';opacity:0.55' : '') + '"><div onclick="toggleTask(' + t.id + ')" style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (isDone ? '#4ADE80' : 'var(--border)') + ';background:' + (isDone ? '#4ADE80' : 'transparent') + ';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">' + checkInner + '</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff' + (isDone ? ';text-decoration:line-through' : '') + '">' + escHtml(t.title || 'Untitled') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + (t.priority ? '<span style="font-size:10px;background:' + pc + '22;color:' + pc + ';padding:2px 7px;border-radius:20px;font-weight:700;text-transform:uppercase">' + t.priority + '</span>' : '') + (t.category ? '<span style="font-size:10px;color:var(--text3)">' + escHtml(t.category) + '</span>' : '') + (t.due ? '<span style="font-size:11px;color:var(--text3)">Due: ' + t.due.substring(0,10) + '</span>' : '') + '</div></div><button onclick="deleteTask(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;line-height:1">×</button></div>';
   }
   var html = active.length ? '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">' + active.map(renderTaskRow).join('') + '</div>' : '';
   if (done.length) html += '<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Completed (' + done.length + ')</div><div style="display:flex;flex-direction:column;gap:6px">' + done.slice(0, 10).map(renderTaskRow).join('') + '</div></div>';
@@ -4141,7 +4141,6 @@ function renderApprovalQueue() {
   var fClient = (document.getElementById('aq-client-filter') || {}).value || 'all';
   var scope = currentSmmScope();
   var content = (S.content || []).filter(function(c) {
-    if (scope && c.assigned_smm !== scope) return false;
     if (fClient !== 'all' && String(c.client_id) !== String(fClient)) return false;
     return true;
   });
@@ -4174,8 +4173,8 @@ async function renderIdeas() {
   var scope = currentSmmScope();
   if (!S.ideas || !S.ideas.length) {
     try {
-      var q = sb.from('ideas').select('*').order('created_at', { ascending: false });
-      if (scope) q = q.eq('assigned_smm', scope);
+      var q = sb.from('shared_ideas').select('*').order('created_at', { ascending: false });
+      if (scope) q = q.eq('captured_by', scope);
       var r = await q;
       S.ideas = r.data || [];
     } catch(e) { S.ideas = []; }
@@ -4191,9 +4190,9 @@ async function submitIdeaAdd() {
   var text = ((document.getElementById('ia-text') || {}).value || '').trim();
   var clientId = (document.getElementById('ia-client') || {}).value;
   if (!text) { toast('Type your idea first', 'error'); return; }
-  var payload = { text: text, client_id: clientId || null, assigned_smm: currentSmmScope() || null };
+  var payload = { text: text, client_id: clientId || null, captured_by: S.currentUser || null };
   try {
-    var r = await sb.from('ideas').insert([payload]).select();
+    var r = await sb.from('shared_ideas').insert([payload]).select();
     if (r.error) throw r.error;
     if (r.data && r.data[0]) { if (!S.ideas) S.ideas = []; S.ideas.unshift(r.data[0]); }
     toast('Idea captured!', 'success');
@@ -4212,7 +4211,7 @@ async function renderDiary() {
   var fClient = (document.getElementById('diary-filter-client') || {}).value || 'all';
   if (!S.diary || !S.diary.length) {
     try {
-      var r = await sb.from('smm_diary').select('*').order('date', { ascending: false });
+      var r = await sb.from('smm_diary').select('*').order('entry_date', { ascending: false });
       S.diary = r.data || [];
     } catch(e) { S.diary = []; }
   }
@@ -4224,7 +4223,7 @@ async function renderDiary() {
   if (!entries.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;font-size:14px">No diary entries yet. Click Add Entry to start your daily log.</div>'; return; }
   el.innerHTML = entries.map(function(entry) {
     var cl = S.clients.find(function(c) { return c.id == entry.client_id; });
-    var date = entry.date ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) : '';
+    var date = entry.entry_date ? new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) : '';
     return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:var(--accent)">' + date + '</div>' + (cl ? '<span style="font-size:11px;color:var(--text2);background:rgba(0,229,255,0.1);padding:2px 8px;border-radius:20px">' + escHtml(cl.name) + '</span>' : '') + '</div><div style="font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap">' + escHtml(entry.body || entry.content || '') + '</div></div>';
   }).join('');
 }
@@ -4241,7 +4240,7 @@ async function saveDiarySubmit() {
   var body = ((document.getElementById('d-body') || {}).value || '').trim();
   if (!body) { toast('Write something before saving', 'error'); return; }
   if (!date) { toast('Date is required', 'error'); return; }
-  var payload = { date: date, client_id: clientId || null, body: body, author: currentSmmScope() || S.currentUser || null };
+  var payload = { entry_date: date, client_id: clientId || null, body: body, author: currentSmmScope() || S.currentUser || null };
   try {
     var r = await sb.from('smm_diary').insert([payload]).select();
     if (r.error) throw r.error;
@@ -4262,7 +4261,7 @@ function renderSmmMissions() {
   grid.innerHTML = smms.map(function(entry) {
     var key = entry[0], info = entry[1], scope = info.smm;
     var clientCount = S.clients.filter(function(c) { return c.assigned_smm === scope; }).length;
-    var tasksDue = (S.tasks || []).filter(function(t) { return t.assigned_smm === scope && t.status !== 'done' && t.status !== 'cancelled'; }).length;
+    var tasksDue = (S.tasks || []).filter(function(t) { return !t.done; }).length;
     var contentActive = (S.content || []).filter(function(c) { return c.assigned_smm === scope && c.status !== 'posted'; }).length;
     return '<div onclick="openSmmMissionModal(\'' + key + '\')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor=\'var(--accent)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'none\'"><div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#FF2D78);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#000;flex-shrink:0">' + info.code + '</div><div><div style="font-size:14px;font-weight:700;color:#fff">' + info.name + '</div><div style="font-size:11px;color:var(--text3)">' + info.role + '</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><div style="text-align:center;background:rgba(0,229,255,0.08);border-radius:8px;padding:8px"><div style="font-size:18px;font-weight:800;color:var(--accent)">' + clientCount + '</div><div style="font-size:10px;color:var(--text3)">Clients</div></div><div style="text-align:center;background:rgba(251,191,36,0.08);border-radius:8px;padding:8px"><div style="font-size:18px;font-weight:800;color:#FBBF24">' + tasksDue + '</div><div style="font-size:10px;color:var(--text3)">Tasks</div></div><div style="text-align:center;background:rgba(255,45,120,0.08);border-radius:8px;padding:8px"><div style="font-size:18px;font-weight:800;color:#FF2D78">' + contentActive + '</div><div style="font-size:10px;color:var(--text3)">Content</div></div></div></div>';
   }).join('');
@@ -4282,7 +4281,7 @@ function openSmmMissionModal(userKey) {
   if (!listEl) return;
   var scope = info.smm;
   var clients = S.clients.filter(function(c) { return !scope || c.assigned_smm === scope; });
-  var tasks = (S.tasks || []).filter(function(t) { return (!scope || t.assigned_smm === scope) && t.status !== 'done' && t.status !== 'cancelled'; });
+  var tasks = (S.tasks || []).filter(function(t) { return !t.done; });
   var html = '<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Assigned Clients (' + clients.length + ')</div>';
   html += clients.length ? clients.map(function(c) { return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:13px;font-weight:600;color:#fff">' + escHtml(c.name) + ' <span style="font-size:11px;color:var(--text3);font-weight:400">' + (c.package || '') + '</span></div>'; }).join('') : '<div style="color:var(--text3);font-size:13px">No clients assigned</div>';
   html += '</div><div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Active Tasks (' + tasks.length + ')</div>';
@@ -4319,17 +4318,17 @@ async function submitQuickAdd() {
   if (!title) { toast('Title is required', 'error'); return; }
   try {
     if (type === 'content') {
-      var r = await sb.from('smm_content').insert([{ title: title, client_id: clientId || null, content_type: ctype, status: 'brief', assigned_smm: currentSmmScope() || null }]).select();
+      var r = await sb.from('smm_content').insert([{ title: title, client_id: clientId || null, content_type: ctype, status: 'brief' }]).select();
       if (r.error) throw r.error;
       if (r.data && r.data[0]) S.content.push(r.data[0]);
       toast('Content card added', 'success');
     } else if (type === 'shoot') {
-      var r2 = await sb.from('smm_shoots').insert([{ title: title, client_id: clientId || null, stage: 'Videos Confirmed', assigned_smm: currentSmmScope() || null }]).select();
+      var r2 = await sb.from('smm_shoots').insert([{ title: title, client_id: clientId || null, stage: 'Videos Confirmed' }]).select();
       if (r2.error) throw r2.error;
       if (r2.data && r2.data[0]) S.shoots.push(r2.data[0]);
       toast('Shoot added', 'success');
     } else if (type === 'idea') {
-      var r3 = await sb.from('ideas').insert([{ text: title, client_id: clientId || null, assigned_smm: currentSmmScope() || null }]).select();
+      var r3 = await sb.from('shared_ideas').insert([{ text: title, client_id: clientId || null, captured_by: S.currentUser || null }]).select();
       if (r3.error) throw r3.error;
       if (r3.data && r3.data[0]) { if (!S.ideas) S.ideas = []; S.ideas.unshift(r3.data[0]); }
       toast('Idea captured', 'success');
@@ -4736,19 +4735,15 @@ function updateSmmAgentsBadge(count) {
 
     if (type === 'urgent') {
       var overdue = content.filter(function(c) {
-        if (scope && c.assigned_smm !== scope) return false;
         return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted';
       });
       var todayPosts = content.filter(function(c) {
-        if (scope && c.assigned_smm !== scope) return false;
         return c.scheduled_date === today && c.status !== 'posted';
       });
       var pendingApproval = content.filter(function(c) {
-        if (scope && c.assigned_smm !== scope) return false;
         return c.status === 'send-client' || c.status === 'client-changes';
       });
       var upcomingShoots = shoots.filter(function(sh) {
-        if (scope && sh.assigned_smm !== scope) return false;
         if (!sh.shoot_date) return false;
         var diff = (new Date(sh.shoot_date) - new Date(today)) / 86400000;
         return diff >= 0 && diff <= 7 && sh.stage !== 'Shot';
@@ -5016,15 +5011,12 @@ function updateSmmAgentsBadge(count) {
     var today = toDateStr(new Date());
 
     var todayContent = S.content.filter(function (c) {
-      if (scope && c.assigned_smm !== scope) return false;
       return c.scheduled_date === today && c.status !== 'posted';
     });
     var overdue = S.content.filter(function (c) {
-      if (scope && c.assigned_smm !== scope) return false;
       return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted';
     });
     var pendingApproval = S.content.filter(function (c) {
-      if (scope && c.assigned_smm !== scope) return false;
       return c.status === 'client-approval' || c.status === 'send-client';
     });
 
