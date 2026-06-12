@@ -1797,25 +1797,19 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ GRAPHIC HUB ============ -->
   <section class="page" id="page-graphic-hub">
     <div class="ph">
-      <div><div class="ph-title">Graphic Hub</div><div class="ph-sub">Design formulas, templates and briefs</div></div>
+      <div><div class="ph-title">Graphic Hub</div><div class="ph-sub">Live design tracker + post formula reference PF01–PF08</div></div>
+      <div class="ph-right"><button class="btn btn-ghost btn-sm" onclick="renderGraphicHub()">↻ Refresh</button></div>
     </div>
-    <div class="coming-soon">
-      <div class="coming-soon-icon">◎</div>
-      <div class="coming-soon-title">Coming Soon</div>
-      <div class="coming-soon-desc">Graphic Hub will host BB's post formulas PF01–PF08, design templates, visual references, and the complete graphic brief system. Building in the next iteration.</div>
-    </div>
+    <div id="gh-root"><div class="loading-row">Loading...</div></div>
   </section>
 
   <!-- ============ VIDEO HUB ============ -->
   <section class="page" id="page-video-hub">
     <div class="ph">
-      <div><div class="ph-title">Video Hub</div><div class="ph-sub">Video formulas, scripts and production</div></div>
+      <div><div class="ph-title">Video Hub</div><div class="ph-sub">Live video production tracker — all active projects by stage</div></div>
+      <div class="ph-right"><button class="btn btn-ghost btn-sm" onclick="renderVideoHub()">↻ Refresh</button></div>
     </div>
-    <div class="coming-soon">
-      <div class="coming-soon-icon">▶</div>
-      <div class="coming-soon-title">Coming Soon</div>
-      <div class="coming-soon-desc">Video Hub will host BB's video formulas F01–F12, script templates, editor briefs, and inspiration library. Building in the next iteration.</div>
-    </div>
+    <div id="vh-root"><div class="loading-row">Loading video projects...</div></div>
   </section>
 
   <!-- ============ IDEAS ============ -->
@@ -2438,6 +2432,8 @@ function nav(page, data) {
   if (page === 'ideas') renderIdeas();
   if (page === 'missions') renderSmmMissions();
   if (page === 'content-overview') renderSmmContentOverview();
+  if (page === 'video-hub') renderVideoHub();
+  if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
   if (page === 'diary') renderDiary();
 }
@@ -3571,6 +3567,118 @@ async function duplicateSmmCPlanItem(id){
     S.contentPlans.push(r.data[0]);
   }
   renderContentPlan();
+}
+
+// ============ VIDEO HUB ============
+async function renderVideoHub() {
+  var root = document.getElementById('vh-root');
+  if (!root) return;
+  root.innerHTML = '<div class="loading-row loading-dots">Loading</div>';
+  try {
+    var r = await sb.from('video_projects').select('*').eq('is_archived', false).order('created_at', { ascending: false });
+    if (r.error) throw r.error;
+    var projects = r.data || [];
+    var STAGES = [
+      { key: 'editing',           label: 'Editing',          color: 'var(--orange)' },
+      { key: 'team_review',       label: 'Team Review',      color: 'var(--pink)' },
+      { key: 'video_head_review', label: 'VH Review',        color: 'var(--purple)' },
+      { key: 'changes',           label: 'Changes',          color: 'var(--red)' },
+      { key: 'client_review',     label: 'Client Review',    color: 'var(--yellow)' },
+      { key: 'client_changes',    label: 'Client Changes',   color: 'var(--red)' },
+      { key: 'rendering',         label: 'Rendering',        color: 'var(--cyan)' },
+      { key: 'add_to_drive',      label: 'Add to Drive',     color: 'var(--green)' }
+    ];
+    var byStage = {};
+    projects.forEach(function(p) { var s = p.current_stage || 'editing'; if (!byStage[s]) byStage[s] = []; byStage[s].push(p); });
+    var inReview = ((byStage['client_review']||[]).length + (byStage['team_review']||[]).length + (byStage['video_head_review']||[]).length);
+    var html = '<div class="g4" style="margin-bottom:20px">'
+      + '<div class="stat"><div class="stat-lbl">Active Projects</div><div class="stat-val c-cyan">'+projects.length+'</div><div class="stat-note">In production now</div></div>'
+      + '<div class="stat"><div class="stat-lbl">In Editing</div><div class="stat-val c-orange">'+((byStage['editing']||[]).length)+'</div><div class="stat-note">Being cut</div></div>'
+      + '<div class="stat"><div class="stat-lbl">In Review</div><div class="stat-val c-yellow">'+inReview+'</div><div class="stat-note">Awaiting approval</div></div>'
+      + '<div class="stat"><div class="stat-lbl">Ready for Drive</div><div class="stat-val c-green">'+((byStage['add_to_drive']||[]).length)+'</div><div class="stat-note">Final — upload needed</div></div>'
+      + '</div>';
+    STAGES.forEach(function(stage) {
+      var items = byStage[stage.key] || [];
+      if (!items.length) return;
+      html += '<div class="my-tasks-section" style="margin-bottom:14px">'
+        + '<div class="my-tasks-section-hdr"><div style="width:8px;height:8px;border-radius:50%;background:'+stage.color+';flex-shrink:0"></div>'
+        + '<div class="my-tasks-section-title" style="color:'+stage.color+'">'+stage.label+'</div>'
+        + '<div class="my-tasks-section-cnt">'+items.length+'</div></div>';
+      items.forEach(function(p) {
+        var cl = S.clients.find(function(c) { return c.id == p.client_id; });
+        var prio = (p.priority||'').toLowerCase();
+        var pc = prio==='high'?'var(--red)':prio==='medium'?'var(--yellow)':'var(--text3)';
+        var dl = p.deadline ? new Date(p.deadline+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : null;
+        var ov = p.deadline && new Date(p.deadline) < new Date();
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">'+escHtml(p.title||'Untitled')+'</div>'
+          + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+          + (cl?'<span style="font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase">'+escHtml(cl.name)+'</span>':'')
+          + '<span style="font-size:9px;background:rgba(255,255,255,0.06);color:var(--text2);padding:1px 6px;border-radius:3px;font-weight:600">'+escHtml((p.type||'reel').toUpperCase())+'</span>'
+          + (dl?'<span style="font-size:9px;color:'+(ov?'var(--red)':'var(--text3)')+';font-weight:600">'+(ov?'⚠ OVERDUE · ':'')+dl+'</span>':'')
+          + '</div></div>'
+          + (prio?'<span style="font-size:9px;font-weight:700;color:'+pc+';text-transform:uppercase;flex-shrink:0">'+prio+'</span>':'')
+          + '</div>';
+      });
+      html += '</div>';
+    });
+    if (!projects.length) html = '<div class="loading-row">No active video projects found.</div>';
+    root.innerHTML = html;
+  } catch(e) { root.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load: '+escHtml(e.message||String(e))+'</div>'; }
+}
+
+// ============ GRAPHIC HUB ============
+async function renderGraphicHub() {
+  var root = document.getElementById('gh-root');
+  if (!root) return;
+  root.innerHTML = '<div class="loading-row loading-dots">Loading</div>';
+  try {
+    var r = await sb.from('graphic_projects').select('*').eq('is_archived', false).order('created_at', { ascending: false });
+    var items = (r.data) || [];
+    var FORMULAS = [
+      { num:'PF01', name:'Problem–Agitate–Solve',    desc:'Name pain → make it urgent → position your offer as the fix.',         goal:'Awareness' },
+      { num:'PF02', name:'Bold Statement Hook',       desc:'Open with a provocative claim. Build credibility. End with CTA.',      goal:'Reach / Share' },
+      { num:'PF03', name:'Product Spotlight',         desc:'Feature → Benefit → Proof → CTA. One product, one angle per post.',   goal:'Conversion' },
+      { num:'PF04', name:'Social Proof',              desc:'Real result first → context → what made it possible → next step CTA.', goal:'Trust / DMs' },
+      { num:'PF05', name:'Before & After',            desc:'Paint the before vividly → reveal the transformation → bridge to offer.', goal:'Conversion' },
+      { num:'PF06', name:'Value List / Tips',         desc:'Numbered tips, each a standalone insight. Saves = algorithm fuel.',    goal:'Saves / Reach' },
+      { num:'PF07', name:'Offer / Promotion',         desc:'Lead with result → explain offer → add urgency → single CTA.',        goal:'Sales' },
+      { num:'PF08', name:'Brand Story / BTS',         desc:'Human moment or origin story. No hard sell — trust is the product.',  goal:'Engagement' }
+    ];
+    var html = '';
+    if (items.length) {
+      html += '<div style="margin-bottom:24px"><div class="stitle">Live Design Projects <span class="cnt">'+items.length+'</span></div>';
+      items.forEach(function(p) {
+        var prio = (p.priority||'').toLowerCase();
+        var pc = prio==='high'?'var(--red)':prio==='medium'?'var(--yellow)':'var(--text3)';
+        var dl = p.deadline ? new Date(p.deadline+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : null;
+        var ov = p.deadline && new Date(p.deadline) < new Date();
+        html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px">'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">'+escHtml(p.title||'Untitled')+'</div>'
+          + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+          + (p.client_name?'<span style="font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase">'+escHtml(p.client_name)+'</span>':'')
+          + '<span style="font-size:9px;background:rgba(168,85,247,0.12);color:var(--purple);padding:1px 6px;border-radius:3px;font-weight:600">'+escHtml((p.current_stage||'brief').replace(/_/g,' ').toUpperCase())+'</span>'
+          + (dl?'<span style="font-size:9px;color:'+(ov?'var(--red)':'var(--text3)')+';font-weight:600">'+(ov?'⚠ ':'')+dl+'</span>':'')
+          + '</div></div>'
+          + (prio?'<span style="font-size:9px;font-weight:700;color:'+pc+';text-transform:uppercase">'+prio+'</span>':'')
+          + '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;margin-bottom:24px;display:flex;align-items:center;gap:12px">'
+        + '<div style="width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0"></div>'
+        + '<div style="font-size:12px;color:var(--text2)">No active graphic projects yet — this will populate automatically when the design team adds projects.</div></div>';
+    }
+    html += '<div class="stitle" style="margin-bottom:14px">Post Formulas — Reference <span class="cnt">PF01–PF08</span></div><div class="sop-grid">';
+    FORMULAS.forEach(function(f) {
+      html += '<div class="sop-card"><div class="sop-num">'+f.num+'</div><div class="sop-name">'+f.name+'</div><div class="sop-desc">'+f.desc+'</div>'
+        + '<div style="margin-top:8px"><span class="pill pill-c" style="font-size:9px">'+f.goal+'</span></div></div>';
+    });
+    html += '</div>';
+    root.innerHTML = html;
+  } catch(e) { root.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load: '+escHtml(e.message||String(e))+'</div>'; }
 }
 
 // ============ TOAST ============
