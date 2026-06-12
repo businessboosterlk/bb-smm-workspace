@@ -2283,6 +2283,15 @@ function doLogin() {
     err.style.display = 'none';
     document.getElementById('login').classList.add('gone');
     S.currentUser = name;
+    // Write login to team_login_logs so CC Team page can see it
+    if (name === 'NIRVANA') {
+      const _anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dmlpd25xZ3BoeWtsY29panlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjE5OTEsImV4cCI6MjA5MTI5Nzk5MX0.I8YiBr-rfLVcc6DE8Z1PxEP2oxXCelv6mxqAY_wY7lc';
+      fetch('https://yyviiwnqgphyklcoijyd.supabase.co/rest/v1/team_login_logs', {
+        method: 'POST',
+        headers: { 'apikey': _anonKey, 'Authorization': 'Bearer ' + _anonKey, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ team_member_id: 12, member_name: 'NIRVANA', logged_in_at: new Date().toISOString(), app: 'smm-workspace' })
+      }).catch(function() {});
+    }
     // Update sidebar date
     const sbd = document.getElementById('sb-date');
     if (sbd) sbd.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -4420,9 +4429,14 @@ function renderSOPs() {
     }
   }
 
+  // Network blips are not real bugs — ignore them completely
+  var _NOISE_RE = /failed to fetch|networkerror|network request failed|load failed|the internet connection appears to be offline|net::/i;
+  function _isNetworkBlip(msg) { return _NOISE_RE.test(String(msg)); }
+
   // Wire up JS error hooks
   var _origErr = window.onerror;
   window.onerror = function(msg, src, line, col, err) {
+    if (_isNetworkBlip(msg)) return false;
     var srcShort = src ? src.split('/').pop() : '';
     logErr('JS Error', msg + (srcShort ? ' — ' + srcShort + ':' + line : ''));
     if (_origErr) return _origErr.apply(this, arguments);
@@ -4432,6 +4446,7 @@ function renderSOPs() {
   window.addEventListener('unhandledrejection', function(ev) {
     var reason = ev.reason;
     var msg = reason ? (reason.message || String(reason)) : 'Unhandled promise rejection';
+    if (_isNetworkBlip(msg)) return;
     logErr('Promise', msg.slice(0, 180));
   });
 
@@ -4448,6 +4463,7 @@ function renderSOPs() {
       }
       return res;
     }).catch(function(err) {
+      if (_isNetworkBlip(err.message)) throw err;
       if (isSupabase) logErr('Supabase Network', err.message || 'Fetch failed');
       throw err;
     });
