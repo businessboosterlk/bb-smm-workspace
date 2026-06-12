@@ -896,6 +896,9 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .vh-card-move:hover{border-color:var(--cyan);color:var(--cyan)}
 .vh-card-menu{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3);font-size:16px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1;z-index:2;transition:all .12s}
 .vh-card-menu:hover{background:rgba(255,255,255,0.06);color:var(--text1)}
+.vh-d-section{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.vh-d-section:last-of-type{border-bottom:none}
+.vh-d-stitle{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px}
 @media(max-width:900px){.vh-stage-col{width:220px}.vh-card-title{font-size:12px}}
 @media(max-width:600px){.vh-pipeline{gap:10px}.vh-stage-col{width:200px}}
 
@@ -3902,66 +3905,234 @@ async function vhMoveProject(pid, newStage) {
   }
 }
 
-function vhOpenDetail(pid) {
+async function vhOpenDetail(pid) {
   var p = VH_projects.find(function(x) { return x.id == pid; });
   if (!p) return;
   var cl = S.clients.find(function(c) { return c.id == p.client_id; });
   var ed = VH_teamMembers.find(function(m) { return m.id == p.assigned_editor_id; });
   var st = VH_STAGES.find(function(s) { return s.key === p.current_stage; });
+  var COMPLETED = ['add_to_drive', 'sent_to_client', 'posted'];
   var dl = p.deadline ? new Date(p.deadline + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-  var ov = p.deadline && new Date(p.deadline) < new Date();
+  var ov = p.deadline && new Date(p.deadline) < new Date() && COMPLETED.indexOf(p.current_stage) === -1;
+  var createdFmt = p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—';
+  var createdAgo = p.created_at ? vhTimeAgo(p.created_at) : '';
+  var smmName = cl && cl.assigned_smm ? cl.assigned_smm : null;
+  var monthLbl = p.target_month ? MONTHS_VH[parseInt(p.target_month) - 1] + (p.target_year ? ' ' + p.target_year : '') : null;
+
+  // Fetch comments and links
+  var comments = [];
+  try { var cr = await sb.from('video_project_comments').select('*').eq('video_project_id', pid).order('created_at', { ascending: true }); comments = cr.data || []; } catch(_) {}
+  var allLinks = [];
+  try { var lr = await sb.from('video_project_links').select('*').eq('video_project_id', pid).order('created_at', { ascending: false }); allLinks = lr.data || []; } catch(_) {}
+  var rawLinks = allLinks.filter(function(l) { return l.tag === 'raw_footage'; });
+  var finalLinks = allLinks.filter(function(l) { return l.tag === 'final_cut'; });
+  var otherLinks = allLinks.filter(function(l) { return l.tag !== 'raw_footage' && l.tag !== 'final_cut'; });
 
   document.getElementById('vh-detail-title').textContent = p.title || 'Untitled';
-  var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'
-    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Client</div><div style="font-size:13px;font-weight:600;">' + escHtml(cl ? cl.name : '—') + '</div></div>'
-    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Editor</div><div style="font-size:13px;font-weight:600;">' + escHtml(ed ? ed.name : 'Unassigned') + '</div></div>'
-    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Stage</div><div style="font-size:13px;font-weight:600;color:' + (st ? st.color : 'var(--text1)') + ';">' + escHtml(st ? st.label : p.current_stage) + '</div></div>'
-    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Priority</div><div style="font-size:13px;font-weight:600;text-transform:capitalize;">' + escHtml(p.priority || 'medium') + '</div></div>'
-    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Deadline</div><div style="font-size:13px;font-weight:600;' + (ov ? 'color:var(--red);' : '') + '">' + dl + (ov ? ' (OVERDUE)' : '') + '</div></div>'
-    + '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Type</div><div style="font-size:13px;font-weight:600;text-transform:capitalize;">' + escHtml(p.type || 'reel') + '</div></div>'
-    + '</div>';
 
-  if (p.description) {
-    html += '<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px;">Notes</div><div style="font-size:13px;line-height:1.5;white-space:pre-wrap;">' + escHtml(p.description) + '</div></div>';
-  }
+  // ── Section: Overview ──
+  var html = '<div class="vh-d-section"><div class="vh-d-stitle">Overview</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+    + vhMetaItem('Added', createdFmt + (createdAgo ? '<div style="font-size:10px;color:var(--text3);margin-top:2px;">' + createdAgo + '</div>' : ''))
+    + vhMetaItem('Due', '<span style="' + (ov ? 'color:#ef4444;' : '') + '">' + dl + (ov ? ' (overdue)' : '') + '</span>')
+    + vhMetaItem('Priority', '<span style="text-transform:capitalize;"><span class="vh-priority-dot ' + (p.priority || 'medium') + '" style="display:inline-block;margin-right:6px;"></span>' + escHtml(p.priority || 'medium') + '</span>')
+    + vhMetaItem('Type', '<span style="text-transform:capitalize;">' + escHtml(p.type || '—') + '</span>')
+    + vhMetaItem('Editor', escHtml(ed ? ed.name : 'Unassigned'))
+    + vhMetaItem('SMM (handles client)', smmName ? escHtml(smmName) : '<span style="color:var(--text3);">No SMM assigned</span>')
+    + vhMetaItem('Month', monthLbl ? escHtml(monthLbl) : '<span style="color:var(--text3);">Not set</span>')
+    + vhMetaItem('Current Stage', '<span style="color:' + (st ? st.color : 'var(--text1)') + ';">' + escHtml(st ? st.label : p.current_stage) + '</span>')
+    + (p.formula ? '<div style="grid-column:1/-1;">' + vhMetaItem('Formula', escHtml(p.formula)) + '</div>' : '')
+    + '</div></div>';
 
-  // Stage history
+  // ── Section: Stage Timing ──
   var hist = VH_stageHistory.filter(function(h) { return h.video_project_id == pid; });
   if (hist.length) {
-    html += '<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:8px;">Stage History</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    var editingSecs = vhStageDur(pid, 'editing');
+    var changesSecs = vhStageDur(pid, 'changes');
+    var clientChangesSecs = vhStageDur(pid, 'client_changes');
+    var cuttingSecs = vhStageDur(pid, 'cutting_color_grading');
+    var renderingSecs = vhStageDur(pid, 'rendering');
+    html += '<div class="vh-d-section"><div class="vh-d-stitle">Time Tracking</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">'
+      + vhTimeStat('Cutting/Color', vhFmtDur(cuttingSecs))
+      + vhTimeStat('Rendering', vhFmtDur(renderingSecs))
+      + vhTimeStat('Editing', vhFmtDur(editingSecs))
+      + vhTimeStat('Team Changes', vhFmtDur(changesSecs))
+      + vhTimeStat('Client Changes', vhFmtDur(clientChangesSecs))
+      + '</div>';
+    html += '<details><summary style="cursor:pointer;font-size:12px;color:var(--text3);padding:6px 0;">Show full stage history (' + hist.length + ')</summary>';
+    html += '<table style="width:100%;font-size:11px;margin-top:8px;border-collapse:collapse;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:4px 8px;color:var(--text3);">Stage</th><th style="text-align:left;padding:4px 8px;color:var(--text3);">Entered</th><th style="text-align:left;padding:4px 8px;color:var(--text3);">Exited</th><th style="text-align:left;padding:4px 8px;color:var(--text3);">Duration</th></tr></thead><tbody>';
     hist.forEach(function(h) {
       var lbl = (VH_STAGES.find(function(s) { return s.key === h.stage; }) || {}).label || h.stage;
-      var entered = h.entered_at ? new Date(h.entered_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-      var durStr = '';
-      if (h.duration_seconds) { var m = Math.round(h.duration_seconds / 60); durStr = m < 60 ? m + 'm' : Math.round(m / 60) + 'h'; }
-      else if (!h.exited_at) { durStr = '⏱ now'; }
-      html += '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0;">'
-        + '<span style="color:var(--text3);">' + entered + '</span>'
-        + '<span style="font-weight:700;color:var(--text1);">' + escHtml(lbl) + '</span>'
-        + (durStr ? '<span style="color:var(--cyan);font-weight:600;">' + durStr + '</span>' : '')
-        + (h.moved_by ? '<span style="color:var(--text3);font-size:10px;">by ' + escHtml(h.moved_by) + '</span>' : '')
-        + '</div>';
+      var entFmt = h.entered_at ? new Date(h.entered_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+      var exFmt = h.exited_at ? new Date(h.exited_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '<span style="color:var(--cyan);">currently here</span>';
+      var dur = h.duration_seconds ? vhFmtDur(h.duration_seconds) : (!h.exited_at ? 'in progress' : vhFmtDur((new Date(h.exited_at) - new Date(h.entered_at)) / 1000));
+      html += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;">' + escHtml(lbl) + '</td><td style="padding:4px 8px;color:var(--text3);">' + entFmt + '</td><td style="padding:4px 8px;color:var(--text3);">' + exFmt + '</td><td style="padding:4px 8px;font-weight:600;">' + dur + '</td></tr>';
     });
-    html += '</div></div>';
+    html += '</tbody></table></details></div>';
   }
 
-  // Move stage dropdown
-  html += '<div style="margin-bottom:16px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:6px;">Move to Stage</div>';
-  html += '<select class="fi" onchange="vhMoveProject(' + pid + ',this.value);closeModal(\'vh-detail\');" style="max-width:240px;">';
+  // ── Section: Description ──
+  if (p.description) {
+    html += '<div class="vh-d-section"><div class="vh-d-stitle">Description</div><div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text1);">' + escHtml(p.description) + '</div></div>';
+  }
+
+  // ── Section: Raw Footage Links ──
+  html += '<div class="vh-d-section"><div style="display:flex;align-items:center;justify-content:space-between;"><div class="vh-d-stitle" style="margin-bottom:0;">Raw Footage</div><button class="btn btn-ghost btn-sm" onclick="vhAddLink(' + pid + ',\'raw_footage\')">+ Add raw link</button></div>';
+  html += vhLinkListHtml(rawLinks, 'raw footage', pid);
+  html += '</div>';
+
+  // ── Section: Final Video Links ──
+  html += '<div class="vh-d-section"><div style="display:flex;align-items:center;justify-content:space-between;"><div class="vh-d-stitle" style="margin-bottom:0;">Final Video</div><button class="btn btn-ghost btn-sm" onclick="vhAddLink(' + pid + ',\'final_cut\')">+ Add final link</button></div>';
+  html += vhLinkListHtml(finalLinks, 'final video', pid);
+  html += '</div>';
+
+  // ── Section: Other Links ──
+  if (otherLinks.length) {
+    html += '<div class="vh-d-section"><div class="vh-d-stitle">Other Links</div>' + vhLinkListHtml(otherLinks, 'other', pid) + '</div>';
+  }
+
+  // ── Section: Team Discussion ──
+  html += '<div class="vh-d-section"><div class="vh-d-stitle">Team Discussion</div>';
+  if (comments.length) {
+    comments.forEach(function(c) {
+      html += '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+        + '<div style="font-size:12px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:0.04em;">' + escHtml(c.author || 'Unknown') + '</div>'
+        + '<div style="font-size:10px;color:var(--text3);">' + vhTimeAgo(c.created_at) + '</div>'
+        + '</div>';
+      if (c.body) html += '<div style="font-size:13px;line-height:1.5;white-space:pre-wrap;color:var(--text1);">' + escHtml(c.body) + '</div>';
+      if (c.image_url) html += '<img src="' + escHtml(c.image_url) + '" style="max-width:100%;border-radius:8px;margin-top:8px;" onerror="this.style.display=\'none\'">';
+      html += '</div>';
+    });
+  } else {
+    html += '<div style="color:var(--text3);font-size:12px;padding:12px 0;font-style:italic;">No comments yet</div>';
+  }
+  html += '<div style="margin-top:10px;">'
+    + '<textarea id="vh-new-comment" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:13px;padding:10px 12px;resize:vertical;font-family:inherit;" rows="2" placeholder="Add a comment..."></textarea>'
+    + '<div style="display:flex;justify-content:flex-end;margin-top:8px;"><button class="btn btn-primary btn-sm" onclick="vhPostComment(' + pid + ')">Post Comment</button></div>'
+    + '</div></div>';
+
+  // ── Section: Move Stage ──
+  html += '<div class="vh-d-section"><div class="vh-d-stitle">Move to Stage</div>';
+  html += '<select class="fi" onchange="vhMoveProject(' + pid + ',this.value);closeModal(\'vh-detail\');renderVideoHub();" style="max-width:260px;">';
   VH_STAGES.forEach(function(s) {
     html += '<option value="' + s.key + '"' + (s.key === p.current_stage ? ' selected' : '') + '>' + s.label + '</option>';
   });
   html += '</select></div>';
 
-  // Edit / Archive buttons
-  html += '<div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:14px;">'
-    + '<button class="btn btn-primary btn-sm" onclick="closeModal(\'vh-detail\');openVHProjectForm(' + pid + ');">✏ Edit</button>'
+  // ── Footer ──
+  html += '<div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:14px;margin-top:8px;">'
+    + '<button class="btn btn-primary btn-sm" onclick="closeModal(\'vh-detail\');openVHProjectForm(' + pid + ');">✏ Edit Project</button>'
     + '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="vhArchiveProject(' + pid + ')">🗄 Archive</button>'
+    + '<button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="closeModal(\'vh-detail\')">Close</button>'
     + '</div>';
 
   document.getElementById('vh-detail-body').innerHTML = html;
   openModal('vh-detail');
+}
+
+function vhMetaItem(label, value) {
+  return '<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;letter-spacing:0.06em;margin-bottom:3px;">' + label + '</div><div style="font-size:13px;font-weight:600;color:var(--text1);">' + value + '</div></div>';
+}
+
+function vhTimeStat(label, value) {
+  return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;text-align:center;">'
+    + '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:2px;">' + label + '</div>'
+    + '<div style="font-size:14px;font-weight:800;color:var(--cyan);">' + value + '</div></div>';
+}
+
+function vhStageDur(pid, stageKey) {
+  var total = 0;
+  VH_stageHistory.filter(function(h) { return h.video_project_id == pid && h.stage === stageKey; }).forEach(function(h) {
+    if (h.duration_seconds) total += h.duration_seconds;
+    else if (h.exited_at) total += (new Date(h.exited_at) - new Date(h.entered_at)) / 1000;
+    else total += (Date.now() - new Date(h.entered_at).getTime()) / 1000;
+  });
+  return Math.round(total);
+}
+
+function vhFmtDur(secs) {
+  if (!secs || secs < 60) return '0m';
+  var m = Math.round(secs / 60);
+  if (m < 60) return m + 'm';
+  var h = Math.floor(m / 60); var rm = m % 60;
+  return rm ? h + 'h ' + rm + 'm' : h + 'h';
+}
+
+function vhTimeAgo(d) {
+  if (!d) return '';
+  var s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+
+function vhLinkIcon(url) {
+  if (!url) return '🔗';
+  var u = url.toLowerCase();
+  if (u.indexOf('drive.google') > -1) return '📁';
+  if (u.indexOf('dropbox') > -1) return '📦';
+  if (u.indexOf('frame.io') > -1) return '🎬';
+  if (u.indexOf('youtube') > -1 || u.indexOf('youtu.be') > -1) return '▶';
+  return '🔗';
+}
+
+function vhLinkListHtml(links, kind, pid) {
+  if (!links.length) return '<div style="color:var(--text3);font-size:12px;padding:10px 0;font-style:italic;">No ' + kind + ' links yet</div>';
+  var html = '';
+  links.forEach(function(l) {
+    var fmt = l.created_at ? new Date(l.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">'
+      + '<div style="font-size:16px;flex-shrink:0;">' + vhLinkIcon(l.url) + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:12px;font-weight:600;"><a href="' + escHtml(l.url) + '" target="_blank" style="color:var(--cyan);text-decoration:none;">' + escHtml(l.label || l.url) + '</a></div>'
+      + '<div style="font-size:10px;color:var(--text3);">' + escHtml(l.added_by || '') + (fmt ? ' · ' + fmt : '') + '</div>'
+      + '</div>'
+      + '<button class="btn btn-ghost btn-sm" style="color:var(--red);flex-shrink:0;" onclick="event.stopPropagation();vhDeleteLink(' + l.id + ',' + pid + ')">×</button>'
+      + '</div>';
+  });
+  return html;
+}
+
+async function vhAddLink(pid, tag) {
+  var url = prompt('Paste the link URL (Drive / Dropbox / Frame.io / etc):');
+  if (!url || !url.trim()) return;
+  var label = prompt('Title for this link (optional):') || '';
+  try {
+    var res = await sb.from('video_project_links').insert({
+      video_project_id: pid, url: url.trim(), label: label.trim() || null,
+      tag: tag, added_by: S.user ? S.user.name : 'SMM'
+    });
+    if (res.error) throw res.error;
+    toast('Link added', 'success');
+    vhOpenDetail(pid);
+  } catch(err) { toast('Failed: ' + (err.message || ''), 'error'); }
+}
+
+async function vhDeleteLink(linkId, pid) {
+  if (!confirm('Delete this link?')) return;
+  try {
+    var res = await sb.from('video_project_links').delete().eq('id', linkId);
+    if (res.error) throw res.error;
+    vhOpenDetail(pid);
+  } catch(err) { toast('Delete failed', 'error'); }
+}
+
+async function vhPostComment(pid) {
+  var el = document.getElementById('vh-new-comment');
+  if (!el) return;
+  var body = el.value.trim();
+  if (!body) return;
+  try {
+    var res = await sb.from('video_project_comments').insert({
+      video_project_id: pid, body: body,
+      author: S.user ? S.user.name : 'SMM'
+    });
+    if (res.error) throw res.error;
+    vhOpenDetail(pid);
+  } catch(err) { toast('Comment failed: ' + (err.message || ''), 'error'); }
 }
 
 function openVHProjectForm(editPid) {
