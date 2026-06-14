@@ -2539,8 +2539,20 @@ async function init() {
   setInterval(async () => {
     await Promise.all([loadClients(), loadContent(), loadTasks(), loadShoots(), loadEvents()]);
     updateBadges();
-    // Re-render current page to reflect fresh data
-    if (S.currentPage) nav(S.currentPage);
+    // Re-render current page to reflect fresh data (preserve scroll position)
+    if (S.currentPage) {
+      const _savedY = window.scrollY;
+      const _activeEl = document.querySelector('.page.active');
+      const _savedElTop = _activeEl ? _activeEl.scrollTop : 0;
+      window._navPreserveScroll = true;
+      nav(S.currentPage);
+      window._navPreserveScroll = false;
+      requestAnimationFrame(() => {
+        window.scrollTo(0, _savedY);
+        const ae = document.querySelector('.page.active');
+        if (ae) ae.scrollTop = _savedElTop;
+      });
+    }
   }, 60000);
 }
 
@@ -2555,7 +2567,7 @@ function nav(page, data) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
-  window.scrollTo(0,0);
+  if (!window._navPreserveScroll) window.scrollTo(0,0);
 
   if (page === 'today') renderToday();
   if (page === 'calendar') { wireCalFilters(); populateCalFilterDropdowns(); switchCalView(S.calView || 'schedule'); }
@@ -3269,6 +3281,7 @@ const CONTENT_STAGE_IDS = {
 };
 
 function renderContent() {
+  const _cols = Array.from(document.querySelectorAll('#content-board .kanban-cards')).map(c => c.scrollTop);
   CONTENT_STAGES.forEach(s => {
     const zone = document.querySelector(`[data-drop="${s}"]`);
     if (!zone) return;
@@ -3282,6 +3295,9 @@ function renderContent() {
     const countEl = document.getElementById(CONTENT_STAGE_IDS[s]);
     if (countEl) countEl.textContent = items.length;
     items.forEach(i => zone.appendChild(buildContentCard(i)));
+  });
+  requestAnimationFrame(() => {
+    document.querySelectorAll('#content-board .kanban-cards').forEach((c, i) => { if (_cols[i]) c.scrollTop = _cols[i]; });
   });
 }
 
@@ -4573,6 +4589,7 @@ function stageToKey(s) {
 function renderShoots() {
   var board = document.getElementById('shoot-board');
   if (!board) return;
+  var _sCols = Array.from(board.querySelectorAll('.kanban-cards')).map(function(c) { return c.scrollTop; });
   var fClient = (document.getElementById('sp-client-filter') || {}).value || 'all';
   var scope = currentSmmScope();
   var shoots = (S.shoots || []).filter(function(s) {
@@ -4613,6 +4630,9 @@ function renderShoots() {
         if (!r.error) { var idx = S.shoots.findIndex(function(s) { return s.id == data.id; }); if (idx !== -1) S.shoots[idx].stage = newLabel; renderShoots(); toast('Moved to ' + newLabel, 'success'); }
       } catch(err) {}
     };
+  });
+  requestAnimationFrame(function() {
+    board.querySelectorAll('.kanban-cards').forEach(function(c, i) { if (_sCols[i]) c.scrollTop = _sCols[i]; });
   });
 }
 function renderUpcomingShoots() { renderSmmShootWeekly(); }
