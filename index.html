@@ -1294,7 +1294,7 @@ tr:last-child td { border-bottom: none; }
     </button>
     <button class="sb-item" data-page="agents">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 2a3 3 0 0 1 3 3v3H9V5a3 3 0 0 1 3-3z"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
-      🤖 Agents
+      ⚡ Agents
       <span class="sb-badge" id="sb-agents-unread" style="display:none"></span>
     </button>
   </nav>
@@ -1957,9 +1957,9 @@ tr:last-child td { border-bottom: none; }
 
   <section class="page" id="page-agents">
     <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div><div class="ph-title">🤖 Agents</div><div class="ph-sub">Live alerts from all BB agents</div></div>
+      <div><div class="ph-title">⚡ Agents</div><div class="ph-sub">Live alerts from all BB agents</div></div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost btn-sm" onclick="loadSmmAgentAlerts()">↻ Refresh</button>
+        <button class="btn btn-ghost btn-sm" id="agents-refresh-btn" onclick="loadSmmAgentAlerts()">↻ Refresh</button>
         <button class="btn btn-ghost btn-sm" onclick="markAllSmmAlertsRead()">Mark all read</button>
       </div>
     </div>
@@ -1967,6 +1967,22 @@ tr:last-child td { border-bottom: none; }
       <div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">Loading...</div>
     </div>
   </section>
+
+  <!-- AGENT DETAIL DRAWER -->
+  <div id="agent-drawer-overlay" onclick="closeAgentDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9990;backdrop-filter:blur(3px);"></div>
+  <div id="agent-drawer-panel" style="position:fixed;top:0;right:0;width:440px;max-width:94vw;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);z-index:9991;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="agent-drawer-accent" style="width:3px;height:22px;background:var(--purple);border-radius:2px;"></div>
+        <div>
+          <div id="agent-drawer-title" style="font-size:15px;font-weight:700;color:var(--text);"></div>
+          <div id="agent-drawer-sub" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
+        </div>
+      </div>
+      <button onclick="closeAgentDrawer()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:14px;">✕</button>
+    </div>
+    <div id="agent-drawer-body" style="flex:1;overflow-y:auto;padding:16px 20px 24px;"></div>
+  </div>
 
 </main>
 
@@ -4973,41 +4989,156 @@ function renderSOPs() {
 const SMM_SB_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
 const SMM_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dmlpd25xZ3BoeWtsY29panlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjE5OTEsImV4cCI6MjA5MTI5Nzk5MX0.I8YiBr-rfLVcc6DE8Z1PxEP2oxXCelv6mxqAY_wY7lc';
 
+var _smmAlertData = [];
+
 async function loadSmmAgentAlerts() {
   const el = document.getElementById('smm-agents-list');
+  const btn = document.getElementById('agents-refresh-btn');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">Loading...</div>';
+  el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:32px 0;text-align:center;">Scanning...</div>';
+  if (btn) { btn.textContent = '↻ Scanning...'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none'; }
   try {
     const resp = await fetch(`${SMM_SB_URL}/rest/v1/agent_alerts?or=(system.eq.smm,system.eq.all)&order=created_at.desc&limit=50&select=*`, {
       headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY }
     });
     const alerts = resp.ok ? await resp.json() : [];
-    if (!alerts || alerts.length === 0) {
-      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">✅ No alerts — everything running smoothly.</div>';
-      updateSmmAgentsBadge(0);
-      return;
-    }
-    const sevColor = { critical: 'var(--red,#ef4444)', warning: 'var(--amber,#f59e0b)', info: '#3b82f6' };
-    const sevLabel = { critical: '🔴 CRITICAL', warning: '🟡 WARNING', info: '🔵 INFO' };
-    const agentLabel = { 'finance': 'Finance', 'stuck-video': 'Stuck Video', 'client-health': 'Client Health', 'content-overdue': 'Content Overdue', 'shoot-tracker': 'Shoot Tracker' };
-    el.innerHTML = alerts.map(a => {
-      const d = new Date(a.created_at);
-      const fmt = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      const col = sevColor[a.severity] || 'var(--text2)';
-      const unread = !a.read_at;
-      return `<div id="smm-alert-${a.id}" style="border-left:3px solid ${unread ? col : 'var(--border)'};padding:12px 16px;background:var(--bg2);border-radius:8px;margin-bottom:10px;cursor:pointer;" onclick="markSmmAlertRead(${a.id})">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-          <span style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;">${sevLabel[a.severity] || a.severity}</span>
-          ${unread ? `<span style="font-size:10px;font-weight:700;background:${col};color:#fff;padding:2px 6px;border-radius:4px;">NEW</span>` : ''}
-          <span style="font-size:11px;color:var(--text3);margin-left:auto;">${agentLabel[a.agent] || a.agent} · ${fmt}</span>
+    _smmAlertData = alerts || [];
+    renderSmmAgentCards(alerts);
+    updateSmmAgentsBadge(alerts.filter(function(a) { return !a.read_at; }).length);
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">Could not load alerts.</div>';
+  } finally {
+    if (btn) { btn.textContent = '↻ Refresh'; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+  }
+}
+
+function renderSmmAgentCards(alerts) {
+  const el = document.getElementById('smm-agents-list');
+  if (!el) return;
+
+  if (!alerts || alerts.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:32px 0;text-align:center;">✅ No alerts — everything running smoothly.</div>';
+    return;
+  }
+
+  const AGENT_META = {
+    'finance':          { icon: '💰', name: 'Finance',          desc: 'Invoice & payment checks' },
+    'stuck-video':      { icon: '🎬', name: 'Stuck Video',      desc: 'Pipeline stalls detected' },
+    'client-health':    { icon: '❤️', name: 'Client Health',    desc: 'At-risk client signals' },
+    'content-overdue':  { icon: '📅', name: 'Content Overdue',  desc: 'Posts past scheduled date' },
+    'shoot-tracker':    { icon: '📸', name: 'Shoot Tracker',    desc: 'Upcoming shoot alerts' },
+  };
+
+  // Group alerts by agent
+  const grouped = {};
+  alerts.forEach(function(a) {
+    if (!grouped[a.agent]) grouped[a.agent] = [];
+    grouped[a.agent].push(a);
+  });
+
+  const SEV_COLOR = { critical: '#f87171', warning: '#fbbf24', info: '#60a5fa' };
+  const STATUS_COLOR = { critical: '#f87171', warning: '#fbbf24', info: '#60a5fa' };
+
+  const cards = Object.keys(grouped).map(function(agent) {
+    const items = grouped[agent];
+    const meta = AGENT_META[agent] || { icon: '⚡', name: agent, desc: 'Agent monitor' };
+    const unread = items.filter(function(a) { return !a.read_at; });
+    const topSev = items.find(function(a) { return a.severity === 'critical'; })
+                 ? 'critical'
+                 : items.find(function(a) { return a.severity === 'warning'; })
+                 ? 'warning' : 'info';
+    const col = STATUS_COLOR[topSev] || '#60a5fa';
+    const hasIssues = unread.length > 0;
+    const lastItem = items[0];
+    const d = new Date(lastItem.created_at);
+    const ts = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    return `<div class="smm-agent-card" data-agent="${agent}" onclick="openSmmAgentDrawer('${agent}')">
+      ${hasIssues ? `<div class="smm-agent-card-bar" style="background:linear-gradient(90deg,${col},transparent);"></div>` : ''}
+      <div class="smm-agent-card-top">
+        <div class="smm-agent-card-icon">${meta.icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="smm-agent-card-name">${meta.name}</div>
+          <div class="smm-agent-card-desc">${meta.desc}</div>
         </div>
-        <div style="font-size:13px;white-space:pre-wrap;line-height:1.5;">${escHtml(a.message)}</div>
+        <div class="smm-agent-card-status" style="background:${col}22;color:${col};">${hasIssues ? unread.length + ' issue' + (unread.length !== 1 ? 's' : '') : '✓ Clear'}</div>
+      </div>
+      <div class="smm-agent-card-foot">
+        <span style="color:var(--text3);font-size:10px;">${ts}</span>
+        <span class="smm-agent-card-arrow">View →</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<style>
+  .smm-agents-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
+  .smm-agent-card { position:relative; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; padding:16px; cursor:pointer; overflow:hidden; transition:transform 0.18s, box-shadow 0.18s, border-color 0.18s; }
+  .smm-agent-card:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(168,85,247,0.18); border-color:var(--purple); }
+  .smm-agent-card-bar { position:absolute; top:0; left:0; right:0; height:3px; }
+  .smm-agent-card-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+  .smm-agent-card-icon { font-size:22px; line-height:1; flex-shrink:0; margin-top:2px; }
+  .smm-agent-card-name { font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .smm-agent-card-desc { font-size:11px; color:var(--text2); }
+  .smm-agent-card-status { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+  .smm-agent-card-foot { display:flex; align-items:center; justify-content:space-between; }
+  .smm-agent-card-arrow { font-size:11px; color:var(--purple); font-weight:600; }
+  </style>
+  <div class="smm-agents-grid">${cards}</div>`;
+}
+
+function openSmmAgentDrawer(agent) {
+  const items = _smmAlertData.filter(function(a) { return a.agent === agent; });
+  const AGENT_META = {
+    'finance':         { icon: '💰', name: 'Finance' },
+    'stuck-video':     { icon: '🎬', name: 'Stuck Video' },
+    'client-health':   { icon: '❤️', name: 'Client Health' },
+    'content-overdue': { icon: '📅', name: 'Content Overdue' },
+    'shoot-tracker':   { icon: '📸', name: 'Shoot Tracker' },
+  };
+  const meta = AGENT_META[agent] || { icon: '⚡', name: agent };
+  const SEV_COLOR = { critical: '#f87171', warning: '#fbbf24', info: '#60a5fa' };
+  const topSev = items.find(function(a) { return a.severity === 'critical'; }) ? 'critical'
+               : items.find(function(a) { return a.severity === 'warning'; }) ? 'warning' : 'info';
+  const col = SEV_COLOR[topSev] || '#60a5fa';
+
+  const titleEl = document.getElementById('agent-drawer-title');
+  const subEl   = document.getElementById('agent-drawer-sub');
+  const bodyEl  = document.getElementById('agent-drawer-body');
+  const accentEl = document.getElementById('agent-drawer-accent');
+  if (!titleEl) return;
+
+  titleEl.textContent = meta.icon + ' ' + meta.name;
+  subEl.textContent = items.length + ' alert' + (items.length !== 1 ? 's' : '');
+  if (accentEl) accentEl.style.background = col;
+
+  if (!items.length) {
+    bodyEl.innerHTML = '<div style="color:var(--text2);text-align:center;padding:40px 0;">✅ No alerts for this agent.</div>';
+  } else {
+    bodyEl.innerHTML = items.map(function(a) {
+      const d = new Date(a.created_at);
+      const ts = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const sc = SEV_COLOR[a.severity] || '#60a5fa';
+      const unread = !a.read_at;
+      return `<div id="smm-alert-${a.id}" style="background:var(--bg3);border:1px solid ${unread ? sc : 'var(--border)'};border-left:3px solid ${sc};border-radius:8px;padding:12px 14px;margin-bottom:10px;cursor:pointer;" onclick="markSmmAlertRead(${a.id})">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:700;color:${sc};text-transform:uppercase;">${a.severity || 'info'}</span>
+          ${unread ? `<span style="font-size:9px;font-weight:700;background:${sc};color:#000;padding:1px 6px;border-radius:4px;">NEW</span>` : ''}
+          <span style="font-size:10px;color:var(--text3);margin-left:auto;">${ts}</span>
+        </div>
+        <div style="font-size:12.5px;white-space:pre-wrap;line-height:1.55;color:var(--text);">${escHtml(a.message)}</div>
       </div>`;
     }).join('');
-    updateSmmAgentsBadge(alerts.filter(a => !a.read_at).length);
-  } catch (e) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:13px;">Could not load alerts.</div>';
   }
+
+  document.getElementById('agent-drawer-overlay').style.display = 'block';
+  document.getElementById('agent-drawer-panel').style.transform = 'translateX(0)';
+}
+
+function closeAgentDrawer() {
+  const ov = document.getElementById('agent-drawer-overlay');
+  const pn = document.getElementById('agent-drawer-panel');
+  if (ov) ov.style.display = 'none';
+  if (pn) pn.style.transform = 'translateX(100%)';
 }
 
 async function markSmmAlertRead(id) {
@@ -6526,4 +6657,436 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     ? document.addEventListener('DOMContentLoaded', init)
     : init();
 }());
+</script>
+
+<!-- ============================================================
+     BB SMM — CTRL+K COMMAND BAR
+     ============================================================ -->
+<style>
+#smm-cmdbar-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.65);
+  z-index:10100; backdrop-filter:blur(4px);
+  align-items:flex-start; justify-content:center; padding-top:80px;
+}
+#smm-cmdbar-overlay.open { display:flex; }
+#smm-cmdbar {
+  background:#14101f; border:1px solid rgba(168,85,247,0.35);
+  border-radius:14px; width:560px; max-width:calc(100vw - 32px);
+  box-shadow:0 24px 64px rgba(0,0,0,.7), 0 0 0 1px rgba(168,85,247,0.1);
+  overflow:hidden; display:flex; flex-direction:column; max-height:70vh;
+}
+#smm-cmdbar-input-wrap {
+  display:flex; align-items:center; gap:10px; padding:14px 16px;
+  border-bottom:1px solid rgba(168,85,247,0.15);
+}
+#smm-cmdbar-input-wrap span { font-size:16px; opacity:0.5; }
+#smm-cmdbar-input {
+  flex:1; background:transparent; border:none; outline:none;
+  color:#e8eaf0; font-size:15px; font-family:'Poppins',sans-serif;
+  font-weight:400;
+}
+#smm-cmdbar-input::placeholder { color:#4a4a6a; }
+#smm-cmdbar-results {
+  overflow-y:auto; max-height:calc(70vh - 110px); padding:6px;
+}
+.smm-cmd-section { font-size:9px; font-weight:700; color:#5b5b8a;
+  text-transform:uppercase; letter-spacing:.1em; padding:8px 10px 4px; }
+.smm-cmd-item {
+  display:flex; align-items:center; gap:10px; padding:9px 10px;
+  border-radius:8px; cursor:pointer; transition:background 0.1s;
+  color:#c4c4e0; font-size:13px;
+}
+.smm-cmd-item:hover, .smm-cmd-item.active {
+  background:rgba(168,85,247,0.15); color:#fff;
+}
+.smm-cmd-item .cmd-icon { width:26px; height:26px; border-radius:6px;
+  background:rgba(168,85,247,0.12); display:flex; align-items:center;
+  justify-content:center; font-size:13px; flex-shrink:0; }
+.smm-cmd-item .cmd-label { flex:1; }
+.smm-cmd-item .cmd-hint { font-size:10px; color:#4a4a6a; }
+#smm-cmdbar-footer {
+  padding:8px 14px; border-top:1px solid rgba(168,85,247,0.12);
+  display:flex; gap:14px; font-size:10px; color:#4a4a6a;
+}
+#smm-cmdbar-footer kbd {
+  background:#1e1a30; border:1px solid #352e50; border-radius:4px;
+  padding:1px 5px; font-family:inherit; font-size:9px; color:#a855f7;
+}
+</style>
+<script>
+(function() {
+  'use strict';
+
+  var PAGES = [
+    { id:'today',           icon:'🌅', label:'Today' },
+    { id:'calendar',        icon:'📅', label:'Calendar' },
+    { id:'my-tasks',        icon:'✅', label:'My Tasks' },
+    { id:'diary',           icon:'📓', label:'Diary' },
+    { id:'content-pipeline',icon:'📋', label:'Content Pipeline' },
+    { id:'shoot-pipeline',  icon:'📸', label:'Shoot Pipeline' },
+    { id:'approval-queue',  icon:'🔔', label:'Approval Queue' },
+    { id:'content-overview',icon:'📊', label:'Content Overview' },
+    { id:'clients',         icon:'👥', label:'Clients' },
+    { id:'escalation',      icon:'⚠️', label:'Escalation' },
+    { id:'sops',            icon:'📖', label:'SOPs' },
+    { id:'graphic-hub',     icon:'🎨', label:'Graphic Hub' },
+    { id:'video-hub',       icon:'🎬', label:'Video Hub' },
+    { id:'missions',        icon:'🎯', label:'Missions' },
+    { id:'idea-hub',        icon:'💡', label:'Idea Hub' },
+    { id:'agents',          icon:'⚡', label:'Agents' },
+  ];
+
+  var ACTIONS = [
+    { icon:'➕', label:'Add Post',       hint:'Quick add', action:function(){ closeBar(); openModal('quick-add'); } },
+    { icon:'✅', label:'Add Task',       hint:'New task',  action:function(){ closeBar(); if(typeof openModal==='function') openModal('task-add'); } },
+    { icon:'🔄', label:'Run Agent Scan', hint:'Scan now',  action:function(){ closeBar(); navTo('agents'); if(typeof loadSmmAgentAlerts==='function') loadSmmAgentAlerts(); } },
+    { icon:'📓', label:'Daily Check-In', hint:'Open',      action:function(){ closeBar(); if(typeof openCheckinPopup==='function') openCheckinPopup(true); } },
+  ];
+
+  var overlay, input, results;
+  var _activeIdx = -1;
+  var _items = [];
+
+  function build() {
+    if (document.getElementById('smm-cmdbar-overlay')) return;
+    overlay = document.createElement('div');
+    overlay.id = 'smm-cmdbar-overlay';
+    overlay.innerHTML =
+      '<div id="smm-cmdbar">' +
+        '<div id="smm-cmdbar-input-wrap"><span>⌘</span><input id="smm-cmdbar-input" placeholder="Search pages, clients, quick actions…" autocomplete="off" spellcheck="false"></div>' +
+        '<div id="smm-cmdbar-results"></div>' +
+        '<div id="smm-cmdbar-footer"><span><kbd>↑↓</kbd> navigate</span><span><kbd>↵</kbd> select</span><span><kbd>Esc</kbd> close</span></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) closeBar(); });
+    input = document.getElementById('smm-cmdbar-input');
+    results = document.getElementById('smm-cmdbar-results');
+    input.addEventListener('input', function(){ renderResults(input.value.trim()); });
+    input.addEventListener('keydown', handleKey);
+  }
+
+  function openBar() {
+    build();
+    overlay.classList.add('open');
+    input.value = '';
+    renderResults('');
+    setTimeout(function(){ input.focus(); }, 50);
+  }
+
+  function closeBar() {
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  function renderResults(q) {
+    _items = [];
+    var html = '';
+    var ql = q.toLowerCase();
+
+    // Pages
+    var pages = PAGES.filter(function(p){ return !q || p.label.toLowerCase().includes(ql); });
+    if (pages.length) {
+      html += '<div class="smm-cmd-section">Pages</div>';
+      pages.forEach(function(p){
+        var idx = _items.length;
+        _items.push({ action: function(){ closeBar(); navTo(p.id); } });
+        html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-icon">'+p.icon+'</div><div class="cmd-label">'+p.label+'</div><div class="cmd-hint">Page</div></div>';
+      });
+    }
+
+    // Quick actions
+    var acts = ACTIONS.filter(function(a){ return !q || a.label.toLowerCase().includes(ql); });
+    if (acts.length) {
+      html += '<div class="smm-cmd-section">Quick Actions</div>';
+      acts.forEach(function(a){
+        var idx = _items.length;
+        _items.push({ action: a.action });
+        html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-icon">'+a.icon+'</div><div class="cmd-label">'+a.label+'</div><div class="cmd-hint">'+a.hint+'</div></div>';
+      });
+    }
+
+    // Clients search
+    if (q && typeof S !== 'undefined' && S.clients) {
+      var cls = S.clients.filter(function(c){ return c.name.toLowerCase().includes(ql); });
+      if (cls.length) {
+        html += '<div class="smm-cmd-section">Clients</div>';
+        cls.slice(0,6).forEach(function(c){
+          var idx = _items.length;
+          _items.push({ action: function(){ closeBar(); if(typeof openClientProfile==='function') openClientProfile(c.id); } });
+          html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-icon">👤</div><div class="cmd-label">'+c.name+'</div><div class="cmd-hint">Client profile</div></div>';
+        });
+      }
+    }
+
+    if (!html) html = '<div style="color:#4a4a6a;font-size:12px;text-align:center;padding:20px;">No results</div>';
+    results.innerHTML = html;
+    _activeIdx = -1;
+  }
+
+  function handleKey(e) {
+    var els = results.querySelectorAll('.smm-cmd-item');
+    if (e.key === 'ArrowDown') { e.preventDefault(); _activeIdx = Math.min(_activeIdx+1, els.length-1); updateActive(els); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); _activeIdx = Math.max(_activeIdx-1, 0); updateActive(els); }
+    else if (e.key === 'Enter') { e.preventDefault(); if(_activeIdx >= 0 && _items[_activeIdx]) _items[_activeIdx].action(); }
+    else if (e.key === 'Escape') { closeBar(); }
+  }
+
+  function updateActive(els) {
+    els.forEach(function(el, i){ el.classList.toggle('active', i === _activeIdx); });
+    if (els[_activeIdx]) els[_activeIdx].scrollIntoView({ block:'nearest' });
+  }
+
+  window.__smmCmdSelect = function(idx) { if (_items[idx]) _items[idx].action(); };
+
+  function navTo(page) {
+    if (typeof showPage === 'function') showPage(page);
+    else {
+      var btn = document.querySelector('[data-page="'+page+'"]');
+      if (btn) btn.click();
+    }
+  }
+
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      if (overlay && overlay.classList.contains('open')) closeBar();
+      else openBar();
+    }
+  });
+
+  window.openSmmCmdBar = openBar;
+})();
+</script>
+
+<!-- ============================================================
+     BB SMM — DAILY CONTENT CHECK-IN POPUP
+     ============================================================ -->
+<style>
+#smm-checkin-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.65);
+  z-index:10090; backdrop-filter:blur(4px);
+  align-items:center; justify-content:center; padding:20px;
+}
+#smm-checkin-overlay.open { display:flex; }
+#smm-checkin-box {
+  background:#100d1e; border:1px solid rgba(168,85,247,0.35);
+  border-radius:16px; width:520px; max-width:100%; max-height:80vh;
+  display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,.8);
+  overflow:hidden;
+}
+#smm-checkin-head {
+  background:linear-gradient(135deg,#a855f7,#7c3aed);
+  padding:18px 20px; display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0;
+}
+#smm-checkin-head h3 { font-size:15px; font-weight:700; color:#fff; margin:0; }
+#smm-checkin-head p  { font-size:11px; color:rgba(255,255,255,0.7); margin:2px 0 0; }
+#smm-checkin-body { flex:1; overflow-y:auto; padding:14px 16px; }
+.smm-ci-client { margin-bottom:16px; }
+.smm-ci-client-name { font-size:10px; font-weight:700; color:#a855f7; text-transform:uppercase;
+  letter-spacing:.1em; margin-bottom:8px; }
+.smm-ci-item {
+  display:flex; align-items:center; gap:10px; padding:9px 12px;
+  background:#1a1530; border:1px solid rgba(168,85,247,0.1);
+  border-radius:8px; margin-bottom:6px; cursor:pointer;
+  transition:background 0.15s, border-color 0.15s;
+}
+.smm-ci-item:hover { background:#221d3a; border-color:rgba(168,85,247,0.3); }
+.smm-ci-item.done { background:#0d1f12; border-color:rgba(0,255,133,0.2); opacity:0.6; }
+.smm-ci-item input[type=checkbox] { accent-color:#a855f7; width:15px; height:15px; cursor:pointer; flex-shrink:0; }
+.smm-ci-item .ci-title { flex:1; font-size:12.5px; color:#c4c4e0; }
+.smm-ci-item .ci-date  { font-size:10px; color:#5b5b8a; white-space:nowrap; }
+#smm-checkin-foot {
+  padding:12px 16px; border-top:1px solid rgba(168,85,247,0.15);
+  display:flex; gap:8px; justify-content:flex-end; flex-shrink:0;
+}
+#smm-checkin-fab {
+  position:fixed; bottom:90px; right:24px;
+  width:46px; height:46px; border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(135deg,#a855f7,#7c3aed);
+  color:#fff; font-size:18px; z-index:9980;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 16px rgba(168,85,247,0.45);
+  transition:transform 0.2s, box-shadow 0.2s;
+}
+#smm-checkin-fab:hover { transform:scale(1.1); box-shadow:0 6px 24px rgba(168,85,247,0.6); }
+#smm-checkin-fab-badge {
+  position:absolute; top:-4px; right:-4px;
+  background:#f87171; color:#fff; font-size:9px; font-weight:800;
+  min-width:17px; height:17px; border-radius:9px;
+  display:none; align-items:center; justify-content:center;
+  padding:0 3px; border:2px solid #0B0C0F;
+}
+</style>
+<script>
+(function() {
+  'use strict';
+
+  var CI_SB_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
+  var CI_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dmlpd25xZ3BoeWtsY29panlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjE5OTEsImV4cCI6MjA5MTI5Nzk5MX0.I8YiBr-rfLVcc6DE8Z1PxEP2oxXCelv6mxqAY_wY7lc';
+  var STORAGE_KEY = 'smm-checkin-last';
+
+  var _ciItems = [];
+
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function buildDOM() {
+    if (document.getElementById('smm-checkin-overlay')) return;
+
+    var ov = document.createElement('div');
+    ov.id = 'smm-checkin-overlay';
+    ov.innerHTML =
+      '<div id="smm-checkin-box">' +
+        '<div id="smm-checkin-head">' +
+          '<div><h3>📋 Daily Content Check-In</h3><p>Mark posts as published to keep records accurate</p></div>' +
+          '<button onclick="closeCheckinPopup()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;">✕</button>' +
+        '</div>' +
+        '<div id="smm-checkin-body"><div style="color:#5b5b8a;text-align:center;padding:30px;font-size:13px;">Loading...</div></div>' +
+        '<div id="smm-checkin-foot">' +
+          '<button class="btn btn-ghost btn-sm" onclick="snoozeCheckin()">⏰ Snooze 2h</button>' +
+          '<button class="btn btn-sm" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;" onclick="closeCheckinPopup()">Done for now</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) closeCheckinPopup(); });
+
+    var fab = document.createElement('button');
+    fab.id = 'smm-checkin-fab';
+    fab.title = 'Daily Content Check-In';
+    fab.innerHTML = '📋<div id="smm-checkin-fab-badge"></div>';
+    fab.addEventListener('click', function(){ openCheckinPopup(true); });
+    document.body.appendChild(fab);
+  }
+
+  async function loadCheckinItems() {
+    var t = today();
+    try {
+      var r = await fetch(CI_SB_URL + '/rest/v1/content_plans?posted=eq.false&scheduled_date=lte.' + t + '&select=id,title,scheduled_date,client_id,type&order=scheduled_date.asc&limit=60', {
+        headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY }
+      });
+      _ciItems = r.ok ? await r.json() : [];
+    } catch(e) { _ciItems = []; }
+    updateFab();
+    return _ciItems;
+  }
+
+  function updateFab() {
+    var badge = document.getElementById('smm-checkin-fab-badge');
+    if (!badge) return;
+    var cnt = _ciItems.length;
+    badge.textContent = cnt;
+    badge.style.display = cnt > 0 ? 'flex' : 'none';
+  }
+
+  function renderCheckinBody(items) {
+    var body = document.getElementById('smm-checkin-body');
+    if (!body) return;
+    if (!items || !items.length) {
+      body.innerHTML = '<div style="color:#00FF85;text-align:center;padding:30px;font-size:13px;">✅ All clear — no unposted content scheduled for today or earlier.</div>';
+      return;
+    }
+
+    // Group by client
+    var groups = {};
+    items.forEach(function(item) {
+      var cid = item.client_id || 'unknown';
+      if (!groups[cid]) groups[cid] = [];
+      groups[cid].push(item);
+    });
+
+    // Get client names
+    var clientNames = {};
+    if (typeof S !== 'undefined' && S.clients) {
+      S.clients.forEach(function(c){ clientNames[c.id] = c.name; });
+    }
+
+    var html = '';
+    Object.keys(groups).forEach(function(cid) {
+      var cname = clientNames[cid] || ('Client ' + cid);
+      html += '<div class="smm-ci-client"><div class="smm-ci-client-name">' + cname + '</div>';
+      groups[cid].forEach(function(item) {
+        html += '<div class="smm-ci-item" id="ci-row-'+item.id+'" onclick="toggleCheckinItem('+item.id+')">' +
+          '<input type="checkbox" id="ci-cb-'+item.id+'" onclick="event.stopPropagation();toggleCheckinItem('+item.id+')">' +
+          '<div class="ci-title">' + (item.title || 'Untitled') + ' <span style="font-size:10px;color:#5b5b8a;">['+( item.type||'post')+']</span></div>' +
+          '<div class="ci-date">' + (item.scheduled_date || '') + '</div>' +
+        '</div>';
+      });
+      html += '</div>';
+    });
+    body.innerHTML = html;
+  }
+
+  window.toggleCheckinItem = async function(id) {
+    var row = document.getElementById('ci-row-' + id);
+    var cb  = document.getElementById('ci-cb-' + id);
+    if (!row || !cb) return;
+    var nowDone = !cb.checked;
+    cb.checked = nowDone;
+    row.classList.toggle('done', nowDone);
+    if (nowDone) {
+      try {
+        await fetch(CI_SB_URL + '/rest/v1/content_plans?id=eq.' + id, {
+          method: 'PATCH',
+          headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ posted: true })
+        });
+        _ciItems = _ciItems.filter(function(x){ return x.id !== id; });
+        updateFab();
+      } catch(e) {}
+    } else {
+      try {
+        await fetch(CI_SB_URL + '/rest/v1/content_plans?id=eq.' + id, {
+          method: 'PATCH',
+          headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ posted: false })
+        });
+        _ciItems.push({ id: id });
+        updateFab();
+      } catch(e) {}
+    }
+  };
+
+  window.openCheckinPopup = async function(force) {
+    buildDOM();
+    var body = document.getElementById('smm-checkin-body');
+    if (body) body.innerHTML = '<div style="color:#5b5b8a;text-align:center;padding:30px;font-size:13px;">Loading...</div>';
+    document.getElementById('smm-checkin-overlay').classList.add('open');
+    var items = await loadCheckinItems();
+    renderCheckinBody(items);
+  };
+
+  window.closeCheckinPopup = function() {
+    var ov = document.getElementById('smm-checkin-overlay');
+    if (ov) ov.classList.remove('open');
+    localStorage.setItem(STORAGE_KEY, today());
+  };
+
+  window.snoozeCheckin = function() {
+    closeCheckinPopup();
+    var snoozeUntil = new Date(Date.now() + 2 * 3600 * 1000).toISOString();
+    localStorage.setItem(STORAGE_KEY + '-snooze', snoozeUntil);
+  };
+
+  function shouldShowToday() {
+    var last = localStorage.getItem(STORAGE_KEY);
+    if (last === today()) return false;
+    var snooze = localStorage.getItem(STORAGE_KEY + '-snooze');
+    if (snooze && new Date(snooze) > new Date()) return false;
+    return true;
+  }
+
+  function init() {
+    buildDOM();
+    loadCheckinItems().then(function(items) {
+      if (items.length > 0 && shouldShowToday()) {
+        setTimeout(function() { openCheckinPopup(false); }, 4000);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else setTimeout(init, 1000);
+})();
 </script>
