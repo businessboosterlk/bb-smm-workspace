@@ -1181,6 +1181,33 @@ tr:last-child td { border-bottom: none; }
   .today-hero { flex-direction: column; align-items: flex-start; }
   .today-stats { gap: 14px; }
 }
+
+/* ═══════════════ WEEKLY PLAN ═══════════════ */
+.wp-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 12px; }
+.wp-day { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; min-height: 200px; display: flex; flex-direction: column; }
+.wp-day-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.wp-day-header h4 { margin: 0; font-size: 13px; font-weight: 700; }
+.wp-day-header.today { background: rgba(0,229,255,0.08); }
+.wp-day-header.today h4 { color: var(--accent); }
+.wp-date { font-size: 11px; color: var(--text3); font-weight: 600; }
+.wp-day-body { padding: 8px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.wp-task { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+.wp-task:hover { border-color: var(--accent); }
+.wp-task-status { position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 8px 0 0 8px; }
+.wp-task-status.planned { background: var(--text3); }
+.wp-task-status.in_progress { background: var(--accent); }
+.wp-task-status.done { background: var(--green); }
+.wp-task-status.pending { background: var(--orange); }
+.wp-task-client { font-size: 12px; font-weight: 700; margin-bottom: 3px; padding-left: 8px; }
+.wp-task-type { font-size: 11px; color: var(--text2); padding-left: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.wp-task-count { background: var(--accent); color: #000; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+.wp-pending-bar { margin-top: 16px; background: var(--bg2); border: 1px solid var(--orange); border-radius: 12px; padding: 16px 20px; }
+.wp-pending-bar h3 { margin: 0 0 10px; font-size: 14px; display: flex; align-items: center; gap: 8px; color: var(--orange); }
+.wp-pending-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.wp-pending-chip { background: var(--bg3); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: border-color 0.15s; }
+.wp-pending-chip:hover { border-color: var(--orange); }
+@media (max-width: 900px) { .wp-board { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .wp-board { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -1226,6 +1253,10 @@ tr:last-child td { border-bottom: none; }
     <button class="sb-item" data-page="diary">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       My Diary
+    </button>
+    <button class="sb-item" data-page="weeklyplan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="14" x2="9" y2="18"/><line x1="15" y1="14" x2="15" y2="18"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+      Weekly Plan
     </button>
 
     <div class="sb-grp">Pipelines</div>
@@ -1955,6 +1986,21 @@ tr:last-child td { border-bottom: none; }
     </div>
   </section>
 
+  <!-- ═══ WEEKLY PLAN ═══ -->
+  <section class="page" id="page-weeklyplan">
+    <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-ghost btn-sm" onclick="wpChangeWeek(-1)">&#9664;</button>
+        <div class="ph-title" id="wpWeekLabel" style="margin:0;white-space:nowrap"></div>
+        <button class="btn btn-ghost btn-sm" onclick="wpChangeWeek(1)">&#9654;</button>
+        <button class="btn btn-ghost btn-sm" onclick="wpGoToday()">Today</button>
+      </div>
+      <button class="btn btn-primary" onclick="wpOpenAdd()">+ Add Task</button>
+    </div>
+    <div class="wp-board" id="wpBoard"></div>
+    <div id="wpPendingSection"></div>
+  </section>
+
   <section class="page" id="page-agents">
     <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div><div class="ph-title">⚡ Agents</div><div class="ph-sub">Live alerts from all BB agents</div></div>
@@ -1985,6 +2031,25 @@ tr:last-child td { border-bottom: none; }
   </div>
 
 </main>
+
+<!-- ═══ WEEKLY PLAN MODAL ═══ -->
+<div class="modal-bg" id="modal-wp-task">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="wpModalTitle">Add Task</div><button class="modal-close" onclick="closeModal('wp-task')">×</button></div>
+    <div class="fg"><label class="fl">Day *</label><select class="fi" id="wpDay"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option></select></div>
+    <div class="fg"><label class="fl">Client *</label><select class="fi" id="wpClient"></select></div>
+    <div class="fg"><label class="fl">Task Type</label><select class="fi" id="wpTaskType"><option value="post">Post</option><option value="story">Story</option><option value="reel">Reel</option><option value="carousel">Carousel</option><option value="caption">Caption</option><option value="scheduling">Scheduling</option><option value="other">Other</option></select></div>
+    <div class="fg"><label class="fl">Task Count</label><input class="fi" type="number" id="wpCount" min="1" value="1"></div>
+    <div class="fg"><label class="fl">Assigned To</label><select class="fi" id="wpAssigned"><option value="">Unassigned</option><option value="Thulaib">Thulaib</option><option value="Shiara">Shiara</option><option value="Nirvana">Nirvana</option><option value="Kenuli">Kenuli</option><option value="Kaneesha">Kaneesha</option></select></div>
+    <div class="fg"><label class="fl">Status</label><select class="fi" id="wpStatus"><option value="planned">Planned</option><option value="in_progress">In Progress</option><option value="done">Done</option><option value="pending">Pending</option></select></div>
+    <div class="fg"><label class="fl">Notes</label><input class="fi" type="text" id="wpNotes" placeholder="e.g. July captions, urgent..."></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('wp-task')">Cancel</button>
+      <button class="btn btn-sm" id="wpDeleteBtn" style="display:none;background:var(--red);color:#fff" onclick="wpDeleteTask()">Delete</button>
+      <button class="btn btn-primary" onclick="wpSaveTask()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ MODALS ============ -->
 <div class="modal-bg" id="modal-quick-add">
@@ -2584,6 +2649,7 @@ function nav(page, data) {
   if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
   if (page === 'diary') renderDiary();
+  if (page === 'weeklyplan') wpLoadWeek();
   if (page === 'agents') loadSmmAgentAlerts();
 }
 
@@ -5003,6 +5069,170 @@ function renderSOPs() {
   el.innerHTML = SOPS.map(function(sop) {
     return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 24px;cursor:pointer;transition:all 0.2s" onclick="openModal(\'sop\')" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'"><div style="display:flex;align-items:flex-start;gap:14px"><div style="background:linear-gradient(135deg,var(--accent),#00B8CC);color:#000;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">' + escHtml(sop.num) + '</div><div><div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px">' + escHtml(sop.name) + '</div><div style="font-size:12px;color:var(--text3);line-height:1.5">' + escHtml(sop.desc) + '</div>' + (sop.when ? '<div style="font-size:11px;color:var(--accent);margin-top:8px;font-weight:600">When: ' + escHtml(sop.when) + '</div>' : '') + '</div></div></div>';
   }).join('');
+}
+
+// ═══════════════ WEEKLY PLAN ═══════════════
+const WP_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+const WP_TYPES = {post:'Post',story:'Story',reel:'Reel',carousel:'Carousel',caption:'Caption',scheduling:'Scheduling',other:'Other'};
+let wpWeekStart = null;
+let wpTasks = [];
+let wpEditId = null;
+
+function wpGetMonday(d){
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = dt.getDate() - day + (day===0?-6:1);
+  dt.setDate(diff); dt.setHours(0,0,0,0);
+  return dt;
+}
+function wpFmtDate(d){
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+}
+function wpChangeWeek(dir){
+  const d = new Date(wpWeekStart);
+  d.setDate(d.getDate() + dir*7);
+  wpWeekStart = d;
+  wpLoadWeek();
+}
+function wpGoToday(){
+  wpWeekStart = wpGetMonday(new Date());
+  wpLoadWeek();
+}
+async function wpLoadWeek(){
+  if(!wpWeekStart) wpWeekStart = wpGetMonday(new Date());
+  const ws = wpWeekStart.toISOString().slice(0,10);
+  const label = document.getElementById('wpWeekLabel');
+  const fri = new Date(wpWeekStart); fri.setDate(fri.getDate()+4);
+  if(label) label.textContent = wpFmtDate(wpWeekStart) + ' — ' + wpFmtDate(fri) + ', ' + wpWeekStart.getFullYear();
+  try {
+    const resp = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?week_start=eq.' + ws + '&order=created_at.asc', {
+      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY }
+    });
+    wpTasks = resp.ok ? await resp.json() : [];
+  } catch(e){ wpTasks = []; }
+  wpRender();
+}
+function wpRender(){
+  const board = document.getElementById('wpBoard');
+  if(!board) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const pending = wpTasks.filter(t=>t.status==='pending');
+  const nonPending = wpTasks.filter(t=>t.status!=='pending');
+  board.innerHTML = WP_DAYS.map((name,i)=>{
+    const dayNum = i+1;
+    const dayDate = new Date(wpWeekStart); dayDate.setDate(dayDate.getDate()+i);
+    const isToday = dayDate.getTime()===today.getTime();
+    const tasks = nonPending.filter(t=>t.day_of_week===dayNum);
+    const totalCount = tasks.reduce((s,t)=>s+(t.task_count||0),0);
+    return `<div class="wp-day">
+      <div class="wp-day-header ${isToday?'today':''}">
+        <h4>${name}</h4>
+        <span class="wp-date">${wpFmtDate(dayDate)}${totalCount?' &middot; '+totalCount+' tasks':''}</span>
+      </div>
+      <div class="wp-day-body">
+        ${tasks.map(t=>wpRenderTask(t)).join('')}
+        ${tasks.length===0?'<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.78rem">No tasks</div>':''}
+      </div>
+    </div>`;
+  }).join('');
+  const pendSec = document.getElementById('wpPendingSection');
+  if(!pendSec) return;
+  if(pending.length>0){
+    pendSec.innerHTML = `<div class="wp-pending-bar">
+      <h3><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Pending (${pending.length})</h3>
+      <div class="wp-pending-list">
+        ${pending.map(t=>`<div class="wp-pending-chip" onclick="wpOpenEdit(${t.id})">${escHtml(t.client_name)} — ${WP_TYPES[t.task_type]||t.task_type}${t.task_count>1?' &times;'+t.task_count:''}${t.notes?' ('+escHtml(t.notes)+')':''}</div>`).join('')}
+      </div>
+    </div>`;
+  } else { pendSec.innerHTML=''; }
+}
+function wpRenderTask(t){
+  return `<div class="wp-task" onclick="wpOpenEdit(${t.id})">
+    <div class="wp-task-status ${t.status}"></div>
+    <div class="wp-task-client">${escHtml(t.client_name)}</div>
+    <div class="wp-task-type">
+      ${WP_TYPES[t.task_type]||t.task_type}
+      <span class="wp-task-count">${t.task_count} task${t.task_count>1?'s':''}</span>
+      ${t.assigned_to?'<span style="font-size:10px;background:var(--bg);padding:1px 6px;border-radius:8px;color:var(--text2)">'+escHtml(t.assigned_to)+'</span>':''}
+    </div>
+    ${t.notes?'<div style="font-size:0.72rem;color:var(--text3);margin-top:4px;padding-left:8px">'+escHtml(t.notes)+'</div>':''}
+  </div>`;
+}
+function wpPopulateClients(){
+  const sel = document.getElementById('wpClient');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Select Client</option>';
+  if(S.clients && Array.isArray(S.clients)){
+    S.clients.forEach(c=>{ sel.innerHTML+=`<option value="${escHtml(c.name)}">${escHtml(c.name)}</option>`; });
+  }
+}
+function wpOpenAdd(prefillDay){
+  wpEditId = null;
+  document.getElementById('wpModalTitle').textContent = 'Add Task';
+  document.getElementById('wpDeleteBtn').style.display = 'none';
+  wpPopulateClients();
+  document.getElementById('wpDay').value = prefillDay || new Date().getDay() || 1;
+  document.getElementById('wpClient').value = '';
+  document.getElementById('wpTaskType').value = 'post';
+  document.getElementById('wpCount').value = 1;
+  document.getElementById('wpAssigned').value = '';
+  document.getElementById('wpStatus').value = 'planned';
+  document.getElementById('wpNotes').value = '';
+  openModal('wp-task');
+}
+function wpOpenEdit(id){
+  const t = wpTasks.find(x=>x.id===id);
+  if(!t) return;
+  wpEditId = id;
+  document.getElementById('wpModalTitle').textContent = 'Edit Task';
+  document.getElementById('wpDeleteBtn').style.display = '';
+  wpPopulateClients();
+  document.getElementById('wpDay').value = t.day_of_week;
+  document.getElementById('wpClient').value = t.client_name||'';
+  document.getElementById('wpTaskType').value = t.task_type||'post';
+  document.getElementById('wpCount').value = t.task_count||1;
+  document.getElementById('wpAssigned').value = t.assigned_to||'';
+  document.getElementById('wpStatus').value = t.status||'planned';
+  document.getElementById('wpNotes').value = t.notes||'';
+  openModal('wp-task');
+}
+async function wpSaveTask(){
+  const clientName = document.getElementById('wpClient').value;
+  if(!clientName){ toast('Select a client','error'); return; }
+  const data = {
+    week_start: wpWeekStart.toISOString().slice(0,10),
+    day_of_week: parseInt(document.getElementById('wpDay').value),
+    client_name: clientName,
+    task_type: document.getElementById('wpTaskType').value,
+    task_count: parseInt(document.getElementById('wpCount').value)||1,
+    assigned_to: document.getElementById('wpAssigned').value||null,
+    status: document.getElementById('wpStatus').value,
+    notes: document.getElementById('wpNotes').value||null,
+    updated_at: new Date().toISOString()
+  };
+  const headers = { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  if(wpEditId){
+    await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + wpEditId, { method: 'PATCH', headers, body: JSON.stringify(data) });
+    toast('Task updated');
+  } else {
+    const userInfo = USER_ROLES[S.currentUser];
+    data.created_by = userInfo ? userInfo.name : (S.currentUser || 'Unknown');
+    await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan', { method: 'POST', headers, body: JSON.stringify(data) });
+    toast('Task added');
+  }
+  closeModal('wp-task');
+  wpLoadWeek();
+}
+async function wpDeleteTask(){
+  if(!wpEditId) return;
+  if(!confirm('Delete this task?')) return;
+  await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + wpEditId, {
+    method: 'DELETE',
+    headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Prefer': 'return=minimal' }
+  });
+  toast('Task deleted');
+  closeModal('wp-task');
+  wpLoadWeek();
 }
 
 // ============ AGENTS TAB ============
