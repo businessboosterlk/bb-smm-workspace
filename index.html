@@ -2198,7 +2198,11 @@ tr:last-child td { border-bottom: none; }
 const SUPABASE_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_RkGimnQ1rzRrU4Io5qn9xg_Fgi4LxiO';
 let sb = null;
-try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) { console.warn(e); }
+try {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Silent app auth so login-only tables (clients) stay readable here
+  window._smmAuthReady = sb.auth.signInWithPassword({email:'nirvana@bb-leads.app',password:'pin2222secure'}).catch(function(e){ console.warn('[auth]',e); });
+} catch (e) { console.warn(e); }
 
 // ============ USERS (login) ============
 const USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '2222' };
@@ -2932,6 +2936,7 @@ function currentSmmScope() {
 
 async function loadClients() {
   if (!sb) return;
+  try { await window._smmAuthReady; } catch(e) {}
   try {
     let query = sb.from('clients').select('*').order('name');
     const scope = currentSmmScope();
