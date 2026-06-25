@@ -2604,8 +2604,9 @@ async function init() {
   // 5 — Navigate to today
   nav('today');
 
-  // 6 — Refresh data every 60 seconds
+  // 6 — Refresh data periodically (bandwidth-safe: skip when tab is hidden)
   setInterval(async () => {
+    if (document.hidden) return;
     await Promise.all([loadClients(), loadContent(), loadTasks(), loadShoots(), loadEvents()]);
     updateBadges();
     // Re-render current page to reflect fresh data (preserve scroll position)
@@ -2622,7 +2623,7 @@ async function init() {
         if (ae) ae.scrollTop = _savedElTop;
       });
     }
-  }, 60000);
+  }, 180000);
 }
 
 // ============ NAVIGATION ============
