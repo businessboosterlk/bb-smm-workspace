@@ -1171,15 +1171,28 @@ tr:last-child td { border-bottom: none; }
   .daily-tasks-wrap { grid-template-columns: 1fr; }
   .eod-list { grid-template-columns: 1fr; }
 }
+/* ═══════════════ MOBILE TOPBAR + HAMBURGER (base — overridden in 768px media query below) ═══════════════ */
+.mobile-topbar {
+  display: none; position: fixed; top: 0; left: 0; right: 0; height: 52px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  align-items: center; gap: 12px; padding: 0 14px; z-index: 250;
+}
+.mobile-topbar-title { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.01em; }
+.hamburger-btn { background: none; border: none; color: var(--text); cursor: pointer; padding: 4px; display: flex; align-items: center; }
+.hamburger-btn svg { width: 24px; height: 24px; }
+.sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 250; }
+
 @media (max-width: 768px) {
-  :root { --sidebar: 0px; }
-  .sidebar { display: none; }
+  .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; z-index: 300; }
+  .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
   .main { margin-left: 0; }
-  .page { padding: 18px 14px 40px; }
+  .page { padding: 64px 14px 40px; }
   .kanban-board { grid-template-columns: 1fr; }
   .cp-fields, .cp-stats { grid-template-columns: 1fr 1fr; }
   .today-hero { flex-direction: column; align-items: flex-start; }
   .today-stats { gap: 14px; }
+  .mobile-topbar { display: flex; }
+  .sidebar-backdrop.open { display: block; }
 }
 
 /* ═══════════════ WEEKLY PLAN ═══════════════ */
@@ -1341,6 +1354,15 @@ tr:last-child td { border-bottom: none; }
     </div>
   </div>
 </aside>
+
+<!-- ============ MOBILE TOPBAR ============ -->
+<div class="mobile-topbar">
+  <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <span class="mobile-topbar-title" id="mobile-topbar-title">SMM Workspace</span>
+</div>
+<div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
 <!-- ============ MAIN ============ -->
 <main class="main">
@@ -2628,8 +2650,30 @@ async function init() {
 
 // ============ NAVIGATION ============
 document.querySelectorAll('.sb-item[data-page]').forEach(b => {
-  b.addEventListener('click', () => nav(b.dataset.page));
+  b.addEventListener('click', () => { nav(b.dataset.page); closeSidebarMobile(); });
 });
+
+// Mobile sidebar drawer controls
+const PAGE_TITLES = {
+  'today':'Today','calendar':'Calendar','my-tasks':'My Tasks','diary':'My Diary',
+  'weeklyplan':'Weekly Plan','content-pipeline':'Content Pipeline','shoot-pipeline':'Shoot Pipeline',
+  'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients',
+  'escalation':'Escalation Helper','sops':'SMM SOPs','graphic-hub':'Graphic Hub','video-hub':'Video Hub',
+  'missions':'Missions','ideas':'Idea Hub','agents':'Agents','client-profile':'Client'
+};
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const bd = document.querySelector('.sidebar-backdrop');
+  if (!sb) return;
+  const open = sb.classList.toggle('open');
+  if (bd) bd.classList.toggle('open', open);
+}
+function closeSidebarMobile() {
+  if (window.innerWidth <= 768) {
+    document.querySelector('.sidebar')?.classList.remove('open');
+    document.querySelector('.sidebar-backdrop')?.classList.remove('open');
+  }
+}
 
 function nav(page, data) {
   S.currentPage = page;
@@ -2637,6 +2681,8 @@ function nav(page, data) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
+  const mt = document.getElementById('mobile-topbar-title');
+  if (mt && PAGE_TITLES[page]) mt.textContent = PAGE_TITLES[page];
   if (!window._navPreserveScroll) window.scrollTo(0,0);
 
   if (page === 'today') renderToday();
@@ -5071,10 +5117,31 @@ function saveTop3Submit() {
 function renderSOPs() {
   var el = document.getElementById('sop-grid');
   if (!el) return;
-  if (!window.SOPS || !SOPS.length) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px">SOPs loading...</div>'; return; }
-  el.innerHTML = SOPS.map(function(sop) {
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 24px;cursor:pointer;transition:all 0.2s" onclick="openModal(\'sop\')" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'"><div style="display:flex;align-items:flex-start;gap:14px"><div style="background:linear-gradient(135deg,var(--accent),#00B8CC);color:#000;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">' + escHtml(sop.num) + '</div><div><div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px">' + escHtml(sop.name) + '</div><div style="font-size:12px;color:var(--text3);line-height:1.5">' + escHtml(sop.desc) + '</div>' + (sop.when ? '<div style="font-size:11px;color:var(--accent);margin-top:8px;font-weight:600">When: ' + escHtml(sop.when) + '</div>' : '') + '</div></div></div>';
+  if (typeof SOPS === 'undefined' || !SOPS.length) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:32px">SOPs loading...</div>'; return; }
+  el.innerHTML = SOPS.map(function(sop, i) {
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 24px;cursor:pointer;transition:all 0.2s" onclick="openSop(' + i + ')" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'"><div style="display:flex;align-items:flex-start;gap:14px"><div style="background:linear-gradient(135deg,var(--accent),#00B8CC);color:#000;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">' + escHtml(sop.num) + '</div><div><div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px">' + escHtml(sop.name) + '</div><div style="font-size:12px;color:var(--text3);line-height:1.5">' + escHtml(sop.desc) + '</div>' + (sop.when ? '<div style="font-size:11px;color:var(--accent);margin-top:8px;font-weight:600">When: ' + escHtml(sop.when) + '</div>' : '') + '</div></div></div>';
   }).join('');
+}
+
+function openSop(idx) {
+  var sop = (typeof SOPS !== 'undefined') ? SOPS[idx] : null;
+  if (!sop) return;
+  var titleEl = document.getElementById('sop-modal-title');
+  var bodyEl = document.getElementById('sop-modal-body');
+  if (titleEl) titleEl.textContent = sop.num + ' — ' + sop.name;
+  var h = '';
+  if (sop.purpose) h += '<h3>Purpose</h3><p>' + escHtml(sop.purpose) + '</p>';
+  var meta = [];
+  if (sop.when)  meta.push('<strong>When:</strong> ' + escHtml(sop.when));
+  if (sop.time)  meta.push('<strong>Time:</strong> ' + escHtml(sop.time));
+  if (sop.owner) meta.push('<strong>Owner:</strong> ' + escHtml(sop.owner));
+  if (meta.length) h += '<p style="color:var(--text2)">' + meta.join('<br>') + '</p>';
+  if (sop.needed && sop.needed.length) h += '<h3>What You Need</h3><ul>' + sop.needed.map(function(n){ return '<li>' + escHtml(n) + '</li>'; }).join('') + '</ul>';
+  if (sop.steps && sop.steps.length) h += '<h3>Steps</h3><ul>' + sop.steps.map(function(s){ return '<li><strong>' + escHtml(s[0]) + '.</strong> ' + escHtml(s[1]) + (s[2] ? ' <em style="color:var(--accent)">(' + escHtml(s[2]) + ')</em>' : '') + '</li>'; }).join('') + '</ul>';
+  if (sop.escalate && sop.escalate.length) h += '<h3>When to Escalate</h3><ul>' + sop.escalate.map(function(e){ return '<li>' + escHtml(e) + '</li>'; }).join('') + '</ul>';
+  if (sop.golden && sop.golden.length) h += '<h3>Golden Rules</h3><ul>' + sop.golden.map(function(g){ return '<li>' + escHtml(g) + '</li>'; }).join('') + '</ul>';
+  if (bodyEl) bodyEl.innerHTML = h || '<p>No detail available.</p>';
+  openModal('sop');
 }
 
 // ═══════════════ WEEKLY PLAN ═══════════════
