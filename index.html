@@ -822,6 +822,13 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .comm-msg { font-size: 13px; line-height: 1.5; color: var(--text); margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; }
 .comm-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .comm-actions .comm-resp-note { font-size: 12px; color: var(--text2); font-style: italic; }
+/* Frictionless content logging: quick-add bar + one-tap card advance */
+.qa-bar-smm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 10px; margin-bottom: 14px; }
+.qa-bar-smm input { flex: 1; min-width: 160px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--rs); color: var(--text); font-size: 13px; padding: 9px 11px; font-family: inherit; }
+.qa-bar-smm input:focus { outline: none; border-color: var(--accent); }
+.kc-advance { margin-top: 8px; width: 100%; background: var(--accent10); color: var(--accent); border: 1px solid var(--accent20); border-radius: var(--rs); padding: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: inherit; }
+.kc-advance:hover { background: var(--accent); color: var(--bg); }
+.kc-doneflag { margin-top: 8px; text-align: center; font-size: 11px; font-weight: 700; color: var(--green); background: var(--g10); border-radius: var(--rs); padding: 5px; }
 .kanban-board {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
 }
@@ -1661,10 +1668,16 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ CONTENT PIPELINE ============ -->
   <section class="page" id="page-content-pipeline">
     <div class="ph">
-      <div><div class="ph-title">Content Pipeline</div><div class="ph-sub">Drag cards between columns</div></div>
+      <div><div class="ph-title">Content Pipeline</div><div class="ph-sub">Type a title to log content · tap a card's button to advance it</div></div>
       <div class="ph-right">
-        <button class="btn btn-primary" onclick="resetContentModal();openModal('content-add')">+ Add Card</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetContentModal();openModal('content-add')" title="Full card with date, status and file link">Full card</button>
       </div>
+    </div>
+    <div class="qa-bar-smm">
+      <input type="text" id="cq-title" placeholder="+ Quick add content — type a title, press Enter" autocomplete="off" onkeydown="if(event.key==='Enter')quickAddContent()">
+      <select class="fi" id="cq-client" style="width:150px"><option value="">Client (optional)</option></select>
+      <select class="fi" id="cq-type" style="width:110px"><option value="post">Post</option><option value="video">Video</option><option value="story">Story</option></select>
+      <button class="btn btn-primary" onclick="quickAddContent()">Add</button>
     </div>
     <div class="kanban-toolbar">
       <button class="filter-chip active" data-filter-type="all">All Types</button>
@@ -3363,6 +3376,8 @@ function populateClientDropdowns() {
   });
   const dc = document.getElementById('d-client');
   if (dc) dc.innerHTML = '<option value="">No specific client</option>' + opts;
+  const cq = document.getElementById('cq-client');
+  if (cq) cq.innerHTML = '<option value="">Client (optional)</option>' + opts;
 }
 
 // ============ CLIENT TABS ============
@@ -3737,6 +3752,9 @@ function buildContentCard(item) {
       <div class="kanban-card-client">${escHtml(clientName)}</div>
       <div class="kanban-card-title">${escHtml(item.title)}</div>
       <div class="kanban-card-foot"><span>${dateStr}</span>${item.asset_link?`<a href="${escHtml(item.asset_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-size:11px">📁 Files</a>`:''}</div>
+      ${(()=>{ const ci=CONTENT_STAGES.indexOf(item.status); return (ci>=0 && ci<CONTENT_STAGES.length-1)
+        ? `<button class="kc-advance" onclick="event.stopPropagation();advanceContent('${item.id}')">${escHtml(CONTENT_STAGE_LABELS[CONTENT_STAGES[ci+1]]||'Next')} &#9654;</button>`
+        : `<div class="kc-doneflag">&#10003; Posted</div>`; })()}
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', item.id); e.dataTransfer.setData('kind', 'content'); });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
@@ -5144,6 +5162,34 @@ async function submitContentAdd() {
     }
     closeModal('content-add'); resetContentModal(); renderContent(); updateBadges();
   } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+
+// One-tap quick add: just a title (client + type optional). Status defaults to
+// brief, so recording a content item takes seconds, not a 6-field form.
+async function quickAddContent() {
+  var el = document.getElementById('cq-title');
+  var title = ((el || {}).value || '').trim();
+  if (!title) { toast('Type a title first', 'error'); if (el) el.focus(); return; }
+  var clientId = (document.getElementById('cq-client') || {}).value || null;
+  var ctype = (document.getElementById('cq-type') || {}).value || 'post';
+  var payload = { title: title, client_id: clientId || null, content_type: ctype, status: 'brief' };
+  try {
+    var r = await sb.from('smm_content').insert([payload]).select();
+    if (r.error) throw r.error;
+    if (r.data && r.data[0]) S.content.push(r.data[0]);
+    el.value = ''; var cc = document.getElementById('cq-client'); if (cc) cc.value = '';
+    toast('Added — ' + title, 'success');
+    renderContent(); updateBadges();
+    el.focus();
+  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+// One-tap advance to the next stage (no drag).
+function advanceContent(id) {
+  var item = (S.content || []).find(function(c) { return c.id == id; });
+  if (!item) return;
+  var ci = CONTENT_STAGES.indexOf(item.status);
+  if (ci < 0 || ci >= CONTENT_STAGES.length - 1) return;
+  updateContentStatus(id, CONTENT_STAGES[ci + 1]);
 }
 async function deleteContentCard() {
   var editId = (document.getElementById('ca-edit-id') || {}).value;
