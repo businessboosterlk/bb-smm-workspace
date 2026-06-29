@@ -7476,14 +7476,40 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     ov.innerHTML='<div style="background:#12121a;border:1px solid #3a3a4e;border-radius:14px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column"><div style="padding:16px 20px;border-bottom:1px solid #2a2a3a;display:flex;align-items:center;justify-content:space-between"><div style="font:800 15px Poppins,Inter;color:#fff">🛡️ Sentinel — '+_issues.length+' issue(s)</div><button id="bbSentClose" style="background:none;border:none;color:#a0a0b8;font-size:22px;cursor:pointer">×</button></div><div style="padding:16px 20px;overflow-y:auto">'+rows+'<div style="margin-top:6px;font-size:11px;color:#8888a0">All issues logged to <code>system_bug_log</code> in Supabase.</div></div></div>';
     ov.onclick=function(e){if(e.target===ov)ov.remove();};document.body.appendChild(ov);document.getElementById('bbSentClose').onclick=function(){ov.remove();};
   }
-  function headCount(table){
-    return fetch(SB_URL+'/rest/v1/'+table+'?select=id&limit=1',{method:'GET',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'count=exact','Range':'0-0'}}).then(function(r){var cr=r.headers.get('content-range');var total=null;if(cr&&cr.indexOf('/')>-1){var t=cr.split('/')[1];total=(t==='*')?null:parseInt(t,10);}return r.text().then(function(body){return {ok:r.ok,status:r.status,count:total,body:body};});}).catch(function(e){return {ok:false,status:0,count:null,body:String(e&&e.message||e)};});
+  function authHeaders(){
+    // Probe the way the logged-in app reads: prefer the authenticated session token
+    // so a future RLS lockdown (authenticated-only core tables) does not make a raw
+    // anon probe read 0 rows and false-alarm as empty_core (logged bug #36). Falls
+    // back to the publishable key if no session is available.
+    return Promise.resolve(window._smmAuthReady).catch(function(){}).then(function(){
+      try{
+        if(typeof sb!=='undefined'&&sb&&sb.auth&&sb.auth.getSession){
+          return sb.auth.getSession().then(function(r){
+            var tok=r&&r.data&&r.data.session&&r.data.session.access_token;
+            return {apikey:SB_KEY,auth:'Bearer '+(tok||SB_KEY)};
+          }).catch(function(){return {apikey:SB_KEY,auth:'Bearer '+SB_KEY};});
+        }
+      }catch(e){}
+      return {apikey:SB_KEY,auth:'Bearer '+SB_KEY};
+    });
+  }
+  function headCount(table,H){
+    return fetch(SB_URL+'/rest/v1/'+table+'?select=id&limit=1',{method:'GET',headers:{'apikey':H.apikey,'Authorization':H.auth,'Prefer':'count=exact','Range':'0-0'}}).then(function(r){var cr=r.headers.get('content-range');var total=null;if(cr&&cr.indexOf('/')>-1){var t=cr.split('/')[1];total=(t==='*')?null:parseInt(t,10);}return r.text().then(function(body){return {ok:r.ok,status:r.status,count:total,body:body};});}).catch(function(e){return {ok:false,status:0,count:null,body:String(e&&e.message||e)};});
   }
   function checkHealth(){
-    TABLES.forEach(function(t){headCount(t.name).then(function(res){
-      if(!res.ok){var cat=res.status===404?'table_missing':(res.status===401||res.status===403?'db_permission':'network');report({severity:'error',category:cat,table_name:t.name,message:'read failed (HTTP '+res.status+')',detail:(res.body||'').slice(0,300)});return;}
-      if(t.core&&res.count===0){report({severity:'warning',category:'empty_core',table_name:t.name,message:'returned 0 rows — likely a permissions (RLS) block',detail:'Core table should never be empty. Check RLS policy for the anon role.'});}
-    });});
+    authHeaders().then(function(H){
+      TABLES.forEach(function(t){headCount(t.name,H).then(function(res){
+        if(!res.ok){var cat=res.status===404?'table_missing':(res.status===401||res.status===403?'db_permission':'network');report({severity:'error',category:cat,table_name:t.name,message:'read failed (HTTP '+res.status+')',detail:(res.body||'').slice(0,300)});return;}
+        if(t.core&&res.count===0){
+          // Re-verify before flagging: a single transient 0 (e.g. a blip mid-auth)
+          // must not create a permanent empty_core bug row — #36 was exactly such a
+          // transient condition (clients reads fine now). Only report if STILL 0.
+          headCount(t.name,H).then(function(res2){
+            if(res2.ok&&res2.count===0){report({severity:'warning',category:'empty_core',table_name:t.name,message:'returned 0 rows — likely a permissions (RLS) block',detail:'Core table should never be empty. Check RLS policy for the anon role.'});}
+          });
+        }
+      });});
+    });
   }
   window.bbSentinelCheck=checkHealth;
   window.addEventListener('error',function(e){if(!e)return;var msg=e.message||'script error';var detail=(e.filename?e.filename+':'+e.lineno+':'+e.colno:'')+(e.error&&e.error.stack?'\n'+e.error.stack:'');report({severity:'error',category:'js_error',message:msg.slice(0,200),detail:detail.slice(0,800)});});
