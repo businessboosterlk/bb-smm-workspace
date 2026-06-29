@@ -15,14 +15,17 @@
    ============================================================ */
 
 :root {
-  /* BB Neon Palette (primary) */
-  --pink:   #FF2D78;  --p10: rgba(255,45,120,0.10);  --p20: rgba(255,45,120,0.22);
-  --cyan:   #00E5FF;  --c10: rgba(0,229,255,0.10);   --c20: rgba(0,229,255,0.22);
-  --purple: #A855F7;  --pu10: rgba(168,85,247,0.10); --pu20: rgba(168,85,247,0.22);
-  --green:  #00FF85;  --g10: rgba(0,255,133,0.10);   --g20: rgba(0,255,133,0.22);
-  --orange: #FF6B2B;  --o10: rgba(255,107,43,0.10);  --o20: rgba(255,107,43,0.22);
-  --yellow: #FBBF24;  --y10: rgba(251,191,36,0.10); --y20: rgba(251,191,36,0.22);
-  --red:    #F87171;  --r10: rgba(248,113,113,0.10); --r20: rgba(248,113,113,0.22);
+  /* BB Calm Palette — ONE accent (cyan) + muted slate. Decorative pink/purple/orange
+     are muted to neutral slate; only red / green / amber carry real status meaning. */
+  --cyan:   #2DD4E8;  --c10: rgba(45,212,232,0.10);  --c20: rgba(45,212,232,0.22);
+  /* decorative (de-neoned to muted slate so the screen stops shouting) */
+  --pink:   #8A90A6;  --p10: rgba(255,255,255,0.05);  --p20: rgba(255,255,255,0.12);
+  --purple: #8A90A6;  --pu10: rgba(255,255,255,0.05); --pu20: rgba(255,255,255,0.12);
+  --orange: #9A8C6E;  --o10: rgba(255,255,255,0.05);  --o20: rgba(255,255,255,0.12);
+  /* status only */
+  --green:  #34D399;  --g10: rgba(52,211,153,0.10);   --g20: rgba(52,211,153,0.22);
+  --yellow: #F0B43C;  --y10: rgba(240,180,60,0.10);   --y20: rgba(240,180,60,0.22);
+  --red:    #F08585;  --r10: rgba(240,133,133,0.10);  --r20: rgba(240,133,133,0.22);
 
   /* Primary accent for SMM (chose cyan — most readable on black, distinct from Command Centre orange) */
   --accent: var(--cyan);
@@ -52,7 +55,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Poppins', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -170,6 +173,18 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 @keyframes badge-pop { 0%{transform:scale(0.8)} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
 .sb-item.active .sb-badge { background: var(--accent); color: var(--bg); }
+.sb-more-toggle {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  margin-top: 14px; padding: 8px 10px; background: none; border: none;
+  font-family: inherit; font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--text3); cursor: pointer; text-align: left;
+  border-top: 1px solid var(--border);
+}
+.sb-more-toggle:hover { color: var(--text2); }
+.sb-more-toggle .sb-more-chev { width: 13px; height: 13px; margin-left: auto; transition: transform 0.2s ease; }
+.sb-more-toggle[aria-expanded="true"] .sb-more-chev { transform: rotate(180deg); }
+.sb-more { display: none; margin-top: 2px; }
+.sb-more.open { display: block; animation: fi 0.18s ease; }
 .sb-footer {
   padding: 12px 16px 14px; border-top: 1px solid var(--border);
   font-size: 11px; color: var(--text3);
@@ -499,7 +514,7 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 
 /* ============ TODAY HERO ============ */
 .today-hero {
-  background: linear-gradient(135deg, rgba(255,45,120,0.06), rgba(0,229,255,0.05) 50%, rgba(168,85,247,0.06));
+  background: linear-gradient(135deg, var(--bg2), rgba(45,212,232,0.05));
   border: 1px solid var(--border2);
   border-radius: var(--r); padding: 22px 24px; margin-bottom: 16px;
   display: flex; justify-content: space-between; align-items: center; gap: 20px;
@@ -508,6 +523,21 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   font-family: 'Poppins', sans-serif; font-size: 22px;
   font-weight: 700; letter-spacing: -0.02em;
 }
+/* Today action grid — the 4 things that need you now */
+.today-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.ta-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 15px 16px; display: flex; flex-direction: column; min-height: 118px; }
+.ta-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ta-title { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: 0.01em; }
+.ta-count { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent10); border: 1px solid var(--accent20); border-radius: 20px; padding: 1px 9px; margin-left: auto; }
+.ta-count.zero { color: var(--text3); background: var(--bg3); border-color: var(--border); }
+.ta-list { display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.ta-row { font-size: 13px; color: var(--text); line-height: 1.35; display: flex; gap: 7px; align-items: baseline; cursor: pointer; }
+.ta-row:hover .ta-main { color: var(--accent); }
+.ta-row .ta-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-row .ta-sub { color: var(--text3); font-size: 11px; flex-shrink: 0; margin-left: auto; }
+.ta-empty { font-size: 13px; color: var(--text3); padding: 8px 0; }
+.ta-more { margin-top: 10px; font-size: 11px; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; text-align: left; font-family: inherit; }
+.ta-more:hover { text-decoration: underline; }
 .today-date { font-size: 11px; color: var(--text2); margin-top: 3px; }
 .today-stats { display: flex; gap: 24px; }
 .today-stat { text-align: right; }
@@ -765,6 +795,33 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   background: var(--accent); color: var(--bg);
   border-color: var(--accent); font-weight: 700;
 }
+/* Community filter chips */
+.comm-fchip {
+  display: inline-flex; align-items: center; padding: 5px 12px;
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: 20px;
+  font-size: 11px; color: var(--text2); cursor: pointer; transition: all 0.12s;
+  font-weight: 500; font-family: inherit;
+}
+.comm-fchip:hover { background: var(--bg4); color: var(--text); }
+.comm-fchip.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+/* Community cards */
+.comm-client-grp { margin-bottom: 22px; }
+.comm-client-hd { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: 0.02em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.comm-client-hd .comm-count { font-size: 10px; font-weight: 700; color: var(--text3); background: var(--bg3); border-radius: 20px; padding: 1px 8px; }
+.comm-card {
+  background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 10px; padding: 13px 15px; margin-bottom: 8px;
+}
+.comm-card.is-flagged { border-left-color: var(--red); }
+.comm-card.is-replied { border-left-color: var(--green); opacity: 0.7; }
+.comm-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
+.comm-author { font-size: 13px; font-weight: 700; color: var(--text); }
+.comm-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 20px; background: var(--bg4); color: var(--text2); }
+.comm-tag.high { background: var(--r10); color: var(--red); }
+.comm-time { font-size: 11px; color: var(--text3); margin-left: auto; }
+.comm-msg { font-size: 13px; line-height: 1.5; color: var(--text); margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; }
+.comm-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.comm-actions .comm-resp-note { font-size: 12px; color: var(--text2); font-style: italic; }
 .kanban-board {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
 }
@@ -1191,6 +1248,7 @@ tr:last-child td { border-bottom: none; }
   .cp-fields, .cp-stats { grid-template-columns: 1fr 1fr; }
   .today-hero { flex-direction: column; align-items: flex-start; }
   .today-stats { gap: 14px; }
+  .today-actions { grid-template-columns: 1fr; }
   .mobile-topbar { display: flex; }
   .sidebar-backdrop.open { display: block; }
 }
@@ -1254,93 +1312,92 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Today
     </button>
-    <button class="sb-item" data-page="calendar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-      Calendar
+    <button class="sb-item" data-page="community">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      Community
+      <span class="sb-badge" id="sb-community-count">0</span>
     </button>
     <button class="sb-item" data-page="my-tasks">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       My Tasks
       <span class="sb-badge" id="sb-mytasks-count">0</span>
     </button>
-    <button class="sb-item" data-page="diary">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      My Diary
-    </button>
-    <button class="sb-item" data-page="weeklyplan">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="14" x2="9" y2="18"/><line x1="15" y1="14" x2="15" y2="18"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
-      Weekly Plan
-    </button>
-
-    <div class="sb-grp">Pipelines</div>
-
     <button class="sb-item" data-page="content-pipeline">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
       Content Pipeline
       <span class="sb-badge" id="sb-pipeline-count">0</span>
-    </button>
-    <button class="sb-item" data-page="shoot-pipeline">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/></svg>
-      Shoot Pipeline
     </button>
     <button class="sb-item" data-page="approval-queue">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Approval Queue
       <span class="sb-badge" id="sb-approval-count">0</span>
     </button>
-    
-
-    <div class="sb-grp">Accounts</div>
-    <button class="sb-item" data-page="content-overview">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-      Content Plans
+    <button class="sb-item" data-page="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      Calendar
     </button>
-    <button class="sb-item" data-page="clients">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Clients
-      <span class="sb-badge" id="sb-clients-count">—</span>
+    <button class="sb-item" data-page="weeklyplan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="14" x2="9" y2="18"/><line x1="15" y1="14" x2="15" y2="18"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+      Weekly Plan
     </button>
 
-    <div class="sb-grp">Support</div>
-    <button class="sb-item" data-page="escalation">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Escalation Helper
+    <button class="sb-more-toggle" id="sb-more-toggle" onclick="toggleMore()" aria-expanded="false">
+      <span>More</span>
+      <svg class="sb-more-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
-    <button class="sb-item" data-page="sops">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      SMM SOPs
-    </button>
-
-    <div class="sb-grp">Hubs</div>
-    <button class="sb-item" data-page="graphic-hub">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/></svg>
-      Graphic Hub
-    </button>
-    <button class="sb-item" data-page="video-hub">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-      Video Hub
-    </button>
-
-    <div class="sb-grp">Missions</div>
-    <button class="sb-item" data-page="missions">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-      Missions
-    </button>
-    <div class="sb-grp">Capture</div>
-    <button class="sb-item" data-page="ideas">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-      Idea Hub
-      <span class="sb-badge" id="sb-ideas-count">0</span>
-    </button>
-    <button class="sb-item" onclick="window.open('https://businessboosterlk.github.io/bb-command-centre/inspo-hub.html','_blank')" style="color:var(--pink)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-      Inspo Hub ↗
-    </button>
-    <button class="sb-item" data-page="agents">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 2a3 3 0 0 1 3 3v3H9V5a3 3 0 0 1 3-3z"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
-      ⚡ Agents
-      <span class="sb-badge" id="sb-agents-unread" style="display:none"></span>
-    </button>
+    <div class="sb-more" id="sb-more">
+      <button class="sb-item" data-page="diary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        My Diary
+      </button>
+      <button class="sb-item" data-page="shoot-pipeline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/></svg>
+        Shoot Pipeline
+      </button>
+      <button class="sb-item" data-page="content-overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        Content Plans
+      </button>
+      <button class="sb-item" data-page="clients">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Clients
+        <span class="sb-badge" id="sb-clients-count">—</span>
+      </button>
+      <button class="sb-item" data-page="escalation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Escalation Helper
+      </button>
+      <button class="sb-item" data-page="sops">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        SMM SOPs
+      </button>
+      <button class="sb-item" data-page="graphic-hub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/></svg>
+        Graphic Hub
+      </button>
+      <button class="sb-item" data-page="video-hub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Video Hub
+      </button>
+      <button class="sb-item" data-page="missions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Missions
+      </button>
+      <button class="sb-item" data-page="ideas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+        Idea Hub
+        <span class="sb-badge" id="sb-ideas-count">0</span>
+      </button>
+      <button class="sb-item" onclick="window.open('https://businessboosterlk.github.io/bb-command-centre/inspo-hub.html','_blank')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+        Inspo Hub ↗
+      </button>
+      <button class="sb-item" data-page="agents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 2a3 3 0 0 1 3 3v3H9V5a3 3 0 0 1 3-3z"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
+        ⚡ Agents
+        <span class="sb-badge" id="sb-agents-unread" style="display:none"></span>
+      </button>
+    </div>
   </nav>
 
   <div class="sb-footer">
@@ -1387,6 +1444,9 @@ tr:last-child td { border-bottom: none; }
         <div class="today-stat"><div class="today-stat-num" id="stat-shoots">0</div><div class="today-stat-lbl">Shoots This Week</div></div>
       </div>
     </div>
+
+    <!-- TODAY ACTION GRID — the 4 things that need you now -->
+    <div class="today-actions" id="today-actions"></div>
 
     <!-- TODAY'S FOCUS PANEL -->
     <div class="stitle" id="focus-title" style="display:none">Today's Focus</div>
@@ -1443,6 +1503,25 @@ tr:last-child td { border-bottom: none; }
         <label class="eod-item"><input type="checkbox" class="eod-check"> Desk closed - zero open loops</label>
       </div>
     </div>
+  </section>
+
+  <!-- ============ COMMUNITY ============ -->
+  <section class="page" id="page-community">
+    <div class="ph">
+      <div><div class="ph-title">Community</div><div class="ph-sub">Comments &amp; DMs to respond to, across all clients</div></div>
+      <div class="ph-right">
+        <button class="btn btn-primary btn-sm" onclick="openCommunityAdd()">+ Log Item</button>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <span class="filter-bar-label">Show</span>
+      <button class="comm-fchip active" data-cstatus="needs_reply" onclick="setCommFilter('needs_reply')">Needs reply</button>
+      <button class="comm-fchip" data-cstatus="flagged" onclick="setCommFilter('flagged')">Flagged</button>
+      <button class="comm-fchip" data-cstatus="replied" onclick="setCommFilter('replied')">Replied</button>
+      <button class="comm-fchip" data-cstatus="all" onclick="setCommFilter('all')">All</button>
+      <select class="filter-select" id="comm-filter-client" onchange="renderCommunity()" style="margin-left:auto"><option value="all">All clients</option></select>
+    </div>
+    <div id="community-list" style="margin-top:14px"></div>
   </section>
 
   <!-- ============ MY TASKS ============ -->
@@ -2184,6 +2263,24 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<div class="modal-bg" id="modal-community-add">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Log a comment or DM</div><button class="modal-close" onclick="closeModal('community-add')">×</button></div>
+    <div class="fg"><label class="fl">Client</label><select class="fi" id="cm-client"></select></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Type</label><select class="fi" id="cm-type"><option value="comment">Comment</option><option value="dm">DM</option><option value="mention">Mention</option><option value="review">Review</option></select></div>
+      <div class="fg"><label class="fl">Platform</label><select class="fi" id="cm-platform"><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="other">Other</option></select></div>
+    </div>
+    <div class="fg"><label class="fl">From (handle or name)</label><input class="fi" id="cm-author" placeholder="@username"></div>
+    <div class="fg"><label class="fl">Message</label><textarea class="fi" id="cm-message" rows="3" placeholder="What did they say?"></textarea></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Link (optional)</label><input class="fi" id="cm-permalink" placeholder="Paste the comment/DM link"></div>
+      <div class="fg"><label class="fl">Priority</label><select class="fi" id="cm-priority"><option value="normal">Normal</option><option value="high">High</option></select></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitCommunityAdd()">Add to inbox</button>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-task">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Add Task</div><button class="modal-close" onclick="closeModal('task')">×</button></div>
@@ -2234,6 +2331,8 @@ const S = {
   clients: [],
   tasks: [],
   content: [],
+  community: [],
+  commFilter: 'needs_reply',
   shoots: [],
   events: [],
   ideas: [],
@@ -2618,7 +2717,7 @@ async function init() {
   }
 
   // 3 — Load remaining data in parallel
-  await Promise.all([loadContent(), loadTasks(), loadShoots(), loadEvents()]);
+  await Promise.all([loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity()]);
 
   // 4 — Refresh all sidebar badges
   updateBadges();
@@ -2629,7 +2728,7 @@ async function init() {
   // 6 — Refresh data periodically (bandwidth-safe: skip when tab is hidden)
   setInterval(async () => {
     if (document.hidden) return;
-    await Promise.all([loadClients(), loadContent(), loadTasks(), loadShoots(), loadEvents()]);
+    await Promise.all([loadClients(), loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity()]);
     updateBadges();
     // Re-render current page to reflect fresh data (preserve scroll position)
     if (S.currentPage) {
@@ -2659,8 +2758,19 @@ const PAGE_TITLES = {
   'weeklyplan':'Weekly Plan','content-pipeline':'Content Pipeline','shoot-pipeline':'Shoot Pipeline',
   'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients',
   'escalation':'Escalation Helper','sops':'SMM SOPs','graphic-hub':'Graphic Hub','video-hub':'Video Hub',
-  'missions':'Missions','ideas':'Idea Hub','agents':'Agents','client-profile':'Client'
+  'missions':'Missions','ideas':'Idea Hub','agents':'Agents','client-profile':'Client',
+  'community':'Community'
 };
+// Pages tucked under the collapsible "More" group
+const MORE_PAGES = ['diary','shoot-pipeline','content-overview','clients','escalation','sops','graphic-hub','video-hub','missions','ideas','agents'];
+function toggleMore(force) {
+  const more = document.getElementById('sb-more');
+  const tog = document.getElementById('sb-more-toggle');
+  if (!more || !tog) return;
+  const open = (typeof force === 'boolean') ? force : !more.classList.contains('open');
+  more.classList.toggle('open', open);
+  tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 function toggleSidebar() {
   const sb = document.querySelector('.sidebar');
   const bd = document.querySelector('.sidebar-backdrop');
@@ -2685,7 +2795,9 @@ function nav(page, data) {
   if (mt && PAGE_TITLES[page]) mt.textContent = PAGE_TITLES[page];
   if (!window._navPreserveScroll) window.scrollTo(0,0);
 
+  if (MORE_PAGES.indexOf(page) !== -1) toggleMore(true);
   if (page === 'today') renderToday();
+  if (page === 'community') renderCommunity();
   if (page === 'calendar') { wireCalFilters(); populateCalFilterDropdowns(); switchCalView(S.calView || 'schedule'); }
   if (page === 'content-pipeline') renderContent();
   if (page === 'shoot-pipeline') { renderShoots(); renderUpcomingShoots(); }
@@ -2821,6 +2933,34 @@ function renderToday() {
   renderClientsNeedingAttention();
   // BB Intelligence
   renderIntel();
+  // The 4 things that need you now
+  renderTodayActions();
+}
+
+function renderTodayActions() {
+  const host = document.getElementById('today-actions');
+  if (!host) return;
+  const today = toDateStr(new Date());
+  const d10 = s => (s || '').substring(0, 10);
+  const clientName = id => { const c = S.clients.find(x => x.id == id); return c ? c.name : ''; };
+  const dueTasks    = (S.tasks || []).filter(t => !t.done && d10(t.due) === today);
+  const dueContent  = (S.content || []).filter(c => d10(c.scheduled_date) === today && c.status !== 'posted');
+  const pendApprove = (S.content || []).filter(c => c.status === 'send-client' || c.status === 'client-changes');
+  const comm        = communityNeedsReply();
+  function panel(title, count, rows, page) {
+    const cz = count === 0 ? ' zero' : '';
+    const body = rows.length ? '<div class="ta-list">' + rows.join('') + '</div>' : '<div class="ta-empty">All clear</div>';
+    return '<div class="ta-card"><div class="ta-head"><span class="ta-title">' + title + '</span><span class="ta-count' + cz + '">' + count + '</span></div>' + body + '<button class="ta-more" onclick="nav(\'' + page + '\')">Open →</button></div>';
+  }
+  const taskRows = dueTasks.slice(0, 4).map(t => '<div class="ta-row" onclick="nav(\'my-tasks\')"><span class="ta-main">' + escHtml(t.title || 'Task') + '</span>' + (t.client_id ? '<span class="ta-sub">' + escHtml(clientName(t.client_id)) + '</span>' : '') + '</div>');
+  const contentRows = dueContent.slice(0, 4).map(c => '<div class="ta-row" onclick="nav(\'content-pipeline\')"><span class="ta-main">' + escHtml(c.title || 'Post') + '</span><span class="ta-sub">' + escHtml(clientName(c.client_id)) + '</span></div>');
+  const apprRows = pendApprove.slice(0, 4).map(c => '<div class="ta-row" onclick="nav(\'approval-queue\')"><span class="ta-main">' + escHtml(c.title || 'Post') + '</span><span class="ta-sub">' + (c.status === 'client-changes' ? 'changes' : 'to send') + '</span></div>');
+  const commRows = comm.slice(0, 4).map(it => '<div class="ta-row" onclick="nav(\'community\')"><span class="ta-main">' + escHtml(it.author || 'Someone') + ': ' + escHtml(it.message || '') + '</span><span class="ta-sub">' + escHtml(clientName(it.client_id) || it.client_name || '') + '</span></div>');
+  host.innerHTML =
+    panel('Due Today', dueTasks.length, taskRows, 'my-tasks') +
+    panel('Content Due', dueContent.length, contentRows, 'content-pipeline') +
+    panel('Pending Approval', pendApprove.length, apprRows, 'approval-queue') +
+    panel('Community to Reply', comm.length, commRows, 'community');
 }
 
 function updateEod() {
@@ -2973,6 +3113,163 @@ function renderScheduleView() {
   grid.innerHTML = html;
 }
 function escHtml(s) { return s ? String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])) : ''; }
+
+// ============ COMMUNITY (comments + DMs inbox) ============
+function commTimeAgo(ts) {
+  if (!ts) return '';
+  const d = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (d < 60) return 'just now';
+  if (d < 3600) return Math.floor(d/60) + 'm ago';
+  if (d < 86400) return Math.floor(d/3600) + 'h ago';
+  return Math.floor(d/86400) + 'd ago';
+}
+async function loadCommunity() {
+  if (!sb) return;
+  try {
+    let q = sb.from('smm_community').select('*').order('created_at', { ascending: false });
+    const scope = currentSmmScope();
+    if (scope) {
+      const ids = S.clients.map(c => c.id);
+      if (ids.length) q = q.in('client_id', ids); else { S.community = []; updateCommunityCount(); return; }
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    S.community = data || [];
+  } catch (e) { console.error(e); S.community = S.community || []; }
+  updateCommunityCount();
+}
+function communityNeedsReply() { return (S.community || []).filter(x => (x.status || 'needs_reply') === 'needs_reply'); }
+function updateCommunityCount() {
+  const n = communityNeedsReply().length;
+  const b = document.getElementById('sb-community-count');
+  if (b) { b.textContent = n; b.classList.toggle('has-items', n > 0); }
+}
+function setCommFilter(f) {
+  S.commFilter = f;
+  document.querySelectorAll('.comm-fchip').forEach(c => c.classList.toggle('active', c.dataset.cstatus === f));
+  renderCommunity();
+}
+function renderCommunity() {
+  const host = document.getElementById('community-list');
+  if (!host) return;
+  const cf = document.getElementById('comm-filter-client');
+  if (cf && cf.options.length <= 1) {
+    cf.innerHTML = '<option value="all">All clients</option>' + S.clients.map(c => '<option value="' + c.id + '">' + escHtml(c.name) + '</option>').join('');
+  }
+  const fClient = (cf || {}).value || 'all';
+  const filt = S.commFilter || 'needs_reply';
+  const items = (S.community || []).filter(it => {
+    if (filt !== 'all' && (it.status || 'needs_reply') !== filt) return false;
+    if (fClient !== 'all' && String(it.client_id) !== String(fClient)) return false;
+    return true;
+  });
+  if (!items.length) {
+    const msg = filt === 'needs_reply' ? 'Inbox zero. No comments or DMs waiting for a reply.' : 'Nothing here.';
+    host.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px 20px;font-size:14px">' + msg + '<br><span style="font-size:12px">Tap <strong style="color:var(--accent)">+ Log Item</strong> when a comment or DM comes in.</span></div>';
+    return;
+  }
+  const groups = {};
+  items.forEach(it => { const k = it.client_id || 'none'; (groups[k] = groups[k] || []).push(it); });
+  let html = '';
+  Object.keys(groups).forEach(k => {
+    const cl = S.clients.find(c => String(c.id) === String(k));
+    const name = cl ? cl.name : (groups[k][0].client_name || 'Unassigned');
+    html += '<div class="comm-client-grp"><div class="comm-client-hd">' + escHtml(name) + '<span class="comm-count">' + groups[k].length + '</span></div>';
+    groups[k].forEach(it => { html += communityCard(it); });
+    html += '</div>';
+  });
+  host.innerHTML = html;
+}
+function communityCard(it) {
+  const type = (it.type || 'comment');
+  const plat = it.platform ? ' · ' + it.platform : '';
+  const cls = (it.status === 'flagged' || it.status === 'escalated') ? ' is-flagged' : (it.status === 'replied' ? ' is-replied' : '');
+  const high = it.priority === 'high' ? '<span class="comm-tag high">High</span>' : '';
+  const link = it.permalink ? '<a href="' + escHtml(it.permalink) + '" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Open ↗</a>' : '';
+  let actions;
+  if (it.status === 'replied') {
+    actions = '<span class="comm-resp-note">✓ Replied' + (it.replied_at ? ' · ' + commTimeAgo(it.replied_at) : '') + '</span>' + link;
+  } else {
+    actions = '<button class="btn btn-primary btn-sm" onclick="communityRespond(' + it.id + ')">Respond</button>'
+      + (it.status === 'flagged' ? '<span class="comm-tag high">Flagged for PM</span>' : '<button class="btn btn-ghost btn-sm" onclick="communityFlag(' + it.id + ')">Flag</button>')
+      + link
+      + '<button class="btn btn-ghost btn-sm" onclick="communityDelete(' + it.id + ')" style="margin-left:auto">Remove</button>';
+  }
+  return '<div class="comm-card' + cls + '">'
+    + '<div class="comm-card-top"><span class="comm-author">' + escHtml(it.author || 'Someone') + '</span>'
+    + '<span class="comm-tag">' + escHtml(type) + escHtml(plat) + '</span>' + high
+    + '<span class="comm-time">' + commTimeAgo(it.created_at) + '</span></div>'
+    + '<div class="comm-msg">' + escHtml(it.message || '') + '</div>'
+    + (it.response ? '<div class="comm-msg" style="color:var(--text2);border-left:2px solid var(--green);padding-left:8px;font-size:12px">↳ ' + escHtml(it.response) + '</div>' : '')
+    + '<div class="comm-actions">' + actions + '</div></div>';
+}
+async function communityRespond(id) {
+  const it = (S.community || []).find(x => x.id === id);
+  if (!it) return;
+  const resp = window.prompt('Your reply to ' + (it.author || 'this person') + ' (logged for the record):', it.response || '');
+  if (resp === null) return;
+  const now = new Date().toISOString();
+  try {
+    await sb.from('smm_community').update({ status: 'replied', response: resp, replied_at: now }).eq('id', id);
+    it.status = 'replied'; it.response = resp; it.replied_at = now;
+    toast('Marked replied', 'success');
+    updateCommunityCount(); renderCommunity();
+    if (S.currentPage === 'today') renderToday();
+  } catch (e) { toast('Failed: ' + (e.message || ''), 'error'); }
+}
+async function communityFlag(id) {
+  const it = (S.community || []).find(x => x.id === id);
+  if (!it) return;
+  try {
+    await sb.from('smm_community').update({ status: 'flagged' }).eq('id', id);
+    it.status = 'flagged';
+    toast('Flagged for PM', 'success');
+    updateCommunityCount(); renderCommunity();
+  } catch (e) { toast('Failed: ' + (e.message || ''), 'error'); }
+}
+async function communityDelete(id) {
+  if (!confirm('Remove this item from the inbox?')) return;
+  try {
+    await sb.from('smm_community').delete().eq('id', id);
+    S.community = (S.community || []).filter(x => x.id !== id);
+    updateCommunityCount(); renderCommunity();
+    if (S.currentPage === 'today') renderToday();
+  } catch (e) { toast('Failed: ' + (e.message || ''), 'error'); }
+}
+function openCommunityAdd() {
+  openModal('community-add');
+  const sel = document.getElementById('cm-client');
+  if (sel) sel.innerHTML = S.clients.map(c => '<option value="' + c.id + '">' + escHtml(c.name) + '</option>').join('');
+  ['cm-author','cm-message','cm-permalink'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+}
+async function submitCommunityAdd() {
+  const clientId = (document.getElementById('cm-client') || {}).value || null;
+  const message = (document.getElementById('cm-message') || {}).value.trim();
+  if (!message) { toast('Add the message text', 'error'); return; }
+  const cl = S.clients.find(c => String(c.id) === String(clientId));
+  const payload = {
+    client_id: clientId ? Number(clientId) : null,
+    client_name: cl ? cl.name : null,
+    type: (document.getElementById('cm-type') || {}).value || 'comment',
+    platform: (document.getElementById('cm-platform') || {}).value || 'instagram',
+    author: (document.getElementById('cm-author') || {}).value.trim() || null,
+    message: message,
+    permalink: (document.getElementById('cm-permalink') || {}).value.trim() || null,
+    priority: (document.getElementById('cm-priority') || {}).value || 'normal',
+    status: 'needs_reply',
+    created_by: S.currentUser || null
+  };
+  try {
+    const { data, error } = await sb.from('smm_community').insert([payload]).select();
+    if (error) throw error;
+    if (data && data[0]) S.community.unshift(data[0]);
+    closeModal('community-add');
+    toast('Added to inbox', 'success');
+    updateCommunityCount();
+    if (S.currentPage === 'community') renderCommunity();
+    if (S.currentPage === 'today') renderToday();
+  } catch (e) { toast('Failed: ' + (e.message || ''), 'error'); }
+}
 
 // ============ SUPABASE LOADERS ============
 // Returns the assigned_smm value for the logged-in user, or null if they see all
@@ -6647,7 +6944,7 @@ function updateSmmAgentsBadge(count) {
 
   function buildUI() {
     var style = document.createElement('style');
-    style.textContent = '#bb-smm-fab{position:fixed;bottom:90px;right:20px;width:52px;height:52px;border-radius:50%;background:#FF6B00;color:#fff;font-size:22px;border:none;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s}#bb-smm-fab:hover{transform:scale(1.1)}#bb-smm-panel{position:fixed;bottom:155px;right:20px;width:370px;max-height:500px;background:#0f0f1a;border:1px solid #FF6B00;border-radius:12px;z-index:9998;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.65);overflow:hidden}#bb-smm-panel.open{display:flex}#bb-smm-ph{background:#FF6B00;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}#bb-smm-ph-title{color:#fff;font-weight:700;font-size:13px;letter-spacing:.8px}#bb-smm-run-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap}#bb-smm-run-btn:hover{background:rgba(255,255,255,.35)}#bb-smm-log{flex:1;overflow-y:auto;padding:10px 10px 6px}.bsa-entry{padding:8px 10px;margin-bottom:6px;border-radius:8px;background:#0d0d1a;border-left:3px solid #334155}.bsa-entry.ok{border-left-color:#22c55e}.bsa-entry.alert{border-left-color:#ef4444;background:#180d0d}.bsa-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}.bsa-name{font-size:12px;font-weight:600;color:#e2e8f0;flex:1}.bsa-badge{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;text-transform:uppercase}.bsa-badge.ok{background:#14532d;color:#4ade80}.bsa-badge.alert{background:#7f1d1d;color:#fca5a5}.bsa-time{font-size:10px;color:#475569}.bsa-detail{font-size:11px;color:#94a3b8;line-height:1.45}#bb-smm-footer{padding:7px 12px;border-top:1px solid #1e293b;font-size:10px;color:#475569;text-align:center}';
+    style.textContent = '#bb-smm-fab{position:fixed;bottom:90px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--bg4);color:var(--text2);font-size:22px;border:1px solid var(--border2);cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s}#bb-smm-fab:hover{transform:scale(1.1)}#bb-smm-panel{position:fixed;bottom:155px;right:20px;width:370px;max-height:500px;background:#0f0f1a;border:1px solid var(--border2);border-radius:12px;z-index:9998;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.65);overflow:hidden}#bb-smm-panel.open{display:flex}#bb-smm-ph{background:var(--bg4);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}#bb-smm-ph-title{color:#fff;font-weight:700;font-size:13px;letter-spacing:.8px}#bb-smm-run-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap}#bb-smm-run-btn:hover{background:rgba(255,255,255,.35)}#bb-smm-log{flex:1;overflow-y:auto;padding:10px 10px 6px}.bsa-entry{padding:8px 10px;margin-bottom:6px;border-radius:8px;background:#0d0d1a;border-left:3px solid #334155}.bsa-entry.ok{border-left-color:#22c55e}.bsa-entry.alert{border-left-color:#ef4444;background:#180d0d}.bsa-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}.bsa-name{font-size:12px;font-weight:600;color:#e2e8f0;flex:1}.bsa-badge{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;text-transform:uppercase}.bsa-badge.ok{background:#14532d;color:#4ade80}.bsa-badge.alert{background:#7f1d1d;color:#fca5a5}.bsa-time{font-size:10px;color:#475569}.bsa-detail{font-size:11px;color:#94a3b8;line-height:1.45}#bb-smm-footer{padding:7px 12px;border-top:1px solid #1e293b;font-size:10px;color:#475569;text-align:center}';
     document.head.appendChild(style);
     var fab = document.createElement('button');
     fab.id = 'bb-smm-fab';
@@ -6699,7 +6996,7 @@ function updateSmmAgentsBadge(count) {
   }
 
   var bbsStyle = document.createElement('style');
-  bbsStyle.textContent = '#bbs-agent-alerts-section{margin:0 0 20px;padding:16px 18px;background:var(--surface-1,#0d0d1a);border:1px solid var(--border,#1e293b);border-radius:12px;}#bbs-alerts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}#bbs-alerts-title{font-size:13px;font-weight:700;color:#FF6B00;letter-spacing:.8px;text-transform:uppercase;}#bbs-alerts-run-btn{background:#FF6B00;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;}#bbs-alerts-run-btn:hover{background:#e05a00;}#bbs-alert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}.bbs-alert-card{padding:10px 12px;border-radius:8px;background:var(--surface-2,#111122);border:1px solid #1e293b;}.bbs-alert-card.alert{border-color:#ef4444;background:#180d0d;}.bbs-alert-card.ok{border-color:#22c55e;}.bbs-alert-card-name{font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:4px;}.bbs-alert-card-detail{font-size:10px;color:#94a3b8;line-height:1.4;margin-bottom:4px;}.bbs-alert-card-detail.alert{color:#fca5a5;}.bbs-alert-card-detail.ok{color:#4ade80;}.bbs-alert-card-time{font-size:9px;color:#475569;}';
+  bbsStyle.textContent = '#bbs-agent-alerts-section{margin:0 0 20px;padding:16px 18px;background:var(--surface-1,#0d0d1a);border:1px solid var(--border,#1e293b);border-radius:12px;}#bbs-alerts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}#bbs-alerts-title{font-size:13px;font-weight:700;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;}#bbs-alerts-run-btn{background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;}#bbs-alerts-run-btn:hover{background:#21b5c8;}#bbs-alert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}.bbs-alert-card{padding:10px 12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);}.bbs-alert-card.alert{border-color:var(--red);background:var(--r10);}.bbs-alert-card.ok{border-color:var(--green);}.bbs-alert-card-name{font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:4px;}.bbs-alert-card-detail{font-size:10px;color:#94a3b8;line-height:1.4;margin-bottom:4px;}.bbs-alert-card-detail.alert{color:#fca5a5;}.bbs-alert-card-detail.ok{color:#4ade80;}.bbs-alert-card-time{font-size:9px;color:#475569;}';
   document.head.appendChild(bbsStyle);
 window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runApproval: runApprovalAgent, runTasks: runTasksAgent, runShoots: runShootAgent, runMissedPost: runMissedPostAgent, getLog: function() { return agentLog; } };
 
