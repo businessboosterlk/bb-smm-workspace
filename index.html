@@ -2183,6 +2183,7 @@ tr:last-child td { border-bottom: none; }
       <option value="posted">Posted</option>
     </select></div>
     <div class="fg"><label class="fl">Scheduled Date</label><input class="fi" type="date" id="ca-date"></div>
+    <div class="fg"><label class="fl">📁 File / Drive link <span style="font-size:10px;opacity:.6">(paste so the next role can open it)</span></label><input class="fi" type="text" id="ca-asset" placeholder="https://drive.google.com/…"></div>
     <input type="hidden" id="ca-edit-id" value="">
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary" style="flex:1;justify-content:center" id="ca-submit-btn" onclick="submitContentAdd()">Add Card</button>
@@ -3735,7 +3736,7 @@ function buildContentCard(item) {
     <div class="kanban-card-body">
       <div class="kanban-card-client">${escHtml(clientName)}</div>
       <div class="kanban-card-title">${escHtml(item.title)}</div>
-      <div class="kanban-card-foot"><span>${dateStr}</span></div>
+      <div class="kanban-card-foot"><span>${dateStr}</span>${item.asset_link?`<a href="${escHtml(item.asset_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-size:11px">📁 Files</a>`:''}</div>
     </div>`;
   card.addEventListener('dragstart', e => { card.classList.add('dragging'); e.dataTransfer.setData('id', item.id); e.dataTransfer.setData('kind', 'content'); });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
@@ -5112,7 +5113,7 @@ async function deleteShootCard() {
 
 // ============ CONTENT CARD CRUD ============
 function resetContentModal() {
-  ['ca-title','ca-date'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  ['ca-title','ca-date','ca-asset'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   var e = function(eid) { return document.getElementById(eid); };
   if (e('ca-edit-id')) e('ca-edit-id').value = '';
   if (e('ca-submit-btn')) e('ca-submit-btn').textContent = 'Add Card';
@@ -5124,9 +5125,10 @@ async function submitContentAdd() {
   var ctype = (document.getElementById('ca-type') || {}).value || 'post';
   var status = (document.getElementById('ca-status') || {}).value || 'brief';
   var date = (document.getElementById('ca-date') || {}).value;
+  var asset = ((document.getElementById('ca-asset') || {}).value || '').trim();
   var editId = (document.getElementById('ca-edit-id') || {}).value;
   if (!title) { toast('Title is required', 'error'); return; }
-  var payload = { title: title, client_id: clientId || null, content_type: ctype, status: status, scheduled_date: date || null };
+  var payload = { title: title, client_id: clientId || null, content_type: ctype, status: status, scheduled_date: date || null, asset_link: asset || null };
   try {
     if (editId) {
       var r = await sb.from('smm_content').update(payload).eq('id', editId);
@@ -5153,6 +5155,24 @@ async function deleteContentCard() {
     S.content = S.content.filter(function(c) { return c.id != editId; });
     toast('Content card deleted', 'success'); closeModal('content-add'); resetContentModal(); renderContent(); updateBadges();
   } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
+}
+
+// Open a content card for editing (was referenced on card click but never defined → card click did nothing).
+function openContentCard(id) {
+  var item = (S.content || []).find(function(c) { return c.id == id; });
+  if (!item) return;
+  resetContentModal();
+  var set = function(eid, val) { var el = document.getElementById(eid); if (el) el.value = (val == null ? '' : val); };
+  set('ca-title', item.title);
+  set('ca-client', item.client_id || '');
+  set('ca-type', item.content_type || 'post');
+  set('ca-status', item.status || 'brief');
+  set('ca-date', item.scheduled_date ? item.scheduled_date.substring(0,10) : '');
+  set('ca-asset', item.asset_link || '');
+  set('ca-edit-id', item.id);
+  var sb2 = document.getElementById('ca-submit-btn'); if (sb2) sb2.textContent = 'Save Changes';
+  var db = document.getElementById('ca-delete-btn'); if (db) db.style.display = '';
+  openModal('content-add');
 }
 
 // ============ MY TASKS ============
