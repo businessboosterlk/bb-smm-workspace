@@ -6545,7 +6545,14 @@ function updateSmmAgentsBadge(count) {
 
   function sbFetch(table, params) {
     var url = SUPABASE_URL + '/rest/v1/' + table + (params ? '?' + params : '');
-    return fetch(url, { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } }).then(function(r) { return r.json(); });
+    // Network-resilient: a transient fetch failure or non-OK response resolves to
+    // null instead of throwing, so the background agents skip this run cleanly rather
+    // than surfacing an unhandled "Failed to fetch" rejection (logged bugs #13/37/38/39).
+    // Every agent guards each step with `if (!Array.isArray(x)) return;`, so null is a
+    // safe no-op for this cycle — no false alerts on a blip.
+    return fetch(url, { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .catch(function() { return null; });
   }
 
   function sendAlert(message, page) {
@@ -7480,7 +7487,8 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
   }
   window.bbSentinelCheck=checkHealth;
   window.addEventListener('error',function(e){if(!e)return;var msg=e.message||'script error';var detail=(e.filename?e.filename+':'+e.lineno+':'+e.colno:'')+(e.error&&e.error.stack?'\n'+e.error.stack:'');report({severity:'error',category:'js_error',message:msg.slice(0,200),detail:detail.slice(0,800)});});
-  window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;if(!r)return;var msg=(r.message||r.msg||(typeof r==='string'?r:JSON.stringify(r))||'unhandled promise rejection');var code=r.code?(' ['+r.code+']'):'';report({severity:'error',category:'promise_rejection',message:('unhandled: '+msg+code).slice(0,200),detail:(r.stack||'').slice(0,800)});});
+  var _SENT_NOISE=/failed to fetch|networkerror|network request failed|load failed|the internet connection appears to be offline|net::/i;
+  window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;if(!r)return;var msg=(r.message||r.msg||(typeof r==='string'?r:JSON.stringify(r))||'unhandled promise rejection');if(_SENT_NOISE.test(String(msg)))return;var code=r.code?(' ['+r.code+']'):'';report({severity:'error',category:'promise_rejection',message:('unhandled: '+msg+code).slice(0,200),detail:(r.stack||'').slice(0,800)});});
   var _tries=0;
   function waitAndRun(){_tries++;if(scu()){setTimeout(checkHealth,500);return;}if(_tries<40)setTimeout(waitAndRun,500);}
   if(document.readyState==='complete')waitAndRun();else window.addEventListener('load',waitAndRun);
