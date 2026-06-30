@@ -1987,6 +1987,8 @@ tr:last-child td { border-bottom: none; }
       <div class="cp-stat"><div class="cp-stat-lbl">Month</div><div class="cp-stat-val" id="cp-s-month">—</div><div class="cp-stat-sub">Client tenure</div></div>
     </div>
 
+    <div id="cp-readiness" style="margin-bottom:14px"></div>
+
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchCpTab('tasks')" id="cpt-tasks">Tasks</button>
       <button class="tab-btn" onclick="switchCpTab('shoots')" id="cpt-shoots">Shoots</button>
@@ -3596,6 +3598,9 @@ function openClientProfile(id) {
   const cpDone = document.getElementById('cp-s-done'); if (cpDone) cpDone.textContent = done;
   const cpOvd  = document.getElementById('cp-s-overdue'); if (cpOvd) cpOvd.textContent = overdue;
   const cpMon  = document.getElementById('cp-s-month'); if (cpMon) cpMon.textContent = c.month || '—';
+
+  // Content readiness strip (read-only, current month)
+  renderClientReadinessStrip(c);
 
   // Notes
   const notesKey = 'cp-notes-' + id;
@@ -5432,6 +5437,36 @@ function renderReadiness() {
 function setReadyPeriod(p) { S_readyPeriod = p; if (p === 'quarter') S_readyMonth = Math.floor((S_readyMonth - 1) / 3) * 3 + 1; renderReadiness(); }
 function setReadyMonth(m) { S_readyMonth = parseInt(m); renderReadiness(); }
 function setReadyYear(y) { S_readyYear = parseInt(y); renderReadiness(); }
+
+// Compact readiness strip for the client profile (current month, same model)
+function renderClientReadinessStrip(c) {
+  const host = document.getElementById('cp-readiness');
+  if (!host || !c) return;
+  // If production data hasn't loaded yet (e.g. profile opened during initial load), fetch then re-render.
+  if (typeof S.videoProd === 'undefined' || typeof S.graphicProd === 'undefined') {
+    host.innerHTML = '<div style="font-size:11px;color:var(--text3)">Loading readiness…</div>';
+    if (typeof loadProduction === 'function') loadProduction().then(function () {
+      if (S.currentClientId == c.id) renderClientReadinessStrip(c);
+    });
+    return;
+  }
+  // Use current month/year for the profile strip regardless of the pipeline tab's selection
+  const savedP = S_readyPeriod, savedM = S_readyMonth, savedY = S_readyYear;
+  S_readyPeriod = 'month'; S_readyMonth = (new Date()).getMonth() + 1; S_readyYear = (new Date()).getFullYear();
+  const r = clientReadiness(c);
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const periodLbl = MONTHS[S_readyMonth - 1] + ' ' + S_readyYear;
+  S_readyPeriod = savedP; S_readyMonth = savedM; S_readyYear = savedY; // restore pipeline tab state
+  host.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+    + '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3)">Content Readiness</span>'
+    + '<span style="font-size:10px;color:var(--text3)">' + periodLbl + '</span></div>'
+    + '<div class="rdy-table"><div class="rdy-row" style="grid-template-columns:repeat(3,1fr)">'
+    + '<div class="rdy-cell ' + r.video.cls + '" data-lbl="Video"><span class="rdy-ico">' + r.video.icon + '</span> Video ' + r.video.text + '</div>'
+    + '<div class="rdy-cell ' + r.post.cls + '" data-lbl="Post"><span class="rdy-ico">' + r.post.icon + '</span> Post ' + r.post.text + '</div>'
+    + '<div class="rdy-cell ' + r.story.cls + '" data-lbl="Story"><span class="rdy-ico">' + r.story.icon + '</span> Story ' + r.story.text + '</div>'
+    + '</div></div>';
+}
 function prodCard(p, kind) {
   const cl = S.clients.find(c => c.id == p.client_id);
   const clientName = cl ? cl.name : (p.client_name || '—');
