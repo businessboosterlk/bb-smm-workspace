@@ -538,6 +538,22 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .ta-empty { font-size: 13px; color: var(--text3); padding: 8px 0; }
 .ta-more { margin-top: 10px; font-size: 11px; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; text-align: left; font-family: inherit; }
 .ta-more:hover { text-decoration: underline; }
+/* Production summary strip on Today */
+.prod-strip { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.prod-pill { flex: 1; min-width: 220px; text-align: left; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 15px; font-size: 13px; color: var(--text2); cursor: pointer; font-family: inherit; transition: all .15s; }
+.prod-pill:hover { border-color: var(--accent20); color: var(--text); }
+.prod-pill b { color: var(--accent); font-size: 15px; }
+/* Responsive grids — multi-column on desktop, stacked on phones */
+.g2-stack { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.g3-stack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 640px) {
+  .g2-stack { grid-template-columns: 1fr; }
+  .g3-stack { grid-template-columns: 1fr; }
+  /* Agent alerts: swipeable single row on phones instead of a tall stack
+     (two-id specificity beats the runtime-injected #bbs-alert-grid rule) */
+  #bbs-agent-alerts-section #bbs-alert-grid { display: flex; overflow-x: auto; gap: 8px; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+  #bbs-agent-alerts-section .bbs-alert-card { flex: 0 0 80%; scroll-snap-align: start; }
+}
 .today-date { font-size: 11px; color: var(--text2); margin-top: 3px; }
 .today-stats { display: flex; gap: 24px; }
 .today-stat { text-align: right; }
@@ -1464,7 +1480,7 @@ tr:last-child td { border-bottom: none; }
       </div>
       <div class="today-stats">
         <div class="today-stat"><div class="today-stat-num" id="stat-posts">0</div><div class="today-stat-lbl">Posts Today</div></div>
-        <div class="today-stat"><div class="today-stat-num" id="stat-review">0</div><div class="today-stat-lbl">In Review</div></div>
+        <div class="today-stat"><div class="today-stat-num" id="stat-review">0</div><div class="today-stat-lbl">To Approve</div></div>
         <div class="today-stat"><div class="today-stat-num" id="stat-shoots">0</div><div class="today-stat-lbl">Shoots This Week</div></div>
       </div>
     </div>
@@ -1472,12 +1488,15 @@ tr:last-child td { border-bottom: none; }
     <!-- TODAY ACTION GRID — the 4 things that need you now -->
     <div class="today-actions" id="today-actions"></div>
 
+    <!-- PRODUCTION SUMMARY — video/graphic work for your clients -->
+    <div id="today-production"></div>
+
     <!-- TODAY'S FOCUS PANEL -->
     <div class="stitle" id="focus-title" style="display:none">Today's Focus</div>
     <div class="focus-panel" id="focus-panel"></div>
 
     <!-- TOP 3 PRIORITIES + CLIENTS NEEDING ATTENTION SIDE BY SIDE -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+    <div class="g2-stack" style="margin-bottom:16px">
       <div class="card" style="padding:16px 18px">
         <div class="stitle" style="margin-bottom:10px">Top 3 Priorities</div>
         <div id="top3-list"></div>
@@ -1677,7 +1696,7 @@ tr:last-child td { border-bottom: none; }
       <!-- UPCOMING SECTION -->
       <div class="card" style="padding:16px 20px;margin-top:16px">
         <div class="stitle" style="margin-bottom:14px">Upcoming — Next 30 Days</div>
-        <div id="cal-upcoming" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+        <div id="cal-upcoming" class="g3-stack"></div>
       </div>
     </div>
   </section>
@@ -2760,7 +2779,7 @@ async function init() {
   }
 
   // 3 — Load remaining data in parallel
-  await Promise.all([loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity()]);
+  await Promise.all([loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity(), loadContentPlans(), loadProduction()]);
 
   // 4 — Refresh all sidebar badges
   updateBadges();
@@ -2771,7 +2790,7 @@ async function init() {
   // 6 — Refresh data periodically (bandwidth-safe: skip when tab is hidden)
   setInterval(async () => {
     if (document.hidden) return;
-    await Promise.all([loadClients(), loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity()]);
+    await Promise.all([loadClients(), loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity(), loadContentPlans(), loadProduction()]);
     updateBadges();
     // Re-render current page to reflect fresh data (preserve scroll position)
     if (S.currentPage) {
@@ -2957,10 +2976,12 @@ function renderToday() {
   });
   updateEod();
 
-  // Stats
+  // Stats — read the real content calendar (content_plans), not the near-empty pipeline
   const todayStr = toDateStr(now);
-  const statPosts = document.getElementById('stat-posts'); if (statPosts) statPosts.textContent = S.content.filter(c => c.scheduled_date === todayStr).length;
-  const statReview = document.getElementById('stat-review'); if (statReview) statReview.textContent = S.content.filter(c => c.status === 'review').length;
+  const statPosts = document.getElementById('stat-posts');
+  if (statPosts) statPosts.textContent = (S.contentPlans || []).filter(p => (p.scheduled_date || '').substring(0,10) === todayStr && !p.posted).length;
+  const statReview = document.getElementById('stat-review');
+  if (statReview) statReview.textContent = (S.content || []).filter(c => c.status === 'send-client' || c.status === 'client-changes' || c.status === 'client-approval').length;
   const weekEnd = new Date(start); weekEnd.setDate(start.getDate() + 6);
   const statShoots = document.getElementById('stat-shoots'); if (statShoots) statShoots.textContent = S.shoots.filter(s => {
     if (!s.shoot_date) return false;
@@ -2978,6 +2999,22 @@ function renderToday() {
   renderIntel();
   // The 4 things that need you now
   renderTodayActions();
+  // Video/graphic production for your clients
+  renderTodayProduction();
+}
+
+function renderTodayProduction() {
+  const host = document.getElementById('today-production');
+  if (!host) return;
+  const vid = (S.videoProd || []).filter(p => !p.is_archived);
+  const gfx = (S.graphicProd || []).filter(p => !p.is_archived);
+  if (!vid.length && !gfx.length) { host.innerHTML = ''; return; }
+  const vidReview = vid.filter(p => p.current_stage === 'client_review' || p.current_stage === 'sent_to_client').length;
+  let html = '<div class="prod-strip">';
+  if (vid.length) html += '<button class="prod-pill" onclick="nav(\'content-pipeline\');setTimeout(function(){switchPipelineView(\'video\')},60)">🎬 <b>' + vid.length + '</b> videos in production' + (vidReview ? ' · <span style="color:var(--yellow)">' + vidReview + ' at client review</span>' : '') + ' →</button>';
+  if (gfx.length) html += '<button class="prod-pill" onclick="nav(\'content-pipeline\');setTimeout(function(){switchPipelineView(\'graphic\')},60)">🎨 <b>' + gfx.length + '</b> graphics in production →</button>';
+  html += '</div>';
+  host.innerHTML = html;
 }
 
 function renderTodayActions() {
@@ -2987,7 +3024,7 @@ function renderTodayActions() {
   const d10 = s => (s || '').substring(0, 10);
   const clientName = id => { const c = S.clients.find(x => x.id == id); return c ? c.name : ''; };
   const dueTasks    = (S.tasks || []).filter(t => !t.done && d10(t.due) === today);
-  const dueContent  = (S.content || []).filter(c => d10(c.scheduled_date) === today && c.status !== 'posted');
+  const dueContent  = (S.contentPlans || []).filter(p => d10(p.scheduled_date) === today && !p.posted);
   const pendApprove = (S.content || []).filter(c => c.status === 'send-client' || c.status === 'client-changes');
   const comm        = communityNeedsReply();
   function panel(title, count, rows, page) {
@@ -2996,12 +3033,12 @@ function renderTodayActions() {
     return '<div class="ta-card"><div class="ta-head"><span class="ta-title">' + title + '</span><span class="ta-count' + cz + '">' + count + '</span></div>' + body + '<button class="ta-more" onclick="nav(\'' + page + '\')">Open →</button></div>';
   }
   const taskRows = dueTasks.slice(0, 4).map(t => '<div class="ta-row" onclick="nav(\'my-tasks\')"><span class="ta-main">' + escHtml(t.title || 'Task') + '</span>' + (t.client_id ? '<span class="ta-sub">' + escHtml(clientName(t.client_id)) + '</span>' : '') + '</div>');
-  const contentRows = dueContent.slice(0, 4).map(c => '<div class="ta-row" onclick="nav(\'content-pipeline\')"><span class="ta-main">' + escHtml(c.title || 'Post') + '</span><span class="ta-sub">' + escHtml(clientName(c.client_id)) + '</span></div>');
+  const contentRows = dueContent.slice(0, 4).map(c => '<div class="ta-row" onclick="nav(\'calendar\')"><span class="ta-main">' + escHtml(c.title || 'Post') + '</span><span class="ta-sub">' + escHtml(clientName(c.client_id)) + '</span></div>');
   const apprRows = pendApprove.slice(0, 4).map(c => '<div class="ta-row" onclick="nav(\'approval-queue\')"><span class="ta-main">' + escHtml(c.title || 'Post') + '</span><span class="ta-sub">' + (c.status === 'client-changes' ? 'changes' : 'to send') + '</span></div>');
   const commRows = comm.slice(0, 4).map(it => '<div class="ta-row" onclick="nav(\'community\')"><span class="ta-main">' + escHtml(it.author || 'Someone') + ': ' + escHtml(it.message || '') + '</span><span class="ta-sub">' + escHtml(clientName(it.client_id) || it.client_name || '') + '</span></div>');
   host.innerHTML =
     panel('Due Today', dueTasks.length, taskRows, 'my-tasks') +
-    panel('Content Due', dueContent.length, contentRows, 'content-pipeline') +
+    panel('Content Due', dueContent.length, contentRows, 'calendar') +
     panel('Pending Approval', pendApprove.length, apprRows, 'approval-queue') +
     panel('Community to Reply', comm.length, commRows, 'community');
 }
@@ -6614,47 +6651,40 @@ function updateSmmAgentsBadge(count) {
   window.renderClientsNeedingAttention = function () {
     var el = document.getElementById('cna-list');
     if (!el) return;
-    var scope = currentSmmScope();
-    var today = toDateStr(new Date());
+    var now = new Date();
+    var curMonth = now.getMonth() + 1, curYear = now.getFullYear();
+    var today = toDateStr(now);
     var issues = [];
-    var nextWeekStr = toDateStr(new Date(Date.now() + 7 * 86400000));
 
     S.clients.forEach(function (client) {
-      var cc = S.content.filter(function (c) {
-        if (scope && c.assigned_smm !== scope) return false;
-        return c.client_id == client.id;
-      });
+      var plans = (S.contentPlans || []).filter(function (p) { return p.client_id == client.id && p.month === curMonth && p.year === curYear; });
+      var target = client.monthly_posts || 0;
+      var planned = plans.length;
+      var overdue = plans.filter(function (p) { return p.scheduled_date && p.scheduled_date.substring(0, 10) < today && !p.posted; });
+      var pendingApproval = (S.content || []).filter(function (c) { return c.client_id == client.id && (c.status === 'client-approval' || c.status === 'send-client'); });
 
-      var pendingApproval = cc.filter(function (c) { return c.status === 'client-approval' || c.status === 'send-client'; });
-      if (pendingApproval.length) {
-        issues.push({ client: client.name, reason: pendingApproval.length + ' item' + (pendingApproval.length > 1 ? 's' : '') + ' awaiting approval', color: '#FBBF24', icon: '⏳' });
-        return;
-      }
-
-      var overdue = cc.filter(function (c) { return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted'; });
       if (overdue.length) {
-        issues.push({ client: client.name, reason: overdue.length + ' overdue post' + (overdue.length > 1 ? 's' : ''), color: '#F87171', icon: '🔴' });
-        return;
-      }
-
-      var upcoming = cc.filter(function (c) { return c.scheduled_date && c.scheduled_date >= today && c.scheduled_date <= nextWeekStr; });
-      if (!upcoming.length && cc.length > 0) {
-        issues.push({ client: client.name, reason: 'No content scheduled this week', color: '#FB923C', icon: '📅' });
+        issues.push({ client: client.name, reason: overdue.length + ' overdue post' + (overdue.length > 1 ? 's' : ''), color: '#F87171', icon: '🔴', sort: overdue.length * -1 });
+      } else if (pendingApproval.length) {
+        issues.push({ client: client.name, reason: pendingApproval.length + ' awaiting approval', color: '#FBBF24', icon: '⏳', sort: 100 });
+      } else if (target > 0 && planned < target) {
+        issues.push({ client: client.name, reason: planned + '/' + target + ' posts planned this month', color: '#FB923C', icon: '📉', sort: 200 + (planned / target) });
       }
     });
+    issues.sort(function (a, b) { return a.sort - b.sort; });
 
     if (!issues.length) {
-      el.innerHTML = '<div style="text-align:center;padding:16px 0;font-size:11px;color:var(--text3)">✅ All clients look good</div>';
+      el.innerHTML = '<div style="text-align:center;padding:16px 0;font-size:11px;color:var(--text3)">✅ All clients on track this month</div>';
       return;
     }
-    el.innerHTML = issues.slice(0, 5).map(function (item) {
-      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">' +
-        '<span style="font-size:12px">' + item.icon + '</span>' +
+    el.innerHTML = issues.slice(0, 6).map(function (item) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="font-size:13px">' + item.icon + '</span>' +
         '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(item.client) + '</div>' +
-          '<div style="font-size:10px;color:' + item.color + '">' + item.reason + '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(item.client) + '</div>' +
+          '<div style="font-size:11px;color:' + item.color + '">' + item.reason + '</div>' +
         '</div></div>';
-    }).join('') + (issues.length > 5 ? '<div style="font-size:10px;color:var(--text3);text-align:center;padding-top:4px">+' + (issues.length - 5) + ' more</div>' : '');
+    }).join('') + (issues.length > 6 ? '<div style="font-size:11px;color:var(--text3);text-align:center;padding-top:6px">+' + (issues.length - 6) + ' more behind</div>' : '');
   };
 
   // ── AGENT 1: MORNING BRIEF BOT (renderIntel) ──────────────
