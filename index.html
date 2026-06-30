@@ -829,6 +829,23 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 .kc-advance { margin-top: 8px; width: 100%; background: var(--accent10); color: var(--accent); border: 1px solid var(--accent20); border-radius: var(--rs); padding: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: inherit; }
 .kc-advance:hover { background: var(--accent); color: var(--bg); }
 .kc-doneflag { margin-top: 8px; text-align: center; font-size: 11px; font-weight: 700; color: var(--green); background: var(--g10); border-radius: var(--rs); padding: 5px; }
+/* Content Pipeline view switcher + read-only production views */
+.cp-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.cp-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; font-family: inherit; transition: all .12s; }
+.cp-tab:hover { color: var(--text); border-color: var(--border2); }
+.cp-tab.active { background: var(--accent10); color: var(--accent); border-color: var(--accent20); }
+.prod-summary { font-size: 12px; color: var(--text2); margin-bottom: 14px; }
+.prod-group { margin-bottom: 18px; }
+.prod-group-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); }
+.prod-group-hd .prod-group-cnt { font-size: 10px; font-weight: 700; color: var(--text3); background: var(--bg3); border-radius: 20px; padding: 1px 8px; }
+.prod-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.prod-card { background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 11px 13px; }
+.prod-card-client { font-size: 11px; font-weight: 700; color: var(--accent); }
+.prod-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 3px; line-height: 1.35; }
+.prod-card-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 7px; font-size: 11px; color: var(--text3); }
+.prod-card-meta .prod-prio { color: var(--yellow); font-weight: 700; text-transform: uppercase; }
+.prod-card-meta .prod-od { color: var(--red); font-weight: 700; }
+.prod-empty { text-align: center; color: var(--text3); padding: 48px 20px; font-size: 14px; }
 .kanban-board {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
 }
@@ -1673,13 +1690,18 @@ tr:last-child td { border-bottom: none; }
         <button class="btn btn-ghost btn-sm" onclick="resetContentModal();openModal('content-add')" title="Full card with date, status and file link">Full card</button>
       </div>
     </div>
-    <div class="qa-bar-smm">
+    <div class="cp-tabs">
+      <button class="cp-tab active" data-view="content" onclick="switchPipelineView('content')">📋 My Content</button>
+      <button class="cp-tab" data-view="video" onclick="switchPipelineView('video')">🎬 Video</button>
+      <button class="cp-tab" data-view="graphic" onclick="switchPipelineView('graphic')">🎨 Graphic</button>
+    </div>
+    <div class="qa-bar-smm" id="cp-quickadd">
       <input type="text" id="cq-title" placeholder="+ Quick add content — type a title, press Enter" autocomplete="off" onkeydown="if(event.key==='Enter')quickAddContent()">
       <select class="fi" id="cq-client" style="width:150px"><option value="">Client (optional)</option></select>
       <select class="fi" id="cq-type" style="width:110px"><option value="post">Post</option><option value="video">Video</option><option value="story">Story</option></select>
       <button class="btn btn-primary" onclick="quickAddContent()">Add</button>
     </div>
-    <div class="kanban-toolbar">
+    <div class="kanban-toolbar" id="cp-toolbar">
       <button class="filter-chip active" data-filter-type="all">All Types</button>
       <button class="filter-chip" data-filter-type="post">Posts</button>
       <button class="filter-chip" data-filter-type="video">Videos</button>
@@ -1729,6 +1751,9 @@ tr:last-child td { border-bottom: none; }
         <div class="kanban-cards" data-drop="posted"></div>
       </div>
     </div>
+    <!-- Read-only production views (the SMM's clients only) -->
+    <div id="prod-video" class="prod-wrap" style="display:none"></div>
+    <div id="prod-graphic" class="prod-wrap" style="display:none"></div>
   </section>
 
 
@@ -2347,6 +2372,10 @@ const S = {
   content: [],
   community: [],
   commFilter: 'needs_reply',
+  pipeView: 'content',
+  videoProd: [],
+  graphicProd: [],
+  teamMap: {},
   shoots: [],
   events: [],
   ideas: [],
@@ -2813,7 +2842,7 @@ function nav(page, data) {
   if (page === 'today') renderToday();
   if (page === 'community') renderCommunity();
   if (page === 'calendar') { wireCalFilters(); populateCalFilterDropdowns(); switchCalView(S.calView || 'schedule'); }
-  if (page === 'content-pipeline') renderContent();
+  if (page === 'content-pipeline') { renderContent(); applyPipeView(); }
   if (page === 'shoot-pipeline') { renderShoots(); renderUpcomingShoots(); }
   if (page === 'approval-queue') renderApprovalQueue();
   if (page === 'clients') renderClients();
@@ -5190,6 +5219,89 @@ function advanceContent(id) {
   var ci = CONTENT_STAGES.indexOf(item.status);
   if (ci < 0 || ci >= CONTENT_STAGES.length - 1) return;
   updateContentStatus(id, CONTENT_STAGES[ci + 1]);
+}
+
+// ============ PRODUCTION VIEWS (read-only: Video + Graphic pipelines, my clients only) ============
+// Canonical stage order mirrors the Video System and Graphic System apps.
+const VIDEO_PROD_STAGES = [
+  {key:'video_shot',label:'Video Shot'},{key:'cutting_color_grading',label:'Cutting & Color'},
+  {key:'rendering',label:'Rendering'},{key:'editing',label:'Editing'},
+  {key:'video_head_review',label:'Video Head Review'},{key:'team_review',label:'Team Review'},
+  {key:'changes',label:'Changes'},{key:'coo_check',label:'COO Check'},
+  {key:'client_review',label:'Client Review'},{key:'client_changes',label:'Client Changes'},
+  {key:'add_to_drive',label:'Add to Drive'},{key:'sent_to_client',label:'Sent to Client'},{key:'posted',label:'Posted'}
+];
+const GRAPHIC_PROD_STAGES = [
+  {key:'brief',label:'Brief'},{key:'in_progress',label:'In Progress'},{key:'first_draft',label:'First Draft'},
+  {key:'revisions',label:'Revisions'},{key:'head_review',label:'Head Review'},
+  {key:'sent_to_client',label:'Sent to Client'},{key:'client_changes',label:'Client Changes'},{key:'approved',label:'Approved'}
+];
+// Load the video + graphic production rows for ONLY the SMM's clients (read-only).
+async function loadProduction() {
+  if (!sb) return;
+  const ids = (S.clients || []).map(c => c.id);
+  if (!ids.length) { S.videoProd = []; S.graphicProd = []; return; }
+  try {
+    const [v, g, tm] = await Promise.all([
+      sb.from('video_projects').select('*').in('client_id', ids),
+      sb.from('graphic_projects').select('*').in('client_id', ids),
+      sb.from('team_members').select('id,name')
+    ]);
+    S.videoProd = (v.data || []).filter(p => !p.is_archived);
+    S.graphicProd = (g.data || []).filter(p => !p.is_archived);
+    S.teamMap = {}; (tm.data || []).forEach(m => { S.teamMap[m.id] = m.name; });
+  } catch (e) { console.error(e); S.videoProd = S.videoProd || []; S.graphicProd = S.graphicProd || []; }
+}
+async function switchPipelineView(view) {
+  S.pipeView = view;
+  document.querySelectorAll('.cp-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  const isContent = view === 'content';
+  ['cp-quickadd','cp-toolbar','content-board'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = isContent ? '' : 'none'; });
+  const pv = document.getElementById('prod-video'), pg = document.getElementById('prod-graphic');
+  if (pv) pv.style.display = view === 'video' ? '' : 'none';
+  if (pg) pg.style.display = view === 'graphic' ? '' : 'none';
+  if (view === 'video' || view === 'graphic') {
+    const host = view === 'video' ? pv : pg;
+    if (host) host.innerHTML = '<div class="prod-empty">Loading…</div>';
+    await loadProduction();
+    if (view === 'video') renderVideoPipeline(); else renderGraphicPipeline();
+  }
+}
+function applyPipeView() { switchPipelineView(S.pipeView || 'content'); }
+function prodCard(p, kind) {
+  const cl = S.clients.find(c => c.id == p.client_id);
+  const clientName = cl ? cl.name : (p.client_name || '—');
+  const who = kind === 'video' ? ((S.teamMap || {})[p.assigned_editor_id] || '') : (p.assigned_designer || '');
+  const dl = p.deadline ? new Date(p.deadline) : null;
+  const overdue = dl && dl < new Date(new Date().toDateString());
+  const meta = [
+    who ? '<span>' + escHtml(who) + '</span>' : '',
+    (p.priority && p.priority !== 'normal') ? '<span class="prod-prio">' + escHtml(p.priority) + '</span>' : '',
+    p.deadline ? '<span class="' + (overdue ? 'prod-od' : '') + '">' + (overdue ? 'overdue · ' : '') + dl.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</span>' : ''
+  ].filter(Boolean).join('');
+  return '<div class="prod-card"><div class="prod-card-client">' + escHtml(clientName) + '</div><div class="prod-card-title">' + escHtml(p.title || 'Untitled') + '</div>' + (meta ? '<div class="prod-card-meta">' + meta + '</div>' : '') + '</div>';
+}
+function renderProdGrouped(host, items, stages, kind, emptyMsg) {
+  if (!host) return;
+  if (!items.length) { host.innerHTML = '<div class="prod-empty">' + emptyMsg + '</div>'; return; }
+  let html = '<div class="prod-summary">' + items.length + ' ' + (kind === 'video' ? 'video' : 'graphic') + ' project' + (items.length !== 1 ? 's' : '') + ' in production · your clients only</div>';
+  const known = stages.map(s => s.key);
+  stages.forEach(st => {
+    const inStage = items.filter(p => p.current_stage === st.key);
+    if (!inStage.length) return;
+    html += '<div class="prod-group"><div class="prod-group-hd"><span>' + escHtml(st.label) + '</span><span class="prod-group-cnt">' + inStage.length + '</span></div><div class="prod-cards">' + inStage.map(p => prodCard(p, kind)).join('') + '</div></div>';
+  });
+  const other = items.filter(p => known.indexOf(p.current_stage) === -1);
+  if (other.length) {
+    html += '<div class="prod-group"><div class="prod-group-hd"><span>Other</span><span class="prod-group-cnt">' + other.length + '</span></div><div class="prod-cards">' + other.map(p => prodCard(p, kind)).join('') + '</div></div>';
+  }
+  host.innerHTML = html;
+}
+function renderVideoPipeline() {
+  renderProdGrouped(document.getElementById('prod-video'), S.videoProd || [], VIDEO_PROD_STAGES, 'video', 'No video projects in production for your clients right now.');
+}
+function renderGraphicPipeline() {
+  renderProdGrouped(document.getElementById('prod-graphic'), S.graphicProd || [], GRAPHIC_PROD_STAGES, 'graphic', 'No graphic projects in production for your clients right now.');
 }
 async function deleteContentCard() {
   var editId = (document.getElementById('ca-edit-id') || {}).value;
