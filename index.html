@@ -5853,8 +5853,12 @@ async function wpLoadWeek(){
   const label = document.getElementById('wpWeekLabel');
   const fri = new Date(wpWeekStart); fri.setDate(fri.getDate()+4);
   if(label) label.textContent = wpFmtDate(wpWeekStart) + ' — ' + wpFmtDate(fri) + ', ' + wpWeekStart.getFullYear();
+  // Scope to the logged-in SMM: each SMM sees only their own weekly work.
+  // Masters with no smm scope (e.g. Thulaib) see everyone's.
+  const roleInfo = USER_ROLES[S.currentUser] || {};
+  const ownerFilter = roleInfo.smm ? ('&created_by=eq.' + encodeURIComponent(roleInfo.name)) : '';
   try {
-    const resp = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?week_start=eq.' + ws + '&order=created_at.asc', {
+    const resp = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?week_start=eq.' + ws + ownerFilter + '&order=created_at.asc', {
       headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY }
     });
     wpTasks = resp.ok ? await resp.json() : [];
