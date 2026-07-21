@@ -1419,28 +1419,54 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="14" x2="9" y2="18"/><line x1="15" y1="14" x2="15" y2="18"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
       Weekly Plan
     </button>
+    <button class="sb-item" data-page="diary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      My Diary
+    </button>
+
+    <div class="sb-grp">Production</div>
+    <button class="sb-item" data-page="shoot-pipeline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/></svg>
+      Shoot Pipeline
+    </button>
+    <button class="sb-item" data-page="video-hub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Video Pipeline
+    </button>
+    <button class="sb-item" data-page="graphic-hub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/></svg>
+      Graphic Pipeline
+    </button>
+
+    <div class="sb-grp">Accounts</div>
+    <button class="sb-item" data-page="clients">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clients
+      <span class="sb-badge" id="sb-clients-count">—</span>
+    </button>
+    <button class="sb-item" data-page="content-overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+      Content Plans
+    </button>
+    <button class="sb-item" data-page="ideas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+      Idea Hub
+      <span class="sb-badge" id="sb-ideas-count">0</span>
+    </button>
 
     <button class="sb-more-toggle" id="sb-more-toggle" onclick="toggleMore()" aria-expanded="false">
       <span>More</span>
       <svg class="sb-more-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
     <div class="sb-more" id="sb-more">
-      <button class="sb-item" data-page="diary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        My Diary
+      <button class="sb-item" data-page="agents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 2a3 3 0 0 1 3 3v3H9V5a3 3 0 0 1 3-3z"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
+        Agents
+        <span class="sb-badge" id="sb-agents-unread" style="display:none"></span>
       </button>
-      <button class="sb-item" data-page="shoot-pipeline">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/></svg>
-        Shoot Pipeline
-      </button>
-      <button class="sb-item" data-page="content-overview">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-        Content Plans
-      </button>
-      <button class="sb-item" data-page="clients">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Clients
-        <span class="sb-badge" id="sb-clients-count">—</span>
+      <button class="sb-item" data-page="missions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Missions
       </button>
       <button class="sb-item" data-page="escalation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -1450,31 +1476,9 @@ tr:last-child td { border-bottom: none; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         SMM SOPs
       </button>
-      <button class="sb-item" data-page="graphic-hub">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/></svg>
-        Graphic Hub
-      </button>
-      <button class="sb-item" data-page="video-hub">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-        Video Hub
-      </button>
-      <button class="sb-item" data-page="missions">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-        Missions
-      </button>
-      <button class="sb-item" data-page="ideas">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-        Idea Hub
-        <span class="sb-badge" id="sb-ideas-count">0</span>
-      </button>
       <button class="sb-item" onclick="window.open('https://businessboosterlk.github.io/bb-command-centre/inspo-hub.html','_blank')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-        Inspo Hub ↗
-      </button>
-      <button class="sb-item" data-page="agents">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 2a3 3 0 0 1 3 3v3H9V5a3 3 0 0 1 3-3z"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
-        ⚡ Agents
-        <span class="sb-badge" id="sb-agents-unread" style="display:none"></span>
+        Inspo Hub
       </button>
     </div>
   </nav>
@@ -1749,10 +1753,10 @@ tr:last-child td { border-bottom: none; }
       </div>
     </div>
     <div class="cp-tabs">
-      <button class="cp-tab active" data-view="content" onclick="switchPipelineView('content')">📋 My Content</button>
-      <button class="cp-tab" data-view="video" onclick="switchPipelineView('video')">🎬 Video</button>
-      <button class="cp-tab" data-view="graphic" onclick="switchPipelineView('graphic')">🎨 Graphic</button>
-      <button class="cp-tab" data-view="readiness" onclick="switchPipelineView('readiness')">📊 Readiness</button>
+      <button class="cp-tab active" data-view="content" onclick="switchPipelineView('content')">My Content</button>
+      <button class="cp-tab" data-view="video" onclick="switchPipelineView('video')">Video</button>
+      <button class="cp-tab" data-view="graphic" onclick="switchPipelineView('graphic')">Graphic</button>
+      <button class="cp-tab" data-view="readiness" onclick="switchPipelineView('readiness')">Readiness</button>
     </div>
     <div class="qa-bar-smm" id="cp-quickadd">
       <input type="text" id="cq-title" placeholder="+ Quick add content — type a title, press Enter" autocomplete="off" onkeydown="if(event.key==='Enter')quickAddContent()">
@@ -1841,7 +1845,7 @@ tr:last-child td { border-bottom: none; }
         <div style="font-size:11px;color:var(--text3);margin-left:2px">— sent to client, waiting</div>
       </div>
       <div id="aq-list-send" style="display:flex;flex-direction:column;gap:6px">
-        <div class="aq-empty">Nothing waiting — all clear ✓</div>
+        <div class="aq-empty">Nothing waiting — all clear </div>
       </div>
     </div>
 
@@ -1854,7 +1858,7 @@ tr:last-child td { border-bottom: none; }
         <div style="font-size:11px;color:var(--text3);margin-left:2px">— client feedback received, needs rework</div>
       </div>
       <div id="aq-list-changes" style="display:flex;flex-direction:column;gap:6px">
-        <div class="aq-empty">No changes requested ✓</div>
+        <div class="aq-empty">No changes requested </div>
       </div>
     </div>
 
@@ -2204,7 +2208,7 @@ tr:last-child td { border-bottom: none; }
 
   <section class="page" id="page-agents">
     <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div><div class="ph-title">⚡ Agents</div><div class="ph-sub">Live alerts from all BB agents</div></div>
+      <div><div class="ph-title">Agents</div><div class="ph-sub">Live alerts from all BB agents</div></div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-ghost btn-sm" id="agents-refresh-btn" onclick="loadSmmAgentAlerts()">↻ Refresh</button>
         <button class="btn btn-ghost btn-sm" onclick="markAllSmmAlertsRead()">Mark all read</button>
@@ -2226,7 +2230,7 @@ tr:last-child td { border-bottom: none; }
           <div id="agent-drawer-sub" style="font-size:11px;color:var(--text2);margin-top:2px;"></div>
         </div>
       </div>
-      <button onclick="closeAgentDrawer()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:14px;">✕</button>
+      <button onclick="closeAgentDrawer()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:14px;"></button>
     </div>
     <div id="agent-drawer-body" style="flex:1;overflow-y:auto;padding:16px 20px 24px;"></div>
   </div>
@@ -2283,7 +2287,7 @@ tr:last-child td { border-bottom: none; }
       <option value="posted">Posted</option>
     </select></div>
     <div class="fg"><label class="fl">Scheduled Date</label><input class="fi" type="date" id="ca-date"></div>
-    <div class="fg"><label class="fl">📁 File / Drive link <span style="font-size:10px;opacity:.6">(paste so the next role can open it)</span></label><input class="fi" type="text" id="ca-asset" placeholder="https://drive.google.com/…"></div>
+    <div class="fg"><label class="fl">File / Drive link <span style="font-size:10px;opacity:.6">(paste so the next role can open it)</span></label><input class="fi" type="text" id="ca-asset" placeholder="https://drive.google.com/…"></div>
     <input type="hidden" id="ca-edit-id" value="">
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary" style="flex:1;justify-content:center" id="ca-submit-btn" onclick="submitContentAdd()">Add Card</button>
@@ -2868,7 +2872,7 @@ const PAGE_TITLES = {
   'community':'Community'
 };
 // Pages tucked under the collapsible "More" group
-const MORE_PAGES = ['diary','shoot-pipeline','content-overview','clients','escalation','sops','graphic-hub','video-hub','missions','ideas','agents'];
+const MORE_PAGES = ['agents','missions','escalation','sops'];
 function toggleMore(force) {
   const more = document.getElementById('sb-more');
   const tog = document.getElementById('sb-more-toggle');
@@ -3055,8 +3059,8 @@ function renderTodayProduction() {
   if (!vid.length && !gfx.length) { host.innerHTML = ''; return; }
   const vidReview = vid.filter(p => p.current_stage === 'client_review' || p.current_stage === 'sent_to_client').length;
   let html = '<div class="prod-strip">';
-  if (vid.length) html += '<button class="prod-pill" onclick="nav(\'content-pipeline\');setTimeout(function(){switchPipelineView(\'video\')},60)">🎬 <b>' + vid.length + '</b> videos in production' + (vidReview ? ' · <span style="color:var(--yellow)">' + vidReview + ' at client review</span>' : '') + ' →</button>';
-  if (gfx.length) html += '<button class="prod-pill" onclick="nav(\'content-pipeline\');setTimeout(function(){switchPipelineView(\'graphic\')},60)">🎨 <b>' + gfx.length + '</b> graphics in production →</button>';
+  if (vid.length) html += '<button class="prod-pill" onclick="nav(\'content-pipeline\');setTimeout(function(){switchPipelineView(\'video\')},60)"><b>' + vid.length + '</b> videos in production' + (vidReview ? ' · <span style="color:var(--yellow)">' + vidReview + ' at client review</span>' : '') + ' →</button>';
+  if (gfx.length) html += '<button class="prod-pill" onclick="nav(\'content-pipeline\');setTimeout(function(){switchPipelineView(\'graphic\')},60)"><b>' + gfx.length + '</b> graphics in production →</button>';
   html += '</div>';
   host.innerHTML = html;
 }
@@ -3312,7 +3316,7 @@ function communityCard(it) {
   const link = it.permalink ? '<a href="' + escHtml(it.permalink) + '" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Open ↗</a>' : '';
   let actions;
   if (it.status === 'replied') {
-    actions = '<span class="comm-resp-note">✓ Replied' + (it.replied_at ? ' · ' + commTimeAgo(it.replied_at) : '') + '</span>' + link;
+    actions = '<span class="comm-resp-note">Replied' + (it.replied_at ? ' · ' + commTimeAgo(it.replied_at) : '') + '</span>' + link;
   } else {
     actions = '<button class="btn btn-primary btn-sm" onclick="communityRespond(' + it.id + ')">Respond</button>'
       + (it.status === 'flagged' ? '<span class="comm-tag high">Flagged for PM</span>' : '<button class="btn btn-ghost btn-sm" onclick="communityFlag(' + it.id + ')">Flag</button>')
@@ -3673,7 +3677,7 @@ function renderTaskRow(t) {
   const priorityClass = t.priority === 'HIGH' ? 'tag-high' : t.priority === 'MEDIUM' ? 'tag-medium' : 'tag-low';
 
   return `<div class="task-row">
-    <div class="task-check ${t.done ? 'done' : ''}" onclick="toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
+    <div class="task-check ${t.done ? 'done' : ''}" onclick="toggleTask(${t.id})">${t.done ? '' : ''}</div>
     <div class="task-body">
       <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}</div>
       <div class="task-tags">
@@ -3864,7 +3868,7 @@ function buildContentCard(item) {
     <div class="kanban-card-body">
       <div class="kanban-card-client">${escHtml(clientName)}</div>
       <div class="kanban-card-title">${escHtml(item.title)}</div>
-      <div class="kanban-card-foot"><span>${dateStr}</span>${item.asset_link?`<a href="${escHtml(item.asset_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-size:11px">📁 Files</a>`:''}</div>
+      <div class="kanban-card-foot"><span>${dateStr}</span>${item.asset_link?`<a href="${escHtml(item.asset_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-size:11px">Files</a>`:''}</div>
       ${(()=>{ const ci=CONTENT_STAGES.indexOf(item.status); return (ci>=0 && ci<CONTENT_STAGES.length-1)
         ? `<button class="kc-advance" onclick="event.stopPropagation();advanceContent('${item.id}')">${escHtml(CONTENT_STAGE_LABELS[CONTENT_STAGES[ci+1]]||'Next')} &#9654;</button>`
         : `<div class="kc-doneflag">&#10003; Posted</div>`; })()}
@@ -4398,7 +4402,7 @@ async function renderVideoHub() {
           html += '<div class="vh-card-client">' + escHtml(cl ? cl.name : '— No client —') + '</div>';
           html += '<span class="vh-card-type">' + escHtml((p.type || 'reel').toUpperCase()) + '</span>';
           html += '<div class="vh-card-meta"><div class="vh-card-meta-left"><div class="vh-priority-dot ' + prio + '"></div>';
-          if (dl) html += '<div class="vh-card-deadline' + (ov ? ' overdue' : '') + '">' + (ov ? '⚠ OVERDUE · ' : '') + dl + '</div>';
+          if (dl) html += '<div class="vh-card-deadline' + (ov ? ' overdue' : '') + '">' + (ov ? 'OVERDUE · ' : '') + dl + '</div>';
           html += '</div>';
           html += ed ? '<div class="vh-card-editor">' + escHtml(ed.name) + '</div>' : '<div class="vh-card-editor unassigned">Unassigned</div>';
           html += '</div>';
@@ -4613,8 +4617,8 @@ async function vhOpenDetail(pid) {
 
   // ── Footer ──
   html += '<div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:14px;margin-top:8px;">'
-    + '<button class="btn btn-primary btn-sm" onclick="closeModal(\'vh-detail\');openVHProjectForm(' + pid + ');">✏ Edit Project</button>'
-    + '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="vhArchiveProject(' + pid + ')">🗄 Archive</button>'
+    + '<button class="btn btn-primary btn-sm" onclick="closeModal(\'vh-detail\');openVHProjectForm(' + pid + ');">Edit Project</button>'
+    + '<button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="vhArchiveProject(' + pid + ')">Archive</button>'
     + '<button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="closeModal(\'vh-detail\')">Close</button>'
     + '</div>';
 
@@ -4662,13 +4666,13 @@ function vhTimeAgo(d) {
 }
 
 function vhLinkIcon(url) {
-  if (!url) return '🔗';
+  if (!url) return '';
   var u = url.toLowerCase();
-  if (u.indexOf('drive.google') > -1) return '📁';
-  if (u.indexOf('dropbox') > -1) return '📦';
-  if (u.indexOf('frame.io') > -1) return '🎬';
+  if (u.indexOf('drive.google') > -1) return '';
+  if (u.indexOf('dropbox') > -1) return '';
+  if (u.indexOf('frame.io') > -1) return 'FRAME';
   if (u.indexOf('youtube') > -1 || u.indexOf('youtu.be') > -1) return '▶';
-  return '🔗';
+  return '';
 }
 
 function vhLinkListHtml(links, kind, pid) {
@@ -4716,7 +4720,7 @@ var VH_PENDING_IMG = {};
 
 function vhImageAttachHtml(hostId) {
   return '<div class="vh-img-attach" data-vh-drop-host="' + hostId + '">'
-    + '<button type="button" class="vh-img-attach-btn" data-vh-attach-host="' + hostId + '">📎 Attach image</button>'
+    + '<button type="button" class="vh-img-attach-btn" data-vh-attach-host="' + hostId + '">Attach image</button>'
     + '<input type="file" accept="image/*" hidden id="' + hostId + '-file">'
     + '<span class="vh-img-hint">paste (Cmd/Ctrl+V) or drag & drop an image here</span>'
     + '</div>'
@@ -4935,7 +4939,7 @@ async function renderGraphicHub() {
           + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
           + (p.client_name?'<span style="font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase">'+escHtml(p.client_name)+'</span>':'')
           + '<span style="font-size:9px;background:rgba(168,85,247,0.12);color:var(--purple);padding:1px 6px;border-radius:3px;font-weight:600">'+escHtml((p.current_stage||'brief').replace(/_/g,' ').toUpperCase())+'</span>'
-          + (dl?'<span style="font-size:9px;color:'+(ov?'var(--red)':'var(--text3)')+';font-weight:600">'+(ov?'⚠ ':'')+dl+'</span>':'')
+          + (dl?'<span style="font-size:9px;color:'+(ov?'var(--red)':'var(--text3)')+';font-weight:600">'+(ov?'':'')+dl+'</span>':'')
           + '</div></div>'
           + (prio?'<span style="font-size:9px;font-weight:700;color:'+pc+';text-transform:uppercase">'+prio+'</span>':'')
           + '</div>';
@@ -5386,9 +5390,9 @@ function readyCount(rows, cid, months, year, predicate) {
 
 function readyStatus(done, target) {
   if (target == null || target <= 0) return { icon: '', cls: 'rdy-none', text: done + ' done' };
-  if (done >= target) return { icon: '✅', cls: 'rdy-ok', text: done + ' / ' + target };
-  if (done > 0)       return { icon: '⚠️', cls: 'rdy-warn', text: done + ' / ' + target };
-  return { icon: '🔴', cls: 'rdy-bad', text: '0 / ' + target };
+  if (done >= target) return { icon: '●', cls: 'rdy-ok', text: done + ' / ' + target };
+  if (done > 0)       return { icon: '●', cls: 'rdy-warn', text: done + ' / ' + target };
+  return { icon: '●', cls: 'rdy-bad', text: '0 / ' + target };
 }
 
 // Compute the 3 readiness statuses for one client over the active period. Reusable for client profile.
@@ -5424,7 +5428,7 @@ function renderReadiness() {
   let ctrl = '<div class="rdy-controls">'
     + '<div class="rdy-toggle"><button class="' + (S_readyPeriod === 'month' ? 'active' : '') + '" onclick="setReadyPeriod(\'month\')">Month</button><button class="' + (S_readyPeriod === 'quarter' ? 'active' : '') + '" onclick="setReadyPeriod(\'quarter\')">Quarter</button></div>'
     + periodSelect + yearSelect
-    + '<div class="rdy-legend"><span>✅ Ready</span><span>⚠️ Behind</span><span>🔴 Not started</span></div>'
+    + '<div class="rdy-legend"><span style="color:var(--green)">● Ready</span><span style="color:var(--yellow)">● Behind</span><span style="color:var(--red)">● Not started</span></div>'
     + '</div>';
 
   const clients = (S.clients || []).slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
@@ -6029,16 +6033,16 @@ function renderSmmAgentCards(alerts) {
   if (!el) return;
 
   if (!alerts || alerts.length === 0) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:32px 0;text-align:center;">✅ No alerts — everything running smoothly.</div>';
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:32px 0;text-align:center;">No alerts — everything running smoothly.</div>';
     return;
   }
 
   const AGENT_META = {
-    'finance':          { icon: '💰', name: 'Finance',          desc: 'Invoice & payment checks' },
-    'stuck-video':      { icon: '🎬', name: 'Stuck Video',      desc: 'Pipeline stalls detected' },
-    'client-health':    { icon: '❤️', name: 'Client Health',    desc: 'At-risk client signals' },
-    'content-overdue':  { icon: '📅', name: 'Content Overdue',  desc: 'Posts past scheduled date' },
-    'shoot-tracker':    { icon: '📸', name: 'Shoot Tracker',    desc: 'Upcoming shoot alerts' },
+    'finance':          { icon: '', name: 'Finance',          desc: 'Invoice & payment checks' },
+    'stuck-video':      { icon: '', name: 'Stuck Video',      desc: 'Pipeline stalls detected' },
+    'client-health':    { icon: '', name: 'Client Health',    desc: 'At-risk client signals' },
+    'content-overdue':  { icon: '', name: 'Content Overdue',  desc: 'Posts past scheduled date' },
+    'shoot-tracker':    { icon: '', name: 'Shoot Tracker',    desc: 'Upcoming shoot alerts' },
   };
 
   // Group alerts by agent
@@ -6053,7 +6057,7 @@ function renderSmmAgentCards(alerts) {
 
   const cards = Object.keys(grouped).map(function(agent) {
     const items = grouped[agent];
-    const meta = AGENT_META[agent] || { icon: '⚡', name: agent, desc: 'Agent monitor' };
+    const meta = AGENT_META[agent] || { icon: '', name: agent, desc: 'Agent monitor' };
     const unread = items.filter(function(a) { return !a.read_at; });
     const topSev = items.find(function(a) { return a.severity === 'critical'; })
                  ? 'critical'
@@ -6073,7 +6077,7 @@ function renderSmmAgentCards(alerts) {
           <div class="smm-agent-card-name">${meta.name}</div>
           <div class="smm-agent-card-desc">${meta.desc}</div>
         </div>
-        <div class="smm-agent-card-status" style="background:${col}22;color:${col};">${hasIssues ? unread.length + ' issue' + (unread.length !== 1 ? 's' : '') : '✓ Clear'}</div>
+        <div class="smm-agent-card-status" style="background:${col}22;color:${col};">${hasIssues ? unread.length + ' issue' + (unread.length !== 1 ? 's' : '') : 'Clear'}</div>
       </div>
       <div class="smm-agent-card-foot">
         <span style="color:var(--text3);font-size:10px;">${ts}</span>
@@ -6101,13 +6105,13 @@ function renderSmmAgentCards(alerts) {
 function openSmmAgentDrawer(agent) {
   const items = _smmAlertData.filter(function(a) { return a.agent === agent; });
   const AGENT_META = {
-    'finance':         { icon: '💰', name: 'Finance' },
-    'stuck-video':     { icon: '🎬', name: 'Stuck Video' },
-    'client-health':   { icon: '❤️', name: 'Client Health' },
-    'content-overdue': { icon: '📅', name: 'Content Overdue' },
-    'shoot-tracker':   { icon: '📸', name: 'Shoot Tracker' },
+    'finance':         { icon: '', name: 'Finance' },
+    'stuck-video':     { icon: '', name: 'Stuck Video' },
+    'client-health':   { icon: '', name: 'Client Health' },
+    'content-overdue': { icon: '', name: 'Content Overdue' },
+    'shoot-tracker':   { icon: '', name: 'Shoot Tracker' },
   };
-  const meta = AGENT_META[agent] || { icon: '⚡', name: agent };
+  const meta = AGENT_META[agent] || { icon: '', name: agent };
   const SEV_COLOR = { critical: '#f87171', warning: '#fbbf24', info: '#60a5fa' };
   const topSev = items.find(function(a) { return a.severity === 'critical'; }) ? 'critical'
                : items.find(function(a) { return a.severity === 'warning'; }) ? 'warning' : 'info';
@@ -6119,12 +6123,12 @@ function openSmmAgentDrawer(agent) {
   const accentEl = document.getElementById('agent-drawer-accent');
   if (!titleEl) return;
 
-  titleEl.textContent = meta.icon + ' ' + meta.name;
+  titleEl.textContent = meta.name;
   subEl.textContent = items.length + ' alert' + (items.length !== 1 ? 's' : '');
   if (accentEl) accentEl.style.background = col;
 
   if (!items.length) {
-    bodyEl.innerHTML = '<div style="color:var(--text2);text-align:center;padding:40px 0;">✅ No alerts for this agent.</div>';
+    bodyEl.innerHTML = '<div style="color:var(--text2);text-align:center;padding:40px 0;">No alerts for this agent.</div>';
   } else {
     bodyEl.innerHTML = items.map(function(a) {
       const d = new Date(a.created_at);
@@ -6325,7 +6329,7 @@ function updateSmmAgentsBadge(count) {
       <div class="bb-atitle">BB Assistant</div>
       <div class="bb-astatus">Error Monitor Active</div>
     </div>
-    <button id="bb-agent-close" onclick="bbAgentToggle()">✕</button>
+    <button id="bb-agent-close" onclick="bbAgentToggle()"></button>
   </div>
   <div id="bb-agent-messages"></div>
   <div id="bb-agent-suggestions">
@@ -6363,7 +6367,7 @@ function updateSmmAgentsBadge(count) {
   var KB = [
     {
       keys: ['hello','hi','hey','good morning','what can you do','help me','how are you','sup'],
-      ans: 'Hey Nirvana! 👋 I\'m your <strong>BB Assistant</strong>. I know this workspace inside out and I\'m watching for errors in the background 24/7.\n\nAsk me anything — or tap a quick chip below to get started!'
+      ans: 'Hey Nirvana! I\'m your <strong>BB Assistant</strong>. I know this workspace inside out and I\'m watching for errors in the background 24/7.\n\nAsk me anything — or tap a quick chip below to get started!'
     },
     {
       keys: ['what should i look into','what needs attention','what to do','what is urgent','urgent','overdue','priorities','what should i work on','whats next','what next','status update','what is going on','whats happening','action items','anything overdue'],
@@ -6375,59 +6379,59 @@ function updateSmmAgentsBadge(count) {
     },
     {
       keys: ['daily workflow','morning routine','what do i do today','start my day','checklist','daily routine','my day','workday'],
-      ans: '<strong>🗓 Daily Workflow — Nirvana\'s Checklist:</strong>\n\n<strong>🌅 Morning (Start here first)</strong>\n1. Open <strong>Dashboard</strong> → click "Set Top 3" → lock in your 3 priorities\n2. Open <strong>Calendar</strong> → check what\'s scheduled for today\n3. Open <strong>Approval Queue</strong> → anything from clients?\n4. Post any client-approved content on time ✅\n\n<strong>☀️ Midday (Keep things moving)</strong>\n5. Update <strong>Content</strong> cards — push stages forward\n6. Check <strong>Shoots</strong> — any scripts to write, dates to confirm?\n7. Reply to any client changes or feedback\n8. Capture new <strong>Ideas</strong> from client calls\n\n<strong>🌙 End of Day (Close out strong)</strong>\n9. Write a <strong>Diary</strong> entry — what did you do today?\n10. Check tomorrow\'s calendar — anything to prep tonight?\n11. Set tomorrow\'s Top 3 if you know them'
+      ans: '<strong>Daily Workflow — Nirvana\'s Checklist:</strong>\n\n<strong>Morning (Start here first)</strong>\n1. Open <strong>Dashboard</strong> → click "Set Top 3" → lock in your 3 priorities\n2. Open <strong>Calendar</strong> → check what\'s scheduled for today\n3. Open <strong>Approval Queue</strong> → anything from clients?\n4. Post any client-approved content on time \n\n<strong>Midday (Keep things moving)</strong>\n5. Update <strong>Content</strong> cards — push stages forward\n6. Check <strong>Shoots</strong> — any scripts to write, dates to confirm?\n7. Reply to any client changes or feedback\n8. Capture new <strong>Ideas</strong> from client calls\n\n<strong>End of Day (Close out strong)</strong>\n9. Write a <strong>Diary</strong> entry — what did you do today?\n10. Check tomorrow\'s calendar — anything to prep tonight?\n11. Set tomorrow\'s Top 3 if you know them'
     },
     {
       keys: ['content','content stages','content pipeline','content status','posting','pipeline','what are the stages','brief','editing'],
-      ans: '<strong>📋 Content Pipeline — 10 Stages:</strong>\n\n1. <strong>Brief</strong> — New card created, brief written\n2. <strong>Ideas</strong> — Brainstorming content ideas\n3. <strong>Editing</strong> — Content being created/edited\n4. <strong>Team Review</strong> — Internal check before client sees it\n5. <strong>Content Plan</strong> — Added to the monthly content plan\n6. <strong>Send Client</strong> — Sent to client for approval\n7. <strong>Client Changes</strong> — Client wants changes\n8. <strong>Client Approval</strong> — Client approved ✅\n9. <strong>Drive</strong> — Uploaded to Google Drive\n10. <strong>Posted</strong> — Live on social media 🎉\n\nTo update a card\'s stage: click the status badge on the content card and select the new stage.'
+      ans: '<strong>Content Pipeline — 10 Stages:</strong>\n\n1. <strong>Brief</strong> — New card created, brief written\n2. <strong>Ideas</strong> — Brainstorming content ideas\n3. <strong>Editing</strong> — Content being created/edited\n4. <strong>Team Review</strong> — Internal check before client sees it\n5. <strong>Content Plan</strong> — Added to the monthly content plan\n6. <strong>Send Client</strong> — Sent to client for approval\n7. <strong>Client Changes</strong> — Client wants changes\n8. <strong>Client Approval</strong> — Client approved \n9. <strong>Drive</strong> — Uploaded to Google Drive\n10. <strong>Posted</strong> — Live on social media \n\nTo update a card\'s stage: click the status badge on the content card and select the new stage.'
     },
     {
       keys: ['shoot','shoots','shoot stages','shoot pipeline','video shoot','filming','script','shoot date'],
-      ans: '<strong>🎬 Shoot Pipeline — 7 Stages:</strong>\n\n1. <strong>Videos Confirmed</strong> — Videos agreed with client\n2. <strong>Script Made</strong> — Script written by SMM\n3. <strong>Script Changes</strong> — Client wants script edits\n4. <strong>Final Script</strong> — Script approved by client ✅\n5. <strong>Get Shoot Date</strong> — Coordinating a date with client\n6. <strong>Shoot Date Set</strong> — Date locked in 📅\n7. <strong>Shot</strong> — Shoot completed! 🎬\n\nFilter by client on the Shoots page using the dropdown. Click any shoot card to update its stage.'
+      ans: '<strong>Shoot Pipeline — 7 Stages:</strong>\n\n1. <strong>Videos Confirmed</strong> — Videos agreed with client\n2. <strong>Script Made</strong> — Script written by SMM\n3. <strong>Script Changes</strong> — Client wants script edits\n4. <strong>Final Script</strong> — Script approved by client \n5. <strong>Get Shoot Date</strong> — Coordinating a date with client\n6. <strong>Shoot Date Set</strong> — Date locked in \n7. <strong>Shot</strong> — Shoot completed! \n\nFilter by client on the Shoots page using the dropdown. Click any shoot card to update its stage.'
     },
     {
       keys: ['pages','navigation','menu','sidebar','sections','navigate','where is'],
-      ans: '<strong>📱 The 9 Pages of SMM Workspace:</strong>\n\n• <strong>Dashboard</strong> — Daily overview, Top 3, upcoming items\n• <strong>Content</strong> — Your full content pipeline\n• <strong>Shoots</strong> — Video shoot tracker\n• <strong>Calendar</strong> — All scheduled content & shoots\n• <strong>Clients</strong> — Client list and details\n• <strong>Approval Queue</strong> — Content awaiting client approval\n• <strong>Ideas</strong> — Capture random content ideas\n• <strong>Diary</strong> — Daily work log\n• <strong>SOPs</strong> — Standard Operating Procedures\n\nClick any item in the <strong>left sidebar</strong> to navigate.'
+      ans: '<strong>The 9 Pages of SMM Workspace:</strong>\n\n• <strong>Dashboard</strong> — Daily overview, Top 3, upcoming items\n• <strong>Content</strong> — Your full content pipeline\n• <strong>Shoots</strong> — Video shoot tracker\n• <strong>Calendar</strong> — All scheduled content & shoots\n• <strong>Clients</strong> — Client list and details\n• <strong>Approval Queue</strong> — Content awaiting client approval\n• <strong>Ideas</strong> — Capture random content ideas\n• <strong>Diary</strong> — Daily work log\n• <strong>SOPs</strong> — Standard Operating Procedures\n\nClick any item in the <strong>left sidebar</strong> to navigate.'
     },
     {
       keys: ['calendar','schedule','events','upcoming','what\'s scheduled','today\'s content'],
-      ans: '<strong>📅 Calendar Page:</strong>\n\nShows all content posts and shoots by date.\n\n• Click any <strong>day</strong> to see what\'s scheduled for that day\n• Content items appear as cards on their scheduled date\n• Use the <strong>← →</strong> arrows to navigate months\n• Today is always highlighted in <strong style="color:#00E5FF">cyan</strong>\n• Click an event to open its details and make updates\n\nAlways check the calendar first thing in the morning so you know what needs to go out today!'
+      ans: '<strong>Calendar Page:</strong>\n\nShows all content posts and shoots by date.\n\n• Click any <strong>day</strong> to see what\'s scheduled for that day\n• Content items appear as cards on their scheduled date\n• Use the <strong>← →</strong> arrows to navigate months\n• Today is always highlighted in <strong style="color:#00E5FF">cyan</strong>\n• Click an event to open its details and make updates\n\nAlways check the calendar first thing in the morning so you know what needs to go out today!'
     },
     {
       keys: ['client','clients','my clients','assigned','client list','who are my clients'],
-      ans: '<strong>👥 Clients Page:</strong>\n\nShows all clients assigned to you (Nirvana sees only her assigned clients — Thulaib and Shiara see everyone).\n\n• Each card shows the client name, package, and assigned SMM\n• Click a client card to see their full details — content, shoots, tasks\n• Clients are linked to all your content cards, shoot cards, and diary entries\n\nIf you don\'t see a client who should be there, ask Thulaib — they may need to be assigned to you in the system.'
+      ans: '<strong>Clients Page:</strong>\n\nShows all clients assigned to you (Nirvana sees only her assigned clients — Thulaib and Shiara see everyone).\n\n• Each card shows the client name, package, and assigned SMM\n• Click a client card to see their full details — content, shoots, tasks\n• Clients are linked to all your content cards, shoot cards, and diary entries\n\nIf you don\'t see a client who should be there, ask Thulaib — they may need to be assigned to you in the system.'
     },
     {
       keys: ['approval','approval queue','approve','awaiting approval','client approved','send to client','client review'],
-      ans: '<strong>✅ Approval Queue:</strong>\n\nShows all content going through the client review process.\n\n• <strong>Awaiting tab</strong> — Content sent to client, waiting on their response\n• <strong>Approved tab</strong> — Content the client has approved, ready to go live\n\n<strong>The flow:</strong>\n1. Move content to "Send Client" → it appears in Awaiting\n2. Client approves → move to "Client Approval"\n3. Upload to Drive → move to "Drive"\n4. Post it → move to "Posted" ✅\n\nCheck this page every morning — client approvals can come in overnight.'
+      ans: '<strong>Approval Queue:</strong>\n\nShows all content going through the client review process.\n\n• <strong>Awaiting tab</strong> — Content sent to client, waiting on their response\n• <strong>Approved tab</strong> — Content the client has approved, ready to go live\n\n<strong>The flow:</strong>\n1. Move content to "Send Client" → it appears in Awaiting\n2. Client approves → move to "Client Approval"\n3. Upload to Drive → move to "Drive"\n4. Post it → move to "Posted" \n\nCheck this page every morning — client approvals can come in overnight.'
     },
     {
       keys: ['idea','ideas','capture idea','brainstorm','new idea','content idea'],
-      ans: '<strong>💡 Ideas Page:</strong>\n\nCapture any content idea the moment it hits you — during a client call, scrolling for inspiration, or from a brief.\n\n<strong>To add an idea:</strong>\n1. Click "Capture Idea"\n2. Type the idea (be specific — the more detail the better)\n3. Optionally link it to a client\n4. Save\n\nReview your Ideas regularly and turn the good ones into Content cards. Ideas expire if you don\'t act on them — aim to review weekly.'
+      ans: '<strong>Ideas Page:</strong>\n\nCapture any content idea the moment it hits you — during a client call, scrolling for inspiration, or from a brief.\n\n<strong>To add an idea:</strong>\n1. Click "Capture Idea"\n2. Type the idea (be specific — the more detail the better)\n3. Optionally link it to a client\n4. Save\n\nReview your Ideas regularly and turn the good ones into Content cards. Ideas expire if you don\'t act on them — aim to review weekly.'
     },
     {
       keys: ['diary','log','daily notes','journal','entry','add entry','what did i do'],
-      ans: '<strong>📓 Daily Diary:</strong>\n\nYour private work log. Write a short entry every day before you finish.\n\n<strong>To add an entry:</strong>\n1. Click "Add Entry"\n2. Select today\'s date\n3. Optionally link to a specific client\n4. Write what you did, what happened, any issues\n5. Save\n\n<strong>Why it matters:</strong> Your diary protects you. If a client ever says "you didn\'t post that" or "nothing happened last week" — your diary is your proof. Make it a habit, takes 2 minutes.'
+      ans: '<strong>Daily Diary:</strong>\n\nYour private work log. Write a short entry every day before you finish.\n\n<strong>To add an entry:</strong>\n1. Click "Add Entry"\n2. Select today\'s date\n3. Optionally link to a specific client\n4. Write what you did, what happened, any issues\n5. Save\n\n<strong>Why it matters:</strong> Your diary protects you. If a client ever says "you didn\'t post that" or "nothing happened last week" — your diary is your proof. Make it a habit, takes 2 minutes.'
     },
     {
       keys: ['top 3','priorities','priority','today\'s priorities','set priorities','what to focus'],
-      ans: '<strong>🎯 Top 3 Priorities:</strong>\n\nThe Top 3 widget is on your <strong>Dashboard</strong>.\n\n• Every morning: click "Set Top 3"\n• Enter your 3 most important tasks for the day\n• This keeps you from getting distracted by low-priority work\n\n<strong>Best practice:</strong> Set your Top 3 BEFORE checking messages or opening content cards. Decide what matters first, then work that list. Don\'t finish the day without completing at least 2 of your 3.'
+      ans: '<strong>Top 3 Priorities:</strong>\n\nThe Top 3 widget is on your <strong>Dashboard</strong>.\n\n• Every morning: click "Set Top 3"\n• Enter your 3 most important tasks for the day\n• This keeps you from getting distracted by low-priority work\n\n<strong>Best practice:</strong> Set your Top 3 BEFORE checking messages or opening content cards. Decide what matters first, then work that list. Don\'t finish the day without completing at least 2 of your 3.'
     },
     {
       keys: ['sop','standard operating','procedure','guide','process','rules','how do i','official process'],
-      ans: '<strong>📋 SOPs (Standard Operating Procedures):</strong>\n\nThe SOPs page contains the official BB playbook — step-by-step guides for every process.\n\nAlways check SOPs before doing something for the first time, or if you\'re unsure how BB wants it handled.\n\nSOPs cover: how to post content, how to handle client changes, shoot processes, approval workflows, and more.\n\nIf a process isn\'t in the SOPs and it should be, flag it to Thulaib.'
+      ans: '<strong>SOPs (Standard Operating Procedures):</strong>\n\nThe SOPs page contains the official BB playbook — step-by-step guides for every process.\n\nAlways check SOPs before doing something for the first time, or if you\'re unsure how BB wants it handled.\n\nSOPs cover: how to post content, how to handle client changes, shoot processes, approval workflows, and more.\n\nIf a process isn\'t in the SOPs and it should be, flag it to Thulaib.'
     },
     {
       keys: ['quick add','add new','new content','new shoot','new task','create','+ button'],
-      ans: '<strong>⚡ Quick Add:</strong>\n\nThe <strong>"+"</strong> button in the top navigation bar opens Quick Add.\n\nYou can instantly create:\n• A new <strong>Content</strong> card\n• A new <strong>Shoot</strong>\n• A new <strong>Idea</strong>\n\nFill in the title, pick the client, and hit Add. The item drops straight into the right section.\n\nUse Quick Add when you\'re on a call and need to capture something fast — don\'t let it slip.'
+      ans: '<strong>Quick Add:</strong>\n\nThe <strong>"+"</strong> button in the top navigation bar opens Quick Add.\n\nYou can instantly create:\n• A new <strong>Content</strong> card\n• A new <strong>Shoot</strong>\n• A new <strong>Idea</strong>\n\nFill in the title, pick the client, and hit Add. The item drops straight into the right section.\n\nUse Quick Add when you\'re on a call and need to capture something fast — don\'t let it slip.'
     },
     {
       keys: ['login','pin','password','sign in','credentials','forgot pin','my pin'],
-      ans: '<strong>🔐 Your Login Details:</strong>\n\n• <strong>Username:</strong> NIRVANA\n• <strong>PIN:</strong> 2222\n\nIf you get logged out just enter these on the login screen. Your data is always safe in Supabase — nothing is lost if you log out.'
+      ans: '<strong>Your Login Details:</strong>\n\n• <strong>Username:</strong> NIRVANA\n• <strong>PIN:</strong> 2222\n\nIf you get logged out just enter these on the login screen. Your data is always safe in Supabase — nothing is lost if you log out.'
     },
     {
       keys: ['not working','broken','error','bug','issue','problem','crash','loading','something wrong','not loading','cant see','not showing'],
-      ans: '<strong>🔧 Troubleshooting Checklist:</strong>\n\n1. <strong>Hard refresh first</strong> — Cmd+Shift+R (clears cache)\n2. <strong>Check your internet</strong> — Supabase needs a connection\n3. <strong>Read the red toast</strong> — The error message at the bottom tells you exactly what broke\n4. <strong>Check error log</strong> — Type "show errors" here to see what I\'ve caught\n5. <strong>Open console</strong> — Cmd+Option+J in Chrome, look for red errors\n\nIf it\'s still broken after all that, screenshot the console and send it to Thulaib with what you were doing when it broke.'
+      ans: '<strong>Troubleshooting Checklist:</strong>\n\n1. <strong>Hard refresh first</strong> — Cmd+Shift+R (clears cache)\n2. <strong>Check your internet</strong> — Supabase needs a connection\n3. <strong>Read the red toast</strong> — The error message at the bottom tells you exactly what broke\n4. <strong>Check error log</strong> — Type "show errors" here to see what I\'ve caught\n5. <strong>Open console</strong> — Cmd+Option+J in Chrome, look for red errors\n\nIf it\'s still broken after all that, screenshot the console and send it to Thulaib with what you were doing when it broke.'
     },
     {
       keys: ['show errors','error log','errors','what errors','detected errors','bugs found','system errors'],
@@ -6443,7 +6447,7 @@ function updateSmmAgentsBadge(count) {
     },
     {
       keys: ['dashboard','home','overview','stats','summary'],
-      ans: '<strong>📊 Dashboard:</strong>\n\nYour home base. Shows at a glance:\n\n• <strong>Top 3 Priorities</strong> — Set these every morning\n• <strong>Today\'s Content</strong> — What needs to go out today\n• <strong>Upcoming Shoots</strong> — Shoots in the next 7 days\n• <strong>Recent Activity</strong> — Latest updates across the system\n\nAlways start and end your day on the Dashboard. It\'s your command center.'
+      ans: '<strong>Dashboard:</strong>\n\nYour home base. Shows at a glance:\n\n• <strong>Top 3 Priorities</strong> — Set these every morning\n• <strong>Today\'s Content</strong> — What needs to go out today\n• <strong>Upcoming Shoots</strong> — Shoots in the next 7 days\n• <strong>Recent Activity</strong> — Latest updates across the system\n\nAlways start and end your day on the Dashboard. It\'s your command center.'
     }
   ];
 
@@ -6501,13 +6505,13 @@ function updateSmmAgentsBadge(count) {
       });
 
       if (!overdue.length && !todayPosts.length && !pendingApproval.length) {
-        return '✅ <strong>You\'re all caught up!</strong><br><br>No overdue content and nothing urgent right now. Use this time to work on upcoming briefs or ideas.';
+        return '<strong>You\'re all caught up!</strong><br><br>No overdue content and nothing urgent right now. Use this time to work on upcoming briefs or ideas.';
       }
 
-      var msg = '📋 <strong>Here\'s what needs your attention:</strong><br><br>';
+      var msg = '<strong>Here\'s what needs your attention:</strong><br><br>';
 
       if (overdue.length) {
-        msg += '🔴 <strong>' + overdue.length + ' overdue:</strong><br>';
+        msg += '<strong>' + overdue.length + ' overdue:</strong><br>';
         overdue.slice(0, 3).forEach(function(c) {
           msg += '&nbsp;&nbsp;• ' + (c.post_name || 'Untitled') + ' — ' + (c.client_name || 'Unknown') + ' (' + c.scheduled_date + ')<br>';
         });
@@ -6516,7 +6520,7 @@ function updateSmmAgentsBadge(count) {
       }
 
       if (todayPosts.length) {
-        msg += '📅 <strong>' + todayPosts.length + ' due today:</strong><br>';
+        msg += '<strong>' + todayPosts.length + ' due today:</strong><br>';
         todayPosts.slice(0, 3).forEach(function(c) {
           msg += '&nbsp;&nbsp;• ' + (c.post_name || 'Untitled') + ' — ' + (c.client_name || 'Unknown') + '<br>';
         });
@@ -6532,7 +6536,7 @@ function updateSmmAgentsBadge(count) {
       }
 
       if (upcomingShoots.length) {
-        msg += '🎬 <strong>' + upcomingShoots.length + ' shoot(s) this week</strong> — check Shoot Pipeline<br><br>';
+        msg += '<strong>' + upcomingShoots.length + ' shoot(s) this week</strong> — check Shoot Pipeline<br><br>';
       }
 
       msg += '<span style="color:#3D4260;font-size:11px">Open Dashboard for full details.</span>';
@@ -6548,7 +6552,7 @@ function updateSmmAgentsBadge(count) {
     if (entry.ans === '__LIVE_URGENT__') return buildLiveAnswer('urgent');
     if (entry.ans === '__CLEAR_ERRORS__') {
       _errLog = []; _errCount = 0; updateBadge();
-      return '<span style="color:#4ADE80">✅ Error log cleared. Watching fresh from now.</span>';
+      return '<span style="color:#4ADE80">Error log cleared. Watching fresh from now.</span>';
     }
     return entry.ans.replace(/\n/g, '<br>');
   }
@@ -6559,9 +6563,9 @@ function updateSmmAgentsBadge(count) {
 
   function buildErrorReport() {
     if (_errLog.length === 0) {
-      return '<span style="color:#4ADE80">✅ No errors detected. System is running clean!</span>';
+      return '<span style="color:#4ADE80">No errors detected. System is running clean!</span>';
     }
-    var html = '<strong style="color:#F87171">⚠️ ' + _errLog.length + ' error(s) detected:</strong><br><br>';
+    var html = '<strong style="color:#F87171">' + _errLog.length + ' error(s) detected:</strong><br><br>';
     var show = _errLog.slice(-8);
     for (var i = 0; i < show.length; i++) {
       var e = show[i];
@@ -6586,7 +6590,7 @@ function updateSmmAgentsBadge(count) {
       if (el) {
         var d = document.createElement('div');
         d.className = 'bb-err-msg';
-        d.innerHTML = '⚠️ <strong>' + type + ':</strong> ' + _esc(msg);
+        d.innerHTML = '<strong>' + type + ':</strong> ' + _esc(msg);
         el.appendChild(d);
         el.scrollTop = el.scrollHeight;
       }
@@ -6659,10 +6663,10 @@ function updateSmmAgentsBadge(count) {
       // Welcome message on first open
       var msgs = document.getElementById('bb-agent-messages');
       if (msgs && msgs.children.length === 0) {
-        _addMsg('Hey Nirvana! 👋 I\'m your <strong>BB Assistant</strong>.<br><br>I know this workspace inside out and I\'m silently watching for bugs in the background. Ask me anything — or tap a chip below!', 'bot');
+        _addMsg('Hey Nirvana! I\'m your <strong>BB Assistant</strong>.<br><br>I know this workspace inside out and I\'m silently watching for bugs in the background. Ask me anything — or tap a chip below!', 'bot');
         if (_errCount > 0) {
           setTimeout(function() {
-            _addMsg('⚠️ I\'ve caught <strong style="color:#F87171">' + _errCount + ' error(s)</strong> since you loaded the app. Tap <strong style="color:#00E5FF">Show Errors</strong> to see them.', 'bot');
+            _addMsg('I\'ve caught <strong style="color:#F87171">' + _errCount + ' error(s)</strong> since you loaded the app. Tap <strong style="color:#00E5FF">Show Errors</strong> to see them.', 'bot');
           }, 600);
         }
       }
@@ -6774,11 +6778,11 @@ function updateSmmAgentsBadge(count) {
     var items = [];
     overdue.forEach(function (c) {
       var cl = c.client_id ? S.clients.find(function (x) { return x.id == c.client_id; }) : null;
-      items.push({ icon: '🔴', label: (cl ? escHtml(cl.name) + ' — ' : '') + escHtml(c.title), sub: 'Overdue · was scheduled ' + c.scheduled_date, color: '#F87171' });
+      items.push({ icon: '', label: (cl ? escHtml(cl.name) + ' — ' : '') + escHtml(c.title), sub: 'Overdue · was scheduled ' + c.scheduled_date, color: '#F87171' });
     });
     todayContent.forEach(function (c) {
       var cl = c.client_id ? S.clients.find(function (x) { return x.id == c.client_id; }) : null;
-      items.push({ icon: '📋', label: (cl ? escHtml(cl.name) + ' — ' : '') + escHtml(c.title), sub: 'Post today · ' + (c.status || 'brief'), color: '#00E5FF' });
+      items.push({ icon: '', label: (cl ? escHtml(cl.name) + ' — ' : '') + escHtml(c.title), sub: 'Post today · ' + (c.status || 'brief'), color: '#00E5FF' });
     });
     pendingApproval.slice(0, 3).forEach(function (c) {
       var cl = c.client_id ? S.clients.find(function (x) { return x.id == c.client_id; }) : null;
@@ -6841,17 +6845,17 @@ function updateSmmAgentsBadge(count) {
       var pendingApproval = (S.content || []).filter(function (c) { return c.client_id == client.id && (c.status === 'client-approval' || c.status === 'send-client'); });
 
       if (overdue.length) {
-        issues.push({ client: client.name, reason: overdue.length + ' overdue post' + (overdue.length > 1 ? 's' : ''), color: '#F87171', icon: '🔴', sort: overdue.length * -1 });
+        issues.push({ client: client.name, reason: overdue.length + ' overdue post' + (overdue.length > 1 ? 's' : ''), color: '#F87171', icon: '', sort: overdue.length * -1 });
       } else if (pendingApproval.length) {
         issues.push({ client: client.name, reason: pendingApproval.length + ' awaiting approval', color: '#FBBF24', icon: '⏳', sort: 100 });
       } else if (target > 0 && planned < target) {
-        issues.push({ client: client.name, reason: planned + '/' + target + ' posts planned this month', color: '#FB923C', icon: '📉', sort: 200 + (planned / target) });
+        issues.push({ client: client.name, reason: planned + '/' + target + ' posts planned this month', color: '#FB923C', icon: '', sort: 200 + (planned / target) });
       }
     });
     issues.sort(function (a, b) { return a.sort - b.sort; });
 
     if (!issues.length) {
-      el.innerHTML = '<div style="text-align:center;padding:16px 0;font-size:11px;color:var(--text3)">✅ All clients on track this month</div>';
+      el.innerHTML = '<div style="text-align:center;padding:16px 0;font-size:11px;color:var(--text3)">All clients on track this month</div>';
       return;
     }
     el.innerHTML = issues.slice(0, 6).map(function (item) {
@@ -6897,7 +6901,7 @@ function updateSmmAgentsBadge(count) {
 
     if (!todayPosts.length && !overdue.length && !pendingApproval.length && !upcomingShoots.length) {
       el.innerHTML = '<div style="background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(0,229,255,0.02));border:1px solid rgba(0,229,255,0.15);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px">' +
-        '<span style="font-size:22px">✅</span>' +
+        '<span style="font-size:22px"></span>' +
         '<div><div style="font-size:13px;font-weight:700;color:#fff">You\'re all caught up</div>' +
         '<div style="font-size:11px;color:var(--text3);margin-top:3px">No urgent items · ' + now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + '</div></div>' +
       '</div>';
@@ -6906,12 +6910,12 @@ function updateSmmAgentsBadge(count) {
 
     var briefLines = [];
     if (overdue.length) {
-      briefLines.push({ icon: '🔴', color: '#F87171',
+      briefLines.push({ icon: '', color: '#F87171',
         text: '<strong style="color:#F87171">' + overdue.length + ' overdue item' + (overdue.length > 1 ? 's' : '') + ' — needs urgent action</strong>',
         detail: overdue.slice(0, 2).map(function (c) { return clientName(c.client_id) + ' — ' + c.title; }).join(' · ') + (overdue.length > 2 ? ' +' + (overdue.length - 2) + ' more' : '') });
     }
     if (todayPosts.length) {
-      briefLines.push({ icon: '📋', color: '#00E5FF',
+      briefLines.push({ icon: '', color: '#00E5FF',
         text: '<strong style="color:#00E5FF">' + todayPosts.length + ' post' + (todayPosts.length > 1 ? 's' : '') + ' to go live today</strong>',
         detail: todayPosts.slice(0, 3).map(function (c) { return clientName(c.client_id) + ' — ' + c.title; }).join(' · ') + (todayPosts.length > 3 ? ' +' + (todayPosts.length - 3) + ' more' : '') });
     }
@@ -6921,13 +6925,13 @@ function updateSmmAgentsBadge(count) {
         detail: pendingApproval.slice(0, 2).map(function (c) { return clientName(c.client_id) + ' — ' + c.title; }).join(' · ') });
     }
     if (upcomingShoots.length) {
-      briefLines.push({ icon: '🎬', color: '#A78BFA',
+      briefLines.push({ icon: '', color: '#A78BFA',
         text: '<strong style="color:#A78BFA">' + upcomingShoots.length + ' shoot' + (upcomingShoots.length > 1 ? 's' : '') + ' this week</strong>',
         detail: upcomingShoots.slice(0, 2).map(function (s) { return clientName(s.client_id) + (s.shoot_date ? ' · ' + s.shoot_date : ''); }).join(' · ') });
     }
 
     var headerColor = overdue.length ? '#F87171' : (pendingApproval.length ? '#FBBF24' : '#00E5FF');
-    var headerText = overdue.length ? '⚡ Action Needed Today' : '☀️ Morning Brief';
+    var headerText = overdue.length ? 'Action Needed Today' : 'Morning Brief';
 
     el.innerHTML =
       '<div style="background:linear-gradient(135deg,rgba(0,229,255,0.07),rgba(0,229,255,0.02));border:1px solid rgba(0,229,255,0.15);border-radius:14px;overflow:hidden">' +
@@ -7002,7 +7006,7 @@ function updateSmmAgentsBadge(count) {
     if (pipelineEl) {
       var normalCount = S.content.filter(function (c) { return c.status && c.status !== 'posted'; }).length;
       if (_overdueCount > 0) {
-        pipelineEl.textContent = _overdueCount + ' ⚠';
+        pipelineEl.textContent = _overdueCount + ' ';
         pipelineEl.style.cssText = 'background:#F87171!important;color:#fff!important;font-size:9px';
       } else {
         pipelineEl.textContent = normalCount;
@@ -7023,7 +7027,7 @@ function updateSmmAgentsBadge(count) {
           shootBtn.appendChild(b);
           existingBadge = b;
         }
-        existingBadge.textContent = _shootIssueCount + ' ⚠';
+        existingBadge.textContent = _shootIssueCount + ' ';
       } else if (existingBadge) {
         existingBadge.remove();
       }
@@ -7059,8 +7063,8 @@ function updateSmmAgentsBadge(count) {
     overlay.innerHTML =
       '<div style="background:#111318;border:1px solid rgba(0,229,255,0.2);border-radius:18px;width:100%;max-width:620px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">' +
         '<div style="padding:18px 22px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">' +
-          '<div style="font-size:14px;font-weight:800;color:#fff">📊 Weekly Report</div>' +
-          '<button onclick="document.getElementById(\'bb-weekly-report-modal\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text3);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit;line-height:1">✕</button>' +
+          '<div style="font-size:14px;font-weight:800;color:#fff">Weekly Report</div>' +
+          '<button onclick="document.getElementById(\'bb-weekly-report-modal\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text3);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit;line-height:1"></button>' +
         '</div>' +
         '<div style="padding:18px 22px;overflow-y:auto">' + contentHtml + '</div>' +
       '</div>';
@@ -7139,11 +7143,11 @@ function updateSmmAgentsBadge(count) {
       '</div>';
 
     if (postedThisWeek.length) {
-      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#00E5FF;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">✅ Posted This Week (' + postedThisWeek.length + ')</div>' +
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#00E5FF;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">Posted This Week (' + postedThisWeek.length + ')</div>' +
         postedThisWeek.map(function (c) { return rowHtml(c, '#00E5FF', clientName(c.client_id)); }).join('') + '</div>';
     }
     if (overdueAll.length) {
-      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#F87171;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">🔴 Overdue — Action Needed (' + overdueAll.length + ')</div>' +
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#F87171;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">Overdue — Action Needed (' + overdueAll.length + ')</div>' +
         overdueAll.map(function (c) { return rowHtml(c, '#F87171', clientName(c.client_id) + ' · was ' + c.scheduled_date); }).join('') + '</div>';
     }
     if (awaitingApproval.length) {
@@ -7151,11 +7155,11 @@ function updateSmmAgentsBadge(count) {
         awaitingApproval.map(function (c) { return rowHtml(c, '#FBBF24', clientName(c.client_id)); }).join('') + '</div>';
     }
     if (pendingThisWeek.length) {
-      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#FB923C;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">📋 Still Pending This Week (' + pendingThisWeek.length + ')</div>' +
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#FB923C;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">Still Pending This Week (' + pendingThisWeek.length + ')</div>' +
         pendingThisWeek.map(function (c) { return rowHtml(c, '#FB923C', clientName(c.client_id) + ' · ' + (c.status || '—')); }).join('') + '</div>';
     }
     if (upcomingShoots.length) {
-      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#A78BFA;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">🎬 Upcoming Shoots (next 14 days)</div>' +
+      html += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#A78BFA;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">Upcoming Shoots (next 14 days)</div>' +
         upcomingShoots.map(shootRowHtml).join('') + '</div>';
     }
     if (!postedThisWeek.length && !overdueAll.length && !awaitingApproval.length && !upcomingShoots.length) {
@@ -7175,7 +7179,7 @@ function updateSmmAgentsBadge(count) {
     if (!right) { right = document.createElement('div'); right.className = 'ph-right'; ph.appendChild(right); }
     var btn = document.createElement('button');
     btn.id = 'bb-weekly-report-btn';
-    btn.innerHTML = '📊 Weekly Report';
+    btn.innerHTML = 'Weekly Report';
     btn.style.cssText = 'background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:#00E5FF;font-size:11px;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer;font-family:inherit;letter-spacing:0.03em;white-space:nowrap;transition:background 0.2s';
     btn.onmouseover = function () { btn.style.background = 'rgba(0,229,255,0.16)'; };
     btn.onmouseout = function () { btn.style.background = 'rgba(0,229,255,0.08)'; };
@@ -7266,9 +7270,9 @@ function updateSmmAgentsBadge(count) {
         var gaps = clients.filter(function(c) { return covered.indexOf(c.id) === -1; });
         if (gaps.length > 0) {
           var names = gaps.map(function(c) { return c.name; }).join(', ');
-          logEntry('📋 Content Gap', 'ALERT', gaps.length + ' client(s) no posts in 3 days: ' + names);
-          if (isAlertTime() && Date.now() - a1Alert > 3600000) { sendAlert('📋 Content Gap: ' + names + ' have NO posts in next 3 days.', 'Content Plans'); a1Alert = Date.now(); }
-        } else { logEntry('📋 Content Gap', 'OK', 'All ' + clients.length + ' clients covered'); }
+          logEntry('Content Gap', 'ALERT', gaps.length + ' client(s) no posts in 3 days: ' + names);
+          if (isAlertTime() && Date.now() - a1Alert > 3600000) { sendAlert('Content Gap: ' + names + ' have NO posts in next 3 days.', 'Content Plans'); a1Alert = Date.now(); }
+        } else { logEntry('Content Gap', 'OK', 'All ' + clients.length + ' clients covered'); }
       });
     });
   }
@@ -7280,9 +7284,9 @@ function updateSmmAgentsBadge(count) {
       if (!Array.isArray(stuck)) return;
       if (stuck.length > 0) {
         var titles = stuck.slice(0,3).map(function(s){ return '"' + s.title + '" [' + s.status + ']'; }).join(', ');
-        logEntry('⏰ Approval Stuck', 'ALERT', stuck.length + ' item(s) stuck 24h+: ' + titles);
-        if (isAlertTime() && Date.now() - a2Alert > 3600000) { sendAlert('⏰ Approval Bottleneck: ' + stuck.length + ' items stuck 24h+ — ' + titles, 'Content Pipeline'); a2Alert = Date.now(); }
-      } else { logEntry('⏰ Approval Stuck', 'OK', 'No content stuck in pipeline'); }
+        logEntry('Approval Stuck', 'ALERT', stuck.length + ' item(s) stuck 24h+: ' + titles);
+        if (isAlertTime() && Date.now() - a2Alert > 3600000) { sendAlert('Approval Bottleneck: ' + stuck.length + ' items stuck 24h+ — ' + titles, 'Content Pipeline'); a2Alert = Date.now(); }
+      } else { logEntry('Approval Stuck', 'OK', 'No content stuck in pipeline'); }
     });
   }
 
@@ -7293,9 +7297,9 @@ function updateSmmAgentsBadge(count) {
       if (!Array.isArray(overdue)) return;
       if (overdue.length > 5) {
         var sample = overdue.slice(0,3).map(function(t){ return '"' + t.title + '"'; }).join(', ');
-        logEntry('📥 Overdue Tasks', 'ALERT', overdue.length + ' overdue. E.g.: ' + sample);
-        if (isAlertTime() && Date.now() - a3Alert > 3600000) { sendAlert('📥 Task Overload: ' + overdue.length + ' tasks overdue! Check: ' + sample, 'My Tasks'); a3Alert = Date.now(); }
-      } else { logEntry('📥 Overdue Tasks', 'OK', overdue.length + ' overdue (under threshold)'); }
+        logEntry('Overdue Tasks', 'ALERT', overdue.length + ' overdue. E.g.: ' + sample);
+        if (isAlertTime() && Date.now() - a3Alert > 3600000) { sendAlert('Task Overload: ' + overdue.length + ' tasks overdue! Check: ' + sample, 'My Tasks'); a3Alert = Date.now(); }
+      } else { logEntry('Overdue Tasks', 'OK', overdue.length + ' overdue (under threshold)'); }
     });
   }
 
@@ -7306,9 +7310,9 @@ function updateSmmAgentsBadge(count) {
       if (!Array.isArray(stalled)) return;
       if (stalled.length > 0) {
         var titles = stalled.slice(0,3).map(function(s){ return '"' + s.title + '"'; }).join(', ');
-        logEntry('📸 Shoot Stall', 'ALERT', stalled.length + ' shoot(s) stuck "Requested" 48h+: ' + titles);
-        if (isAlertTime() && Date.now() - a4Alert > 3600000) { sendAlert('📸 Shoot Stall: ' + stalled.length + ' shoots still Requested 48h+: ' + titles, 'Shoot Pipeline'); a4Alert = Date.now(); }
-      } else { logEntry('📸 Shoot Stall', 'OK', 'No shoots stalled'); }
+        logEntry('Shoot Stall', 'ALERT', stalled.length + ' shoot(s) stuck "Requested" 48h+: ' + titles);
+        if (isAlertTime() && Date.now() - a4Alert > 3600000) { sendAlert('Shoot Stall: ' + stalled.length + ' shoots still Requested 48h+: ' + titles, 'Shoot Pipeline'); a4Alert = Date.now(); }
+      } else { logEntry('Shoot Stall', 'OK', 'No shoots stalled'); }
     });
   }
 
@@ -7319,9 +7323,9 @@ function updateSmmAgentsBadge(count) {
       if (!Array.isArray(missed)) return;
       if (missed.length > 0) {
         var sample = missed.slice(0,3).map(function(p){ return '"' + p.title + '" (' + p.scheduled_date + ')'; }).join(', ');
-        logEntry('🔔 Missed Post', 'ALERT', missed.length + ' post(s) past due: ' + sample);
-        if (isAlertTime() && Date.now() - a5Alert > 3600000) { sendAlert('🔔 Missed Posts: ' + missed.length + ' past schedule, not posted: ' + sample, 'Content Plans'); a5Alert = Date.now(); }
-      } else { logEntry('🔔 Missed Post', 'OK', 'All scheduled posts published'); }
+        logEntry('Missed Post', 'ALERT', missed.length + ' post(s) past due: ' + sample);
+        if (isAlertTime() && Date.now() - a5Alert > 3600000) { sendAlert('Missed Posts: ' + missed.length + ' past schedule, not posted: ' + sample, 'Content Plans'); a5Alert = Date.now(); }
+      } else { logEntry('Missed Post', 'OK', 'All scheduled posts published'); }
     });
   }
 
@@ -7334,11 +7338,11 @@ function updateSmmAgentsBadge(count) {
     var fab = document.createElement('button');
     fab.id = 'bb-smm-fab';
     fab.title = 'BB AI Agents';
-    fab.innerHTML = '🤖';
+    fab.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
     document.body.appendChild(fab);
     var panel = document.createElement('div');
     panel.id = 'bb-smm-panel';
-    panel.innerHTML = '<div id="bb-smm-ph"><span id="bb-smm-ph-title">🤖 BB SMM AGENTS</span><button id="bb-smm-run-btn">▶ Run All</button></div><div id="bb-smm-log"><div style="color:#475569;font-size:12px;padding:24px;text-align:center;">Click ▶ Run All to scan now.<br><span style="font-size:10px;color:#334155;">Auto-scans every 5 min</span></div></div><div id="bb-smm-footer">5 agents active • Alerts → Gmail (SMM + CEO)</div>';
+    panel.innerHTML = '<div id="bb-smm-ph"><span id="bb-smm-ph-title">BB SMM AGENTS</span><button id="bb-smm-run-btn">▶ Run All</button></div><div id="bb-smm-log"><div style="color:#475569;font-size:12px;padding:24px;text-align:center;">Click ▶ Run All to scan now.<br><span style="font-size:10px;color:#334155;">Auto-scans every 5 min</span></div></div><div id="bb-smm-footer">5 agents active • Alerts → Gmail (SMM + CEO)</div>';
     document.body.appendChild(panel);
     fab.addEventListener('click', function() { panelOpen = !panelOpen; panel.classList.toggle('open', panelOpen); });
     document.getElementById('bb-smm-run-btn').addEventListener('click', function() { runAll(); });
@@ -7362,7 +7366,7 @@ function updateSmmAgentsBadge(count) {
     if (!target || document.getElementById('bbs-agent-alerts-section')) return;
     var section = document.createElement('div');
     section.id = 'bbs-agent-alerts-section';
-    section.innerHTML = '<div id="bbs-alerts-header"><span id="bbs-alerts-title">\uD83E\uDD16 Agent Alerts</span><button id="bbs-alerts-run-btn">\u25B6 Run All</button></div><div id="bbs-alert-grid"><div style="color:#475569;font-size:12px;grid-column:1/-1;padding:8px 0;">Starting scan...</div></div>';
+    section.innerHTML = '<div id="bbs-alerts-header"><span id="bbs-alerts-title">Agent Alerts</span><button id="bbs-alerts-run-btn">Run All</button></div><div id="bbs-alert-grid"><div style="color:#475569;font-size:12px;grid-column:1/-1;padding:8px 0;">Starting scan...</div></div>';
     target.insertBefore(section, target.firstChild);
     document.getElementById('bbs-alerts-run-btn').addEventListener('click', window.BB_SMM_AGENTS ? window.BB_SMM_AGENTS.runAll : function(){});
   }
@@ -7436,9 +7440,9 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     title.textContent = data ? data.label : agentKey;
     subhead.textContent = data ? (data.items.length + ' item' + (data.items.length !== 1 ? 's' : '') + ' found') : '';
     if (!data) {
-      body.innerHTML = '<div class="bbd-loading">\u26a1 Running scan\u2026</div>';
+      body.innerHTML = '<div class="bbd-loading">Running scan\u2026</div>';
     } else if (!data.items.length) {
-      body.innerHTML = '<div class="bbd-ok">\u2705 All clear \u2014 no issues found.</div>';
+      body.innerHTML = '<div class="bbd-ok">All clear \u2014 no issues found.</div>';
     } else {
       body.innerHTML = data.items.map(function (t) { return '<div class="bbd-item">' + t + '</div>'; }).join('');
     }
@@ -7453,16 +7457,11 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     if (panel)   panel.style.transform  = 'translateX(100%)';
   }
 
-  function fixEmoji() {
-    var t = document.getElementById(PREFIX + '-alerts-title');
-    if (t) t.innerHTML = t.innerHTML.replace(/\ud83e\udd16/g, '\u26a1');
-    var section = document.getElementById(SECTION_ID);
-    if (section) section.innerHTML = section.innerHTML.replace(/\ud83e\udd16 AI Agent Alerts/g, '\u26a1 AI Agent Alerts');
-  }
+  function fixEmoji() { /* emojis removed at source — nothing to fix */ }
 
   var NEW_AGENTS_SMM = [
-    { key: 'caption-missing',  label: '\ud83d\udcdd Caption Missing',  desc: 'Posts without caption/copy ready' },
-    { key: 'week-ahead-gap',   label: '\ud83d\udcc5 Week Ahead Gap',   desc: 'Content not scheduled for next 7 days' }
+    { key: 'caption-missing',  label: 'Caption Missing',  desc: 'Posts without caption/copy ready' },
+    { key: 'week-ahead-gap',   label: 'Week Ahead Gap',   desc: 'Content not scheduled for next 7 days' }
   ];
 
   function addNewCards() {
@@ -7535,11 +7534,11 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
         return (planCounts[c.id] || 0) < target;
       });
       window.BB_SMM_DETAIL['content-gap'] = {
-        label: '\ud83d\udcca Content Plan Gap',
+        label: 'Content Plan Gap',
         items: gaps.map(function (c) {
           var planned = planCounts[c.id] || 0;
           var target  = c.monthly_posts || 0;
-          return '\ud83d\udcc9 <strong>' + c.name + '</strong> \u2014 ' + planned + '/' + target + ' posts planned' + (c.assigned_smm ? ' \u2014 SMM: ' + c.assigned_smm : '');
+          return '<strong>' + c.name + '</strong> \u2014 ' + planned + '/' + target + ' posts planned' + (c.assigned_smm ? ' \u2014 SMM: ' + c.assigned_smm : '');
         })
       };
       setCard('content-gap', gaps.length, gaps.length ? 'amber' : 'green');
@@ -7549,10 +7548,10 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
       'posted=eq.false&month=eq.' + m + '&year=eq.' + y + '&scheduled_date=lte.' + today + '&select=title,scheduled_date,client_id,type&limit=30'
     ).then(function (rows) {
       window.BB_SMM_DETAIL['post-overdue'] = {
-        label: '\u23f0 Posts Overdue',
+        label: 'Posts Overdue',
         items: (rows || []).map(function (r) {
           var days = Math.floor((Date.now() - new Date(r.scheduled_date).getTime()) / 86400000);
-          return '\ud83d\udcc5 <strong>' + (r.title || 'Untitled') + '</strong> \u2014 scheduled ' + r.scheduled_date + ' \u2014 <strong>' + days + ' day' + (days !== 1 ? 's' : '') + ' overdue</strong>';
+          return '<strong>' + (r.title || 'Untitled') + '</strong> \u2014 scheduled ' + r.scheduled_date + ' \u2014 <strong>' + days + ' day' + (days !== 1 ? 's' : '') + ' overdue</strong>';
         })
       };
       setCard('post-overdue', (rows || []).length, (rows || []).length ? 'red' : 'green');
@@ -7572,9 +7571,9 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
           return true;
         });
         window.BB_SMM_DETAIL['approval-pending'] = {
-          label: '\u270b Pending Approval',
+          label: 'Pending Approval',
           items: combined.map(function (r) {
-            return '\u270b <strong>' + (r.title || 'Untitled') + '</strong> \u2014 ' + (r.content_type || 'post') + ' \u2014 waiting for client sign-off';
+            return '<strong>' + (r.title || 'Untitled') + '</strong> \u2014 ' + (r.content_type || 'post') + ' \u2014 waiting for client sign-off';
           })
         };
         setCard('approval-pending', combined.length, combined.length ? 'amber' : 'green');
@@ -7582,7 +7581,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     });
 
     window.BB_SMM_DETAIL['engagement-drop'] = {
-      label: '\ud83d\udcc9 Engagement Drop',
+      label: 'Engagement Drop',
       items: ['<em>Engagement data comes from Instagram/Facebook Insights. Connect analytics data to enable this agent. Currently no automated data source linked.</em>']
     };
 
@@ -7590,9 +7589,9 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
       'done=eq.false&priority=eq.high&due=lte.' + today + '&select=title,assign,due,client_id&limit=20'
     ).then(function (rows) {
       window.BB_SMM_DETAIL['priority'] = {
-        label: '\ud83d\udd34 High Priority Overdue Tasks',
+        label: 'High Priority Overdue Tasks',
         items: (rows || []).map(function (r) {
-          return '\ud83d\udd34 <strong>' + (r.title || 'Untitled') + '</strong>' + (r.assign ? ' \u2014 ' + r.assign : '') + ' \u2014 due ' + r.due;
+          return '<strong>' + (r.title || 'Untitled') + '</strong>' + (r.assign ? ' \u2014 ' + r.assign : '') + ' \u2014 due ' + r.due;
         })
       };
       setCard('priority', (rows || []).length, (rows || []).length ? 'red' : 'green');
@@ -7606,9 +7605,9 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
         return !t || t.toLowerCase() === 'untitled' || t.toLowerCase() === 'post' || t.length < 5;
       });
       window.BB_SMM_DETAIL['caption-missing'] = {
-        label: '\ud83d\udcdd Caption / Title Missing',
+        label: 'Caption / Title Missing',
         items: missing.map(function (r) {
-          return '\ud83d\udcdd <strong>' + (r.title || '(no title)') + '</strong> \u2014 ' + r.type + (r.scheduled_date ? ' \u2014 scheduled ' + r.scheduled_date : ' \u2014 no date set');
+          return '<strong>' + (r.title || '(no title)') + '</strong> \u2014 ' + r.type + (r.scheduled_date ? ' \u2014 scheduled ' + r.scheduled_date : ' \u2014 no date set');
         })
       };
       setCard('caption-missing', missing.length, missing.length ? 'amber' : 'green');
@@ -7630,10 +7629,10 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
         return (perClient[c.id] || 0) < 2;
       });
       window.BB_SMM_DETAIL['week-ahead-gap'] = {
-        label: '\ud83d\udcc5 Week Ahead \u2014 Content Gap',
+        label: 'Week Ahead \u2014 Content Gap',
         items: gaps.map(function (c) {
           var n = perClient[c.id] || 0;
-          return '\ud83d\udcad <strong>' + c.name + '</strong> \u2014 only <strong>' + n + ' post' + (n !== 1 ? 's' : '') + '</strong> scheduled in next 7 days' + (c.assigned_smm ? ' \u2014 SMM: ' + c.assigned_smm : '');
+          return '<strong>' + c.name + '</strong> \u2014 only <strong>' + n + ' post' + (n !== 1 ? 's' : '') + '</strong> scheduled in next 7 days' + (c.assigned_smm ? ' \u2014 SMM: ' + c.assigned_smm : '');
         })
       };
       setCard('week-ahead-gap', gaps.length, gaps.length ? 'amber' : 'green');
@@ -7730,29 +7729,29 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
   'use strict';
 
   var PAGES = [
-    { id:'today',           icon:'🌅', label:'Today' },
-    { id:'calendar',        icon:'📅', label:'Calendar' },
-    { id:'my-tasks',        icon:'✅', label:'My Tasks' },
-    { id:'diary',           icon:'📓', label:'Diary' },
-    { id:'content-pipeline',icon:'📋', label:'Content Pipeline' },
-    { id:'shoot-pipeline',  icon:'📸', label:'Shoot Pipeline' },
-    { id:'approval-queue',  icon:'🔔', label:'Approval Queue' },
-    { id:'content-overview',icon:'📊', label:'Content Overview' },
-    { id:'clients',         icon:'👥', label:'Clients' },
-    { id:'escalation',      icon:'⚠️', label:'Escalation' },
-    { id:'sops',            icon:'📖', label:'SOPs' },
-    { id:'graphic-hub',     icon:'🎨', label:'Graphic Hub' },
-    { id:'video-hub',       icon:'🎬', label:'Video Hub' },
-    { id:'missions',        icon:'🎯', label:'Missions' },
-    { id:'idea-hub',        icon:'💡', label:'Idea Hub' },
-    { id:'agents',          icon:'⚡', label:'Agents' },
+    { id:'today',           icon:'', label:'Today' },
+    { id:'calendar',        icon:'', label:'Calendar' },
+    { id:'my-tasks',        icon:'', label:'My Tasks' },
+    { id:'diary',           icon:'', label:'Diary' },
+    { id:'content-pipeline',icon:'', label:'Content Pipeline' },
+    { id:'shoot-pipeline',  icon:'', label:'Shoot Pipeline' },
+    { id:'approval-queue',  icon:'', label:'Approval Queue' },
+    { id:'content-overview',icon:'', label:'Content Overview' },
+    { id:'clients',         icon:'', label:'Clients' },
+    { id:'escalation',      icon:'', label:'Escalation' },
+    { id:'sops',            icon:'', label:'SOPs' },
+    { id:'graphic-hub',     icon:'', label:'Graphic Hub' },
+    { id:'video-hub',       icon:'', label:'Video Hub' },
+    { id:'missions',        icon:'', label:'Missions' },
+    { id:'idea-hub',        icon:'', label:'Idea Hub' },
+    { id:'agents',          icon:'', label:'Agents' },
   ];
 
   var ACTIONS = [
-    { icon:'➕', label:'Add Post',       hint:'Quick add', action:function(){ closeBar(); openModal('quick-add'); } },
-    { icon:'✅', label:'Add Task',       hint:'New task',  action:function(){ closeBar(); if(typeof openModal==='function') openModal('task-add'); } },
-    { icon:'🔄', label:'Run Agent Scan', hint:'Scan now',  action:function(){ closeBar(); navTo('agents'); if(typeof loadSmmAgentAlerts==='function') loadSmmAgentAlerts(); } },
-    { icon:'📓', label:'Daily Check-In', hint:'Open',      action:function(){ closeBar(); if(typeof openCheckinPopup==='function') openCheckinPopup(true); } },
+    { icon:'', label:'Add Post',       hint:'Quick add', action:function(){ closeBar(); openModal('quick-add'); } },
+    { icon:'', label:'Add Task',       hint:'New task',  action:function(){ closeBar(); if(typeof openModal==='function') openModal('task-add'); } },
+    { icon:'', label:'Run Agent Scan', hint:'Scan now',  action:function(){ closeBar(); navTo('agents'); if(typeof loadSmmAgentAlerts==='function') loadSmmAgentAlerts(); } },
+    { icon:'', label:'Daily Check-In', hint:'Open',      action:function(){ closeBar(); if(typeof openCheckinPopup==='function') openCheckinPopup(true); } },
   ];
 
   var overlay, input, results;
@@ -7801,7 +7800,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
       pages.forEach(function(p){
         var idx = _items.length;
         _items.push({ action: function(){ closeBar(); navTo(p.id); } });
-        html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-icon">'+p.icon+'</div><div class="cmd-label">'+p.label+'</div><div class="cmd-hint">Page</div></div>';
+        html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-label">'+p.label+'</div><div class="cmd-hint">Page</div></div>';
       });
     }
 
@@ -7812,7 +7811,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
       acts.forEach(function(a){
         var idx = _items.length;
         _items.push({ action: a.action });
-        html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-icon">'+a.icon+'</div><div class="cmd-label">'+a.label+'</div><div class="cmd-hint">'+a.hint+'</div></div>';
+        html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-label">'+a.label+'</div><div class="cmd-hint">'+a.hint+'</div></div>';
       });
     }
 
@@ -7824,7 +7823,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
         cls.slice(0,6).forEach(function(c){
           var idx = _items.length;
           _items.push({ action: function(){ closeBar(); if(typeof openClientProfile==='function') openClientProfile(c.id); } });
-          html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-icon">👤</div><div class="cmd-label">'+c.name+'</div><div class="cmd-hint">Client profile</div></div>';
+          html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-label">'+c.name+'</div><div class="cmd-hint">Client profile</div></div>';
         });
       }
     }
@@ -7952,12 +7951,12 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     ov.innerHTML =
       '<div id="smm-checkin-box">' +
         '<div id="smm-checkin-head">' +
-          '<div><h3>📋 Daily Content Check-In</h3><p>Mark posts as published to keep records accurate</p></div>' +
-          '<button onclick="closeCheckinPopup()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;">✕</button>' +
+          '<div><h3>Daily Content Check-In</h3><p>Mark posts as published to keep records accurate</p></div>' +
+          '<button onclick="closeCheckinPopup()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;"></button>' +
         '</div>' +
         '<div id="smm-checkin-body"><div style="color:#5b5b8a;text-align:center;padding:30px;font-size:13px;">Loading...</div></div>' +
         '<div id="smm-checkin-foot">' +
-          '<button class="btn btn-ghost btn-sm" onclick="snoozeCheckin()">⏰ Snooze 2h</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="snoozeCheckin()">Snooze 2h</button>' +
           '<button class="btn btn-sm" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;" onclick="closeCheckinPopup()">Done for now</button>' +
         '</div>' +
       '</div>';
@@ -7967,7 +7966,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     var fab = document.createElement('button');
     fab.id = 'smm-checkin-fab';
     fab.title = 'Daily Content Check-In';
-    fab.innerHTML = '📋<div id="smm-checkin-fab-badge"></div>';
+    fab.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><div id="smm-checkin-fab-badge"></div>';
     fab.addEventListener('click', function(){ openCheckinPopup(true); });
     document.body.appendChild(fab);
   }
@@ -7996,7 +7995,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     var body = document.getElementById('smm-checkin-body');
     if (!body) return;
     if (!items || !items.length) {
-      body.innerHTML = '<div style="color:#00FF85;text-align:center;padding:30px;font-size:13px;">✅ All clear — no unposted content scheduled for today or earlier.</div>';
+      body.innerHTML = '<div style="color:#00FF85;text-align:center;padding:30px;font-size:13px;">All clear — no unposted content scheduled for today or earlier.</div>';
       return;
     }
 
@@ -8148,14 +8147,14 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     var el=document.getElementById('bbSentinelBanner');
     if(!el){el=document.createElement('div');el.id='bbSentinelBanner';el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#7f1d1d,#b91c1c);color:#fff;font:600 12.5px/1.4 Inter,system-ui,sans-serif;padding:9px 16px;box-shadow:0 2px 14px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px;';document.body.appendChild(el);}
     var top=_issues.slice(-3).map(function(i){return (i.table_name?i.table_name+': ':'')+i.message;}).join('  ·  ');
-    el.innerHTML='<span style="font-size:15px">⚠️</span><span style="flex:1">System issue detected ('+_issues.length+'): '+top+'</span><button id="bbSentinelView" style="background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:6px;padding:4px 10px;font:700 11px Inter;cursor:pointer">Details</button><button id="bbSentinelHide" style="background:none;border:none;color:#fff;opacity:.7;font-size:17px;cursor:pointer;line-height:1">×</button>';
+    el.innerHTML='<span style="font-size:15px"></span><span style="flex:1">System issue detected ('+_issues.length+'): '+top+'</span><button id="bbSentinelView" style="background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:6px;padding:4px 10px;font:700 11px Inter;cursor:pointer">Details</button><button id="bbSentinelHide" style="background:none;border:none;color:#fff;opacity:.7;font-size:17px;cursor:pointer;line-height:1">×</button>';
     document.getElementById('bbSentinelHide').onclick=function(){el.remove();};
     document.getElementById('bbSentinelView').onclick=showDetails;
   }
   function showDetails(){
     var rows=_issues.map(function(i){return '<div style="padding:10px 12px;border:1px solid #2a2a3a;border-radius:8px;margin-bottom:8px;background:#1a1a26"><div style="font-weight:700;color:#f87171;font-size:12px;text-transform:uppercase;letter-spacing:.04em">'+(i.category||'issue')+(i.table_name?' · '+i.table_name:'')+'</div><div style="margin-top:3px;font-size:13px;color:#e8e8f0">'+(i.message||'')+'</div>'+(i.detail?'<div style="margin-top:3px;font-size:11px;color:#8888a0;word-break:break-word">'+i.detail+'</div>':'')+'</div>';}).join('');
     var ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px';
-    ov.innerHTML='<div style="background:#12121a;border:1px solid #3a3a4e;border-radius:14px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column"><div style="padding:16px 20px;border-bottom:1px solid #2a2a3a;display:flex;align-items:center;justify-content:space-between"><div style="font:800 15px Poppins,Inter;color:#fff">🛡️ Sentinel — '+_issues.length+' issue(s)</div><button id="bbSentClose" style="background:none;border:none;color:#a0a0b8;font-size:22px;cursor:pointer">×</button></div><div style="padding:16px 20px;overflow-y:auto">'+rows+'<div style="margin-top:6px;font-size:11px;color:#8888a0">All issues logged to <code>system_bug_log</code> in Supabase.</div></div></div>';
+    ov.innerHTML='<div style="background:#12121a;border:1px solid #3a3a4e;border-radius:14px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column"><div style="padding:16px 20px;border-bottom:1px solid #2a2a3a;display:flex;align-items:center;justify-content:space-between"><div style="font:800 15px Poppins,Inter;color:#fff">Sentinel — '+_issues.length+' issue(s)</div><button id="bbSentClose" style="background:none;border:none;color:#a0a0b8;font-size:22px;cursor:pointer">×</button></div><div style="padding:16px 20px;overflow-y:auto">'+rows+'<div style="margin-top:6px;font-size:11px;color:#8888a0">All issues logged to <code>system_bug_log</code> in Supabase.</div></div></div>';
     ov.onclick=function(e){if(e.target===ov)ov.remove();};document.body.appendChild(ov);document.getElementById('bbSentClose').onclick=function(){ov.remove();};
   }
   function authHeaders(){
