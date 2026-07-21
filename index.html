@@ -6110,6 +6110,7 @@ async function wpCarryOver(){
     const resp = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?week_start=eq.' + pws + '&status=neq.done' + ownerFilter + '&select=id', { headers });
     const rows = resp.ok ? await resp.json() : [];
     if(!rows.length){ toast('Nothing unfinished from last week'); return; }
+    if(!confirm('Move ' + rows.length + ' unfinished task' + (rows.length>1?'s':'') + ' from last week into this week?')) return;
     await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?week_start=eq.' + pws + '&status=neq.done' + ownerFilter, { method: 'PATCH', headers: Object.assign({ 'Prefer': 'return=minimal' }, headers), body: JSON.stringify({ week_start: ws, updated_at: new Date().toISOString() }) });
     toast('Moved ' + rows.length + ' unfinished item' + (rows.length>1?'s':'') + ' into this week', 'success');
     wpLoadWeek();
