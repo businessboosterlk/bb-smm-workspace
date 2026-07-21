@@ -2007,7 +2007,7 @@ tr:last-child td { border-bottom: none; }
       <button class="tab-btn active" onclick="switchCpTab('tasks')" id="cpt-tasks">Tasks</button>
       <button class="tab-btn" onclick="switchCpTab('shoots')" id="cpt-shoots">Shoots</button>
       <button class="tab-btn" onclick="switchCpTab('notes')" id="cpt-notes">Notes</button>
-      <button class="tab-btn" onclick="switchCpTab('content-plan')" id="cpt-content-plan">Content Plan</button>
+      <button class="tab-btn" onclick="switchCpTab('content-plan')" id="cpt-content-plan">Posting Plan</button>
     </div>
 
     <div class="tab-panel active" id="cp-tab-tasks">
@@ -2356,6 +2356,24 @@ tr:last-child td { border-bottom: none; }
     <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="d-client"><option value="">No specific client</option></select></div>
     <div class="fg"><label class="fl">What did you work on?</label><textarea class="fi" id="d-body" rows="6" placeholder="Notes for your own memory and for handover if you're out…" style="resize:vertical;min-height:120px"></textarea></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveDiarySubmit()">Save Entry</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-cplan">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="cplan-modal-title">Add Post</div><button class="modal-close" onclick="closeModal('cplan')">×</button></div>
+    <div class="fg"><label class="fl">Topic / Title</label><input class="fi" id="cplan-title" placeholder="What's going up?"></div>
+    <div class="fg"><label class="fl">Posting Date</label><input type="date" class="fi" id="cplan-date"></div>
+    <div class="fg"><label class="fl">Image (optional)</label>
+      <input type="file" id="cplan-img-file" accept="image/*" style="display:none" onchange="cplanHandleImage(this)">
+      <div id="cplan-img-zone" onclick="document.getElementById('cplan-img-file').click()" style="border:1px dashed var(--border2);border-radius:8px;padding:14px;text-align:center;cursor:pointer;font-size:11px;color:var(--text3);transition:border-color 0.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">Click to attach the post visual</div>
+      <div id="cplan-img-preview" style="margin-top:8px"></div>
+    </div>
+    <input type="hidden" id="cplan-edit-id" value="">
+    <input type="hidden" id="cplan-edit-type" value="post">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" style="flex:1;justify-content:center" id="cplan-submit-btn" onclick="submitCPlanModal()">Add</button>
+    </div>
   </div>
 </div>
 
@@ -3722,7 +3740,8 @@ function switchCpTab(tab) {
   document.getElementById('cpt-' + tab).classList.add('active');
   document.querySelectorAll('#page-client-profile .tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('cp-tab-' + tab).classList.add('active');
-
+  // Posting Plan opens straight to the calendar — the at-a-glance view
+  if (tab === 'content-plan') { renderContentPlan(); setCPlanView(S_cpView || 'cal'); }
 }
 
 // ============ TASKS CRUD ============
@@ -3953,7 +3972,7 @@ async function loadContentPlans() {
   } catch (e) { console.error('Content plans load failed:', e); S.contentPlans = []; }
 }
 
-var S_cpView = 'list';
+var S_cpView = 'cal';
 
 function setCPlanView(v) {
   S_cpView = v;
@@ -3996,12 +4015,20 @@ function renderContentPlanCal() {
     var ds = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
     var isToday = ds === todayStr;
     var items = byDay[day] || [];
-    html += '<div style="min-height:72px;background:var(--bg3);border-radius:6px;border:1px solid ' + (isToday ? 'var(--accent)' : 'var(--border)') + ';padding:5px 4px">';
+    html += '<div style="min-height:86px;background:var(--bg3);border-radius:6px;border:1px solid ' + (isToday ? 'var(--accent)' : 'var(--border)') + ';padding:5px 4px">';
     html += '<div style="font-size:10px;font-weight:700;color:' + (isToday ? 'var(--accent)' : 'var(--text2)') + ';margin-bottom:3px">' + day + '</div>';
     items.forEach(function(p) {
       var color = p.type === 'post' ? 'var(--cyan)' : 'var(--pink)';
       var bg = p.type === 'post' ? 'rgba(6,182,212,0.12)' : 'rgba(236,72,153,0.12)';
-      html += '<div onclick="openCPlanModal(\'' + p.type + '\',' + p.id + ')" style="font-size:9px;font-weight:600;padding:2px 5px;margin-bottom:2px;border-radius:4px;background:' + (p.posted ? 'var(--bg4)' : bg) + ';color:' + (p.posted ? 'var(--text3)' : color) + ';cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;' + (p.posted ? 'text-decoration:line-through' : '') + '" title="' + escHtml(p.title||'Untitled') + '">' + escHtml(p.title||'Untitled') + '</div>';
+      var typeLbl = p.type === 'post' ? 'POST' : 'VIDEO';
+      html += '<div onclick="openCPlanModal(\'' + p.type + '\',' + p.id + ')" style="margin-bottom:3px;border-radius:5px;background:' + (p.posted ? 'var(--bg4)' : bg) + ';cursor:pointer;overflow:hidden;border:1px solid ' + (p.posted ? 'var(--border)' : 'transparent') + '" title="' + escHtml(p.title||'Untitled') + '">';
+      if (p.image_url) {
+        html += '<img src="' + p.image_url + '" style="width:100%;height:44px;object-fit:cover;display:block;' + (p.posted ? 'opacity:0.45;filter:grayscale(0.6)' : '') + '" onerror="this.style.display=\'none\'">';
+      }
+      html += '<div style="display:flex;align-items:center;gap:3px;padding:2px 5px">'
+        + '<span style="font-size:7px;font-weight:800;letter-spacing:0.06em;color:' + (p.posted ? 'var(--text3)' : color) + '">' + typeLbl + '</span>'
+        + '<span style="font-size:9px;font-weight:600;color:' + (p.posted ? 'var(--text3)' : 'var(--text)') + ';overflow:hidden;white-space:nowrap;text-overflow:ellipsis;' + (p.posted ? 'text-decoration:line-through' : '') + '">' + escHtml(p.title||'Untitled') + '</span>'
+        + '</div></div>';
     });
     html += '</div>';
   }
@@ -4051,6 +4078,7 @@ function renderCPlanRow(p, num, type) {
       ${p.posted ? '<svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7.5L10 1" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
     </div>
     <div style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:800;color:${p.posted ? 'var(--text3)' : color};min-width:22px">${String(num).padStart(2, '0')}</div>
+    ${p.image_url ? `<img src="${p.image_url}" style="width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;cursor:pointer;${p.posted ? 'opacity:0.5' : ''}" onclick="openCPlanModal('${type}', ${p.id})">` : ''}
     <div style="flex:1;font-size:12px;font-weight:${p.posted ? 400 : 600};color:${p.posted ? 'var(--text3)' : 'var(--text)'};${p.posted ? 'text-decoration:line-through' : ''};cursor:pointer" onclick="openCPlanModal('${type}', ${p.id})">${escHtml(p.title || 'Untitled')}</div>
     <div style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:${p.posted ? 'var(--bg4)' : bg};color:${p.posted ? 'var(--text3)' : color};white-space:nowrap;flex-shrink:0">${dateStr}</div>
     <button onclick="duplicateSmmCPlanItem(${p.id})" title="Duplicate" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:0 4px;flex-shrink:0" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">⧉</button>
@@ -4067,19 +4095,64 @@ async function toggleCPlanPosted(id) {
   catch (e) { item.posted = !item.posted; renderContentPlan(); toast('Failed', 'error'); }
 }
 
+// Pending compressed image for the posting-plan modal
+var _cplanPendingImg = null;
+
+function cplanHandleImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = function (ev) {
+    img.onload = function () {
+      // Compress: max 480px on the long edge, JPEG q0.72 → small thumbnail, never a heavy blob
+      const MAX = 480;
+      let w = img.width, h = img.height;
+      if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      else if (h >= w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      _cplanPendingImg = cv.toDataURL('image/jpeg', 0.72);
+      cplanShowPreview(_cplanPendingImg);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cplanShowPreview(src) {
+  const pv = document.getElementById('cplan-img-preview');
+  if (!pv) return;
+  pv.innerHTML = src
+    ? '<div style="position:relative;display:inline-block"><img src="' + src + '" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--border2);display:block"><button onclick="cplanClearImage(event)" style="position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:12px;line-height:1">×</button></div>'
+    : '';
+}
+
+function cplanClearImage(e) {
+  if (e) e.stopPropagation();
+  _cplanPendingImg = '';
+  const f = document.getElementById('cplan-img-file'); if (f) f.value = '';
+  cplanShowPreview(null);
+}
+
 function openCPlanModal(type, editId) {
   const isEdit = !!editId;
   document.getElementById('cplan-modal-title').textContent = isEdit ? `Edit ${type === 'post' ? 'Post' : 'Video'}` : `Add ${type === 'post' ? 'Post' : 'Video'}`;
   document.getElementById('cplan-submit-btn').textContent = isEdit ? 'Save' : 'Add';
   document.getElementById('cplan-edit-id').value = editId || '';
   document.getElementById('cplan-edit-type').value = type;
+  _cplanPendingImg = null; // null = untouched, '' = removed, string = new image
+  const f = document.getElementById('cplan-img-file'); if (f) f.value = '';
   if (isEdit) {
     const item = (S.contentPlans || []).find(p => p.id === editId);
     document.getElementById('cplan-title').value = item ? item.title : '';
     document.getElementById('cplan-date').value = item?.scheduled_date || '';
+    cplanShowPreview(item?.image_url || null);
   } else {
     document.getElementById('cplan-title').value = '';
     document.getElementById('cplan-date').value = '';
+    cplanShowPreview(null);
   }
   openModal('cplan');
   setTimeout(() => document.getElementById('cplan-title').focus(), 100);
@@ -4094,15 +4167,18 @@ async function submitCPlanModal() {
   if (editId) {
     const item = (S.contentPlans || []).find(p => p.id == editId);
     if (!item) return;
-    const oldTitle = item.title; const oldDate = item.scheduled_date;
+    const oldTitle = item.title; const oldDate = item.scheduled_date; const oldImg = item.image_url;
     item.title = title; item.scheduled_date = dateVal || null;
+    const upd = { title, scheduled_date: dateVal || null };
+    if (_cplanPendingImg !== null) { upd.image_url = _cplanPendingImg || null; item.image_url = upd.image_url; }
     renderContentPlan(); closeModal('cplan');
-    try { await sb.from('content_plans').update({ title, scheduled_date: dateVal || null }).eq('id', editId); toast('Updated', 'success'); }
-    catch (e) { item.title = oldTitle; item.scheduled_date = oldDate; renderContentPlan(); toast('Failed', 'error'); }
+    try { await sb.from('content_plans').update(upd).eq('id', editId); toast('Updated', 'success'); }
+    catch (e) { item.title = oldTitle; item.scheduled_date = oldDate; item.image_url = oldImg; renderContentPlan(); toast('Failed', 'error'); }
   } else {
     const month = parseInt(document.getElementById('cplan-month')?.value || new Date().getMonth() + 1);
     const year = parseInt(document.getElementById('cplan-year')?.value || new Date().getFullYear());
     const payload = { client_id: S.currentClientId, month, year, type, title, scheduled_date: dateVal || null, posted: false };
+    if (_cplanPendingImg) payload.image_url = _cplanPendingImg;
     try {
       const { data, error } = await sb.from('content_plans').insert([payload]).select();
       if (error) throw error;
