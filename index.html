@@ -2055,6 +2055,7 @@ tr:last-child td { border-bottom: none; }
         <div id="cplan-inline-summary" style="flex:1;font-size:12px;color:var(--text2);font-weight:500"></div>
         <button class="btn btn-ghost btn-sm" onclick="openCPlanModal('post')">+ Post</button>
         <button class="btn btn-primary btn-sm" onclick="openCPlanModal('video')">+ Video</button>
+        <button class="btn btn-ghost btn-sm" onclick="openCPlanBulk()">Bulk Add</button>
       </div>
       <div id="cplan-list-view">
         <div style="margin-bottom:20px">
@@ -2373,6 +2374,30 @@ tr:last-child td { border-bottom: none; }
     <input type="hidden" id="cplan-edit-type" value="post">
     <div style="display:flex;gap:8px">
       <button class="btn btn-primary" style="flex:1;justify-content:center" id="cplan-submit-btn" onclick="submitCPlanModal()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-cplan-bulk">
+  <div class="modal" style="max-width:680px;width:calc(100vw - 24px)">
+    <div class="modal-head"><div class="modal-title">Bulk Add — Posting Plan</div><button class="modal-close" onclick="closeModal('cplan-bulk')">×</button></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Fill a row per post. Rows without a title are skipped. Attach the visual per row if you have it.</div>
+    <div style="overflow-x:auto;max-height:52vh;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr>
+          <th style="text-align:left;padding:4px 6px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em">Date</th>
+          <th style="text-align:left;padding:4px 6px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em">Type</th>
+          <th style="text-align:left;padding:4px 6px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em">Title</th>
+          <th style="text-align:left;padding:4px 6px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em">Image</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="cplan-bulk-rows"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="cplanBulkAddRow()" style="margin-top:8px">+ Add Row</button>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeModal('cplan-bulk')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center" id="cplan-bulk-save-btn" onclick="cplanBulkSaveAll()">Save All</button>
     </div>
   </div>
 </div>
@@ -4134,6 +4159,102 @@ function cplanClearImage(e) {
   _cplanPendingImg = '';
   const f = document.getElementById('cplan-img-file'); if (f) f.value = '';
   cplanShowPreview(null);
+}
+
+// ============ POSTING PLAN — BULK ADD ============
+var _cplanBulkImgs = {};
+var _cplanBulkSeq = 0;
+
+function cplanCompressFile(file, cb) {
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = function (ev) {
+    img.onload = function () {
+      const MAX = 480;
+      let w = img.width, h = img.height;
+      if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      else if (h >= w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(cv.toDataURL('image/jpeg', 0.72));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function openCPlanBulk() {
+  _cplanBulkImgs = {};
+  _cplanBulkSeq = 0;
+  const tb = document.getElementById('cplan-bulk-rows');
+  if (tb) tb.innerHTML = '';
+  for (let i = 0; i < 5; i++) cplanBulkAddRow();
+  openModal('cplan-bulk');
+}
+
+function cplanBulkAddRow() {
+  const tb = document.getElementById('cplan-bulk-rows');
+  if (!tb) return;
+  const k = ++_cplanBulkSeq;
+  const tr = document.createElement('tr');
+  tr.dataset.bulkKey = k;
+  tr.innerHTML =
+    '<td style="padding:3px 4px"><input type="date" class="fi cb-date" style="padding:6px 8px;font-size:11px;min-width:120px"></td>' +
+    '<td style="padding:3px 4px"><select class="fi cb-type" style="padding:6px 8px;font-size:11px"><option value="post">Post</option><option value="video">Video</option></select></td>' +
+    '<td style="padding:3px 4px"><input type="text" class="fi cb-title" placeholder="Topic / title" style="padding:6px 8px;font-size:11px;min-width:160px"></td>' +
+    '<td style="padding:3px 4px;white-space:nowrap">' +
+      '<input type="file" accept="image/*" id="cb-img-' + k + '" style="display:none" onchange="cplanBulkImg(this,' + k + ')">' +
+      '<button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:10px" onclick="document.getElementById(\'cb-img-' + k + '\').click()">Attach</button>' +
+      '<span id="cb-img-ind-' + k + '" style="margin-left:5px;vertical-align:middle"></span>' +
+    '</td>' +
+    '<td style="padding:3px 2px"><button onclick="delete _cplanBulkImgs[' + k + '];this.closest(\'tr\').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;line-height:1">×</button></td>';
+  tb.appendChild(tr);
+}
+
+function cplanBulkImg(input, key) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  cplanCompressFile(file, function (dataUrl) {
+    _cplanBulkImgs[key] = dataUrl;
+    const ind = document.getElementById('cb-img-ind-' + key);
+    if (ind) ind.innerHTML = '<img src="' + dataUrl + '" style="width:26px;height:26px;object-fit:cover;border-radius:5px;border:1px solid var(--border2);vertical-align:middle">';
+  });
+}
+
+async function cplanBulkSaveAll() {
+  const btn = document.getElementById('cplan-bulk-save-btn');
+  const selMonth = parseInt(document.getElementById('cplan-month')?.value || new Date().getMonth() + 1);
+  const selYear = parseInt(document.getElementById('cplan-year')?.value || new Date().getFullYear());
+  const rows = document.querySelectorAll('#cplan-bulk-rows tr');
+  const payloads = [];
+  rows.forEach(function (tr) {
+    const title = tr.querySelector('.cb-title').value.trim();
+    if (!title) return;
+    const dateVal = tr.querySelector('.cb-date').value || null;
+    // month/year follow the row's date when given, else the selected plan month
+    let m = selMonth, y = selYear;
+    if (dateVal) { const parts = dateVal.split('-'); y = parseInt(parts[0]); m = parseInt(parts[1]); }
+    const p = { client_id: S.currentClientId, month: m, year: y, type: tr.querySelector('.cb-type').value, title: title, scheduled_date: dateVal, posted: false };
+    const k = tr.dataset.bulkKey;
+    if (_cplanBulkImgs[k]) p.image_url = _cplanBulkImgs[k];
+    payloads.push(p);
+  });
+  if (!payloads.length) { toast('Fill at least one title', 'error'); return; }
+  if (btn) { btn.textContent = 'Saving…'; btn.style.pointerEvents = 'none'; }
+  try {
+    const { data, error } = await sb.from('content_plans').insert(payloads).select();
+    if (error) throw error;
+    S.contentPlans = (S.contentPlans || []).concat(data || []);
+    toast(payloads.length + ' item' + (payloads.length > 1 ? 's' : '') + ' added', 'success');
+    closeModal('cplan-bulk');
+    renderContentPlan();
+  } catch (e) {
+    console.error(e);
+    toast('Save failed — try again', 'error');
+  } finally {
+    if (btn) { btn.textContent = 'Save All'; btn.style.pointerEvents = ''; }
+  }
 }
 
 function openCPlanModal(type, editId) {
