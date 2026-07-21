@@ -1669,7 +1669,11 @@ tr:last-child td { border-bottom: none; }
         <option value="all">All Assignees</option>
         <option value="TH">Thulaib</option>
         <option value="SH">Shiara</option>
-        <option value="KE">Kenuli</option>
+        <option value="US">Ushane</option>
+        <option value="SU">Suhana</option>
+        <option value="RU">Rukshan</option>
+        <option value="TI">Tiana</option>
+        <option value="NV">Nirvana</option>
       </select>
       <select class="filter-select" id="cal-filter-client">
         <option value="all">All Clients</option>
@@ -2363,7 +2367,7 @@ tr:last-child td { border-bottom: none; }
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Due Date</label><input class="fi" type="date" id="t-due"></div>
-      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="TH">Thulaib</option><option value="SH">Shiara</option><option value="KE">Kenuli</option><option value="KA">Kaneesha</option></select></div>
+      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="TH">Thulaib</option><option value="SH">Shiara</option><option value="US">Ushane</option><option value="SU">Suhana</option><option value="RU">Rukshan</option><option value="TI">Tiana</option><option value="NV">Nirvana</option></select></div>
     </div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="t-notes" rows="2" placeholder="Optional notes"></textarea></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitTaskAdd()">Add Task</button>
@@ -2440,7 +2444,7 @@ const S = {
 // ============ USER ROLES ============
 const USER_ROLES = {
   THULAIB:  { code: 'TH', role: 'CEO', name: 'Thulaib', smm: null },
-  SHIARA:   { code: 'SH', role: 'COO', name: 'Shiara', smm: 'SHIARA' },
+  SHIARA:   { code: 'SH', role: 'COO', name: 'Shiara', smm: null },
   NIRVANA:  { code: 'NV', role: 'SMM', name: 'Nirvana', smm: 'NIRVANA' },
   TIANA:    { code: 'TI', role: 'SMM', name: 'Tiana', smm: 'TIANA' }
 };
