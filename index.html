@@ -2017,7 +2017,7 @@ tr:last-child td { border-bottom: none; }
   <!-- ============ GRAPHIC HUB ============ -->
   <section class="page" id="page-graphic-hub">
     <div class="ph">
-      <div><div class="ph-title">Graphic Hub</div><div class="ph-sub">Live design tracker + post formula reference PF01–PF08</div></div>
+      <div><div class="ph-title">Graphic Pipeline</div><div class="ph-sub">Your clients' design work by stage — read-only mirror of the design team's pipeline</div></div>
       <div class="ph-right"><button class="btn btn-ghost btn-sm" onclick="renderGraphicHub()">↻ Refresh</button></div>
     </div>
     <div id="gh-root"><div class="loading-row">Loading...</div></div>
@@ -2825,7 +2825,7 @@ const PAGE_TITLES = {
   'today':'Today','calendar':'Calendar','my-tasks':'My Tasks','diary':'My Diary',
   'weeklyplan':'Weekly Plan','content-pipeline':'Content Pipeline','shoot-pipeline':'Shoot Pipeline',
   'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients',
-  'escalation':'Escalation Helper','sops':'SMM SOPs','graphic-hub':'Graphic Hub','video-hub':'Video Hub',
+  'escalation':'Escalation Helper','sops':'SMM SOPs','graphic-hub':'Graphic Pipeline','video-hub':'Video Pipeline',
   'missions':'Missions','ideas':'Idea Hub','agents':'Agents','client-profile':'Client',
   'community':'Community'
 };
@@ -5029,52 +5029,8 @@ async function renderGraphicHub() {
   var root = document.getElementById('gh-root');
   if (!root) return;
   root.innerHTML = '<div class="loading-row loading-dots">Loading</div>';
-  try {
-    var r = await sb.from('graphic_projects').select('*').eq('is_archived', false).order('created_at', { ascending: false });
-    var items = (r.data) || [];
-    var FORMULAS = [
-      { num:'PF01', name:'Problem–Agitate–Solve',    desc:'Name pain → make it urgent → position your offer as the fix.',         goal:'Awareness' },
-      { num:'PF02', name:'Bold Statement Hook',       desc:'Open with a provocative claim. Build credibility. End with CTA.',      goal:'Reach / Share' },
-      { num:'PF03', name:'Product Spotlight',         desc:'Feature → Benefit → Proof → CTA. One product, one angle per post.',   goal:'Conversion' },
-      { num:'PF04', name:'Social Proof',              desc:'Real result first → context → what made it possible → next step CTA.', goal:'Trust / DMs' },
-      { num:'PF05', name:'Before & After',            desc:'Paint the before vividly → reveal the transformation → bridge to offer.', goal:'Conversion' },
-      { num:'PF06', name:'Value List / Tips',         desc:'Numbered tips, each a standalone insight. Saves = algorithm fuel.',    goal:'Saves / Reach' },
-      { num:'PF07', name:'Offer / Promotion',         desc:'Lead with result → explain offer → add urgency → single CTA.',        goal:'Sales' },
-      { num:'PF08', name:'Brand Story / BTS',         desc:'Human moment or origin story. No hard sell — trust is the product.',  goal:'Engagement' }
-    ];
-    var html = '';
-    if (items.length) {
-      html += '<div style="margin-bottom:24px"><div class="stitle">Live Design Projects <span class="cnt">'+items.length+'</span></div>';
-      items.forEach(function(p) {
-        var prio = (p.priority||'').toLowerCase();
-        var pc = prio==='high'?'var(--red)':prio==='medium'?'var(--yellow)':'var(--text3)';
-        var dl = p.deadline ? new Date(p.deadline+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : null;
-        var ov = p.deadline && new Date(p.deadline) < new Date();
-        html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">'+escHtml(p.title||'Untitled')+'</div>'
-          + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-          + (p.client_name?'<span style="font-size:9px;font-weight:700;color:var(--cyan);text-transform:uppercase">'+escHtml(p.client_name)+'</span>':'')
-          + '<span style="font-size:9px;background:rgba(168,85,247,0.12);color:var(--purple);padding:1px 6px;border-radius:3px;font-weight:600">'+escHtml((p.current_stage||'brief').replace(/_/g,' ').toUpperCase())+'</span>'
-          + (dl?'<span style="font-size:9px;color:'+(ov?'var(--red)':'var(--text3)')+';font-weight:600">'+(ov?'':'')+dl+'</span>':'')
-          + '</div></div>'
-          + (prio?'<span style="font-size:9px;font-weight:700;color:'+pc+';text-transform:uppercase">'+prio+'</span>':'')
-          + '</div>';
-      });
-      html += '</div>';
-    } else {
-      html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;margin-bottom:24px;display:flex;align-items:center;gap:12px">'
-        + '<div style="width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0"></div>'
-        + '<div style="font-size:12px;color:var(--text2)">No active graphic projects yet — this will populate automatically when the design team adds projects.</div></div>';
-    }
-    html += '<div class="stitle" style="margin-bottom:14px">Post Formulas — Reference <span class="cnt">PF01–PF08</span></div><div class="sop-grid">';
-    FORMULAS.forEach(function(f) {
-      html += '<div class="sop-card"><div class="sop-num">'+f.num+'</div><div class="sop-name">'+f.name+'</div><div class="sop-desc">'+f.desc+'</div>'
-        + '<div style="margin-top:8px"><span class="pill pill-c" style="font-size:9px">'+f.goal+'</span></div></div>';
-    });
-    html += '</div>';
-    root.innerHTML = html;
-  } catch(e) { root.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load: '+escHtml(e.message||String(e))+'</div>'; }
+  await loadProduction();
+  renderProdKanban(root, S.graphicProd || [], GRAPHIC_PROD_STAGES, 'graphic', "No graphic projects for your clients right now — this mirrors the design team's pipeline and fills as they add work.");
 }
 
 // ============ TOAST ============
@@ -5447,9 +5403,12 @@ async function loadProduction() {
   const ids = (S.clients || []).map(c => c.id);
   if (!ids.length) { S.videoProd = []; S.graphicProd = []; return; }
   try {
+    // Explicit columns — never pull graphic_projects.image_url (base64 blobs) into the SMM board; it's not displayed and kills load speed
+    const G_COLS = 'id,title,client_id,client_name,current_stage,priority,deadline,assigned_designer,assigned_designer_id,type,target_month,target_year,is_archived,created_at';
+    const V_COLS = 'id,title,client_id,current_stage,priority,deadline,assigned_editor_id,target_month,target_year,is_archived,created_at';
     const [v, g, tm] = await Promise.all([
-      sb.from('video_projects').select('*').in('client_id', ids),
-      sb.from('graphic_projects').select('*').in('client_id', ids),
+      sb.from('video_projects').select(V_COLS).in('client_id', ids),
+      sb.from('graphic_projects').select(G_COLS).in('client_id', ids),
       sb.from('team_members').select('id,name')
     ]);
     S.videoProd = (v.data || []).filter(p => !p.is_archived);
@@ -5634,6 +5593,27 @@ function renderVideoPipeline() {
 }
 function renderGraphicPipeline() {
   renderProdGrouped(document.getElementById('prod-graphic'), S.graphicProd || [], GRAPHIC_PROD_STAGES, 'graphic', 'No graphic projects in production for your clients right now.');
+}
+// Read-only kanban that mirrors the Graphic/Video System pipeline, scoped to the SMM's clients
+const PROD_STAGE_COLORS = ['#00E5FF','#FBBF24','#FF6B2B','#A855F7','#FF2D78','#60A5FA','#F87171','#00FF85','#A3E635'];
+function renderProdKanban(host, items, stages, kind, emptyMsg) {
+  if (!host) return;
+  if (!items || !items.length) { host.innerHTML = '<div class="prod-empty">' + emptyMsg + '</div>'; return; }
+  const known = stages.map(s => s.key);
+  let cols = stages.map((st, idx) => {
+    const inStage = items.filter(p => p.current_stage === st.key);
+    const col = PROD_STAGE_COLORS[idx % PROD_STAGE_COLORS.length];
+    return '<div class="kanban-col" style="border-top:2px solid ' + col + '">'
+      + '<div class="kanban-col-hdr"><div class="kanban-col-title" style="color:' + col + '">' + escHtml(st.label) + '</div><div class="kanban-col-cnt">' + inStage.length + '</div></div>'
+      + '<div class="kanban-cards">' + (inStage.length ? inStage.map(p => prodCard(p, kind)).join('') : '<div style="padding:14px;text-align:center;color:var(--text3);font-size:11px">—</div>') + '</div></div>';
+  }).join('');
+  const other = items.filter(p => known.indexOf(p.current_stage) === -1);
+  if (other.length) {
+    cols += '<div class="kanban-col" style="border-top:2px solid var(--text3)"><div class="kanban-col-hdr"><div class="kanban-col-title" style="color:var(--text2)">Other</div><div class="kanban-col-cnt">' + other.length + '</div></div><div class="kanban-cards">' + other.map(p => prodCard(p, kind)).join('') + '</div></div>';
+  }
+  const ncols = stages.length + (other.length ? 1 : 0);
+  host.innerHTML = '<div class="prod-summary" style="margin-bottom:12px">' + items.length + ' ' + (kind === 'video' ? 'video' : 'graphic') + ' project' + (items.length !== 1 ? 's' : '') + ' across your clients · read-only mirror of the ' + (kind === 'video' ? 'video' : 'design') + ' team\'s pipeline</div>'
+    + '<div class="kanban-board" style="grid-template-columns:repeat(' + ncols + ',minmax(200px,1fr));overflow-x:auto;gap:8px">' + cols + '</div>';
 }
 async function deleteContentCard() {
   var editId = (document.getElementById('ca-edit-id') || {}).value;
@@ -7928,8 +7908,8 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     { id:'clients',         icon:'', label:'Clients' },
     { id:'escalation',      icon:'', label:'Escalation' },
     { id:'sops',            icon:'', label:'SOPs' },
-    { id:'graphic-hub',     icon:'', label:'Graphic Hub' },
-    { id:'video-hub',       icon:'', label:'Video Hub' },
+    { id:'graphic-hub',     icon:'', label:'Graphic Pipeline' },
+    { id:'video-hub',       icon:'', label:'Video Pipeline' },
     { id:'idea-hub',        icon:'', label:'Idea Hub' },
     { id:'agents',          icon:'', label:'Agents' },
   ];
