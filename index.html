@@ -1441,6 +1441,10 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
       Content Plans
     </button>
+    <button class="sb-item" data-page="onetime">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 20 6"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      One-Time Tasks
+    </button>
     <button class="sb-more-toggle" id="sb-more-toggle" onclick="toggleMore()" aria-expanded="false">
       <span>More</span>
       <svg class="sb-more-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2090,6 +2094,10 @@ tr:last-child td { border-bottom: none; }
   <!-- ══ MISSIONS PAGE ══ -->
   <section class="page" id="page-content-overview">
     <div id="smm-co-root"></div>
+  </section>
+
+  <section class="page" id="page-onetime">
+    <div id="smm-ot-root"></div>
   </section>
 
   <section class="page" id="page-missions">
@@ -2828,7 +2836,7 @@ document.querySelectorAll('.sb-item[data-page]').forEach(b => {
 const PAGE_TITLES = {
   'today':'Today','calendar':'Calendar','my-tasks':'My Tasks','diary':'My Diary',
   'weeklyplan':'Weekly Plan','content-pipeline':'Content Pipeline','shoot-pipeline':'Shoot Pipeline',
-  'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients',
+  'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients','onetime':'One-Time Tasks',
   'escalation':'Escalation Helper','sops':'SMM SOPs','graphic-hub':'Graphic Pipeline','video-hub':'Video Pipeline',
   'missions':'Missions','ideas':'Idea Hub','agents':'Agents','client-profile':'Client',
   'community':'Community'
@@ -2878,6 +2886,7 @@ function nav(page, data) {
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
   if (page === 'content-overview') renderSmmContentOverview();
+  if (page === 'onetime') renderSmmOneTime();
   if (page === 'video-hub') renderVideoHub();
   if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
@@ -4426,6 +4435,170 @@ async function renderSmmContentOverview(){
   html+='</div>';
 
   root.innerHTML=html;
+}
+
+// ============ ONE-TIME TASKS ============
+// Reads the SAME client_onboarding table as the Command Centre's Onboarding tracker,
+// and uses the SAME "BIO: <Month> <Year>" row convention, so the two views can never
+// disagree. An SMM sees only their own clients because loadClients() already scopes
+// S.clients by assigned_smm; Thulaib and Shiara (no scope) see every section.
+const SMM_OT_BIO_PREFIX='BIO: ';
+const SMM_OT_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let SMM_OT_ROWS=[];
+
+function smmOtIsBio(s){ return String(s.step||'').indexOf(SMM_OT_BIO_PREFIX)===0; }
+function smmOtBioLabel(m,y){ return SMM_OT_BIO_PREFIX+SMM_OT_MONTHS[m-1]+' '+y; }
+function smmOtThis(){ const d=new Date(); return {m:d.getMonth()+1,y:d.getFullYear()}; }
+function smmOtNext(){ const t=smmOtThis(); return t.m===12?{m:1,y:t.y+1}:{m:t.m+1,y:t.y}; }
+// Bio is recurring, not an onboarding step - it must never count toward the %.
+function smmOtSteps(name){ return SMM_OT_ROWS.filter(function(s){return s.client_name===name&&!smmOtIsBio(s);}).sort(function(a,b){return (a.step_order||0)-(b.step_order||0);}); }
+function smmOtBioRow(name,m,y){ return SMM_OT_ROWS.find(function(s){return s.client_name===name&&s.step===smmOtBioLabel(m,y);})||null; }
+function smmOtBioDone(name,m,y){ const r=smmOtBioRow(name,m,y); return !!(r&&r.status==='done'); }
+
+async function renderSmmOneTime(){
+  const root=document.getElementById('smm-ot-root');
+  if(!root)return;
+  root.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px">Loading...</div>';
+  try{ await window._smmAuthReady; }catch(e){}
+  try{
+    const {data,error}=await sb.from('client_onboarding').select('*').order('step_order',{ascending:true});
+    if(error)throw error;
+    SMM_OT_ROWS=data||[];
+  }catch(e){
+    console.error('one-time tasks load failed',e);
+    root.innerHTML='<div style="color:#ff6b6b;font-size:13px;padding:24px">Could not load one-time tasks: '+escHtml(e.message||'unknown error')+'</div>';
+    return;
+  }
+
+  const TM=smmOtThis(), NM=smmOtNext();
+  const tmLbl=SMM_OT_MONTHS[TM.m-1], nmLbl=SMM_OT_MONTHS[NM.m-1];
+  const clients=(S.clients||[]).slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'
+    +'<div><div style="font-size:22px;font-weight:800;color:#fff">One-Time Tasks</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">Setup work and monthly bio, per client</div></div>'
+  +'</div>';
+
+  function bioChip(name,mo,lbl){
+    const done=smmOtBioDone(name,mo.m,mo.y);
+    return '<span onclick="smmOtToggleBio(\''+escHtml(name).replace(/'/g,"\\'")+'\','+mo.m+','+mo.y+')" '
+      +'title="'+lbl+' '+mo.y+' bio - click to mark '+(done?'not done':'done')+'" '
+      +'style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;cursor:pointer;user-select:none;font-size:10px;font-weight:700;'
+      +(done?'background:rgba(0,255,133,0.14);border:1px solid rgba(0,255,133,0.45);color:#00FF85'
+            :'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.45)')
+      +'">'+(done?'&#10003;':'&#9675;')+' '+lbl+'</span>';
+  }
+
+  function card(c){
+    const steps=smmOtSteps(c.name);
+    const doneN=steps.filter(function(s){return s.status==='done';}).length;
+    const pct=steps.length?Math.round(doneN/steps.length*100):null;
+    const bar=pct===null?'rgba(255,255,255,0.2)':pct===100?'#00FF85':pct>=50?'#f59e0b':'#ef4444';
+    var body=steps.length
+      ? steps.map(function(s){
+          const d=s.status==='done';
+          return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">'
+            +'<div onclick="smmOtToggleStep('+s.id+')" style="width:18px;height:18px;border-radius:5px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;'
+              +'border:1.5px solid '+(d?'#00FF85':'rgba(255,255,255,0.2)')+';background:'+(d?'#00FF85':'transparent')+'">'
+              +(d?'<svg width="10" height="8" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7.5L10 1" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':'')
+            +'</div>'
+            +'<div style="flex:1;font-size:12px;'+(d?'color:rgba(255,255,255,0.35);text-decoration:line-through':'color:rgba(255,255,255,0.85)')+'">'+escHtml(s.step)+'</div>'
+          +'</div>';
+        }).join('')
+      : '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:10px 0">No checklist started for this client yet.</div>';
+
+    return '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">'
+        +'<div style="font-size:14px;font-weight:800;color:#fff">'+escHtml(c.name)+'</div>'
+        +'<div style="font-size:11px;color:rgba(255,255,255,0.4)">'+(pct===null?'not started':doneN+'/'+steps.length+' &middot; '+pct+'%')+'</div>'
+      +'</div>'
+      +'<div style="height:5px;border-radius:3px;background:rgba(255,255,255,0.07);overflow:hidden;margin-bottom:12px"><div style="height:100%;width:'+(pct||0)+'%;background:'+bar+'"></div></div>'
+      +'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:9px 11px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px">'
+        +'<div style="font-size:9px;font-weight:800;letter-spacing:0.09em;color:rgba(255,255,255,0.3)">BIO</div>'
+        +'<div style="display:flex;gap:6px">'+bioChip(c.name,TM,tmLbl)+bioChip(c.name,NM,nmLbl)+'</div>'
+      +'</div>'
+      +body
+    +'</div>';
+  }
+
+  // Split by SMM. Nirvana first, then Tiana, then others, then unassigned.
+  const known=['NIRVANA','TIANA'];
+  const extras=[];
+  clients.forEach(function(c){ const s=(c.assigned_smm||'').toUpperCase(); if(s&&known.indexOf(s)<0&&extras.indexOf(s)<0)extras.push(s); });
+  const sections=known.concat(extras.sort()).map(function(s){
+    return {key:s,label:s,list:clients.filter(function(c){return (c.assigned_smm||'').toUpperCase()===s;})};
+  });
+  const orphans=clients.filter(function(c){return !(c.assigned_smm||'').trim();});
+  if(orphans.length)sections.push({key:'',label:'UNASSIGNED',list:orphans});
+
+  const ACCENT={NIRVANA:'#00E5FF',TIANA:'#FF1F8E'};
+  var any=false;
+  sections.forEach(function(sec){
+    if(!sec.list.length)return;
+    any=true;
+    const accent=ACCENT[sec.key]||'rgba(255,255,255,0.35)';
+    var tot=0,don=0;
+    sec.list.forEach(function(c){ const st=smmOtSteps(c.name); tot+=st.length; don+=st.filter(function(s){return s.status==='done';}).length; });
+    const secPct=tot>0?Math.round(don/tot*100):0;
+    const bioT=sec.list.filter(function(c){return smmOtBioDone(c.name,TM.m,TM.y);}).length;
+    const bioN=sec.list.filter(function(c){return smmOtBioDone(c.name,NM.m,NM.y);}).length;
+
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:26px 0 12px;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.09)">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="width:3px;height:18px;background:'+accent+';border-radius:2px"></div>'
+        +'<div style="font-size:14px;font-weight:800;color:#fff;letter-spacing:0.04em">'+escHtml(sec.label)+'</div>'
+        +'<div style="font-size:11px;color:rgba(255,255,255,0.35)">'+sec.list.length+' client'+(sec.list.length===1?'':'s')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:16px;font-size:11px;color:rgba(255,255,255,0.4)">'
+        +'<span>One-time tasks <b style="color:'+accent+';font-size:13px">'+secPct+'%</b> <span style="opacity:0.6">('+don+'/'+tot+')</span></span>'
+        +'<span>Bio '+tmLbl+' <b style="color:'+(bioT===sec.list.length?'#00FF85':'#fff')+'">'+bioT+'/'+sec.list.length+'</b></span>'
+        +'<span>Bio '+nmLbl+' <b style="color:'+(bioN===sec.list.length?'#00FF85':'#fff')+'">'+bioN+'/'+sec.list.length+'</b></span>'
+      +'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px">'
+      +sec.list.map(card).join('')
+    +'</div>';
+  });
+
+  if(!any)html+='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px;text-align:center">No clients assigned to you yet.</div>';
+  root.innerHTML=html;
+}
+
+async function smmOtToggleStep(id){
+  const s=SMM_OT_ROWS.find(function(x){return String(x.id)===String(id);});
+  if(!s)return;
+  const next=s.status==='done'?'pending':'done';
+  s.status=next;                      // optimistic
+  renderSmmOneTime();
+  try{
+    const {error}=await sb.from('client_onboarding').update({status:next}).eq('id',id);
+    if(error)throw error;
+  }catch(e){
+    console.error('smmOtToggleStep',e);
+    s.status=next==='done'?'pending':'done';
+    renderSmmOneTime();
+    toast('Could not save that tick','error');
+  }
+}
+
+async function smmOtToggleBio(name,m,y){
+  const existing=smmOtBioRow(name,m,y);
+  try{
+    if(existing){
+      const next=existing.status==='done'?'pending':'done';
+      const {error}=await sb.from('client_onboarding').update({status:next}).eq('id',existing.id);
+      if(error)throw error;
+    }else{
+      const c=(S.clients||[]).find(function(x){return x.name===name;});
+      const row={client_id:c?c.id:null,client_name:name,step:smmOtBioLabel(m,y),step_order:900+parseInt(m),status:'done'};
+      const {error}=await sb.from('client_onboarding').insert([row]);
+      if(error)throw error;
+    }
+    await renderSmmOneTime();
+  }catch(e){
+    console.error('smmOtToggleBio',e);
+    toast('Could not update the bio for '+name,'error');
+  }
 }
 
 function smmOpenClientContentPlan(id){
@@ -7909,6 +8082,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     { id:'shoot-pipeline',  icon:'', label:'Shoot Pipeline' },
     { id:'approval-queue',  icon:'', label:'Approval Queue' },
     { id:'content-overview',icon:'', label:'Content Overview' },
+    { id:'onetime',         icon:'', label:'One-Time Tasks' },
     { id:'clients',         icon:'', label:'Clients' },
     { id:'escalation',      icon:'', label:'Escalation' },
     { id:'sops',            icon:'', label:'SOPs' },
