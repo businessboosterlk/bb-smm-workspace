@@ -1441,6 +1441,10 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
       Content Plans
     </button>
+    <button class="sb-item" data-page="delivery">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 20 6"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      Delivery
+    </button>
     <button class="sb-more-toggle" id="sb-more-toggle" onclick="toggleMore()" aria-expanded="false">
       <span>More</span>
       <svg class="sb-more-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2090,6 +2094,10 @@ tr:last-child td { border-bottom: none; }
   <!-- ══ MISSIONS PAGE ══ -->
   <section class="page" id="page-content-overview">
     <div id="smm-co-root"></div>
+  </section>
+
+  <section class="page" id="page-delivery">
+    <div id="smm-dl-root"></div>
   </section>
 
   <section class="page" id="page-missions">
@@ -2828,7 +2836,7 @@ document.querySelectorAll('.sb-item[data-page]').forEach(b => {
 const PAGE_TITLES = {
   'today':'Today','calendar':'Calendar','my-tasks':'My Tasks','diary':'My Diary',
   'weeklyplan':'Weekly Plan','content-pipeline':'Content Pipeline','shoot-pipeline':'Shoot Pipeline',
-  'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients',
+  'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients','delivery':'Delivery',
   'escalation':'Escalation Helper','sops':'SMM SOPs','graphic-hub':'Graphic Pipeline','video-hub':'Video Pipeline',
   'missions':'Missions','ideas':'Idea Hub','agents':'Agents','client-profile':'Client',
   'community':'Community'
@@ -2878,6 +2886,7 @@ function nav(page, data) {
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
   if (page === 'content-overview') renderSmmContentOverview();
+  if (page === 'delivery') renderSmmDelivery();
   if (page === 'video-hub') renderVideoHub();
   if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
@@ -4426,6 +4435,157 @@ async function renderSmmContentOverview(){
   html+='</div>';
 
   root.innerHTML=html;
+}
+
+// ============ DELIVERY BOARD (shared bb_delivery table) ============
+// Same rows the standalone Delivery Tracker (bb-delivery) writes, so all three
+// views are one board. Group headers use the REAL month name taken from the
+// period label, not "this month"/"next month".
+var BBD_COLS=[
+ {k:'posts',   g:'this', t:'Posts'},
+ {k:'shorts',  g:'this', t:'Short videos'},
+ {k:'vids',    g:'this', t:'Published videos'},
+ {k:'stories', g:'this', t:'Stories'},
+ {k:'scripts', g:'this', t:'Scripts sent'},
+ {k:'ads',     g:'this', t:'Ads live'},
+ {k:'report',  g:'this', t:'Report sent'},
+ {k:'plan',    g:'next', t:'Content plan'},
+ {k:'approved',g:'next', t:'Plan approved'},
+ {k:'nposts',  g:'next', t:'Posts made'},
+ {k:'bio',     g:'bio',  t:'BIOTHIS'},
+ {k:'nbio',    g:'bio',  t:'BIONEXT'},
+ {k:'fb',      g:'one',  t:'FB cover'},
+ {k:'ig',      g:'one',  t:'IG highlights'}
+];
+var BBD_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var BBD_ROWS=[], BBD_PERIODS=[], BBD_PERIOD='';
+// One-time tasks are the brand jobs - done once, not every month.
+function bbdIsOneTime(c){ return c.g==='one'; }
+function bbdThisMonthName(p){ var m=String(p||'').split(' ')[0]; return BBD_MONTHS.indexOf(m)>=0?m:'This month'; }
+function bbdNextMonthName(p){
+  var parts=String(p||'').split(' '); var i=BBD_MONTHS.indexOf(parts[0]);
+  if(i<0) return 'Next month';
+  var y=parseInt(parts[1]||'0',10); i++; if(i>11){i=0;y++;}
+  return BBD_MONTHS[i];
+}
+function bbdColLabel(c,period){
+  if(c.t==='BIOTHIS') return bbdThisMonthName(period);
+  if(c.t==='BIONEXT') return bbdNextMonthName(period);
+  return c.t;
+}
+function bbdGroupLabel(g,period){
+  if(g==='this') return bbdThisMonthName(period).toUpperCase();
+  if(g==='next') return bbdNextMonthName(period).toUpperCase();
+  if(g==='bio')  return 'BIO';
+  return 'ONE-TIME';
+}
+function bbdPct(r){ var v=r.vals||{}; return Math.round(BBD_COLS.filter(function(c){return v[c.k];}).length/BBD_COLS.length*100); }
+
+async function renderSmmDelivery(){
+  var root=document.getElementById('smm-dl-root'); if(!root) return;
+  if(!BBD_ROWS.length) root.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px">Loading...</div>';
+  try{ await window._smmAuthReady; }catch(e){}
+  try{
+    if(!BBD_PERIODS.length){
+      var pr=await sb.from('bb_delivery').select('period');
+      if(pr.error) throw pr.error;
+      var seen={}; (pr.data||[]).forEach(function(x){seen[x.period]=1;});
+      BBD_PERIODS=Object.keys(seen).sort().reverse();
+      if(!BBD_PERIOD||BBD_PERIODS.indexOf(BBD_PERIOD)<0) BBD_PERIOD=BBD_PERIODS[0]||'';
+    }
+    var r=await sb.from('bb_delivery').select('*').eq('period',BBD_PERIOD).order('pos',{ascending:true});
+    if(r.error) throw r.error;
+    BBD_ROWS=r.data||[];
+  }catch(e){
+    console.error('delivery load',e);
+    root.innerHTML='<div style="color:#ff6b6b;font-size:13px;padding:24px">Could not load the delivery board: '+escHtml(e.message||'unknown')+'</div>';
+    return;
+  }
+
+  var scope=(typeof currentSmmScope==='function')?currentSmmScope():null;
+  var rows=BBD_ROWS.filter(function(x){ return !scope || String(x.owner||'').toUpperCase()===scope; });
+
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px">'
+    +'<div><div style="font-size:22px;font-weight:800;color:#fff">Delivery</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">'+escHtml(BBD_PERIOD)+(scope?' &middot; your clients':'')+'</div></div>'
+    +'<select onchange="BBD_PERIOD=this.value;BBD_ROWS=[];renderSmmDelivery()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">'
+      +BBD_PERIODS.map(function(p){return '<option'+(p===BBD_PERIOD?' selected':'')+'>'+escHtml(p)+'</option>';}).join('')
+    +'</select>'
+  +'</div>';
+
+  var known=['NIRVANA','TIANA'], extras=[];
+  rows.forEach(function(x){var o=String(x.owner||'').toUpperCase(); if(o&&known.indexOf(o)<0&&extras.indexOf(o)<0)extras.push(o);});
+  var groups=known.concat(extras.sort()).map(function(o){return {label:o,list:rows.filter(function(x){return String(x.owner||'').toUpperCase()===o;})};});
+  var orphans=rows.filter(function(x){return !String(x.owner||'').trim();});
+  if(orphans.length) groups.push({label:'UNASSIGNED',list:orphans});
+
+  var ACC={NIRVANA:'#00E5FF',TIANA:'#FF1F8E'};
+  var any=false;
+  groups.forEach(function(g){
+    if(!g.list.length) return; any=true;
+    var accent=ACC[g.label]||'rgba(255,255,255,0.4)';
+    var tot=g.list.length*BBD_COLS.length, don=0, full=0;
+    g.list.forEach(function(r){var v=r.vals||{};var d=BBD_COLS.filter(function(c){return v[c.k];}).length;don+=d;if(d===BBD_COLS.length)full++;});
+    var pct=tot?Math.round(don/tot*100):0;
+
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:26px 0 10px;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.09)">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="width:3px;height:18px;background:'+accent+';border-radius:2px"></div>'
+        +'<div style="font-size:14px;font-weight:800;color:#fff;letter-spacing:0.04em">'+escHtml(g.label)+'</div>'
+        +'<div style="font-size:11px;color:rgba(255,255,255,0.35)">'+g.list.length+' client'+(g.list.length===1?'':'s')+' &middot; '+full+' fully done</div>'
+      +'</div>'
+      +'<div style="font-size:11px;color:rgba(255,255,255,0.4)">Complete <b style="color:'+accent+';font-size:15px">'+pct+'%</b> <span style="opacity:0.6">('+don+'/'+tot+')</span></div>'
+    +'</div>';
+
+    var head='<tr><th style="text-align:left;padding:8px 10px;position:sticky;left:0;background:#12121a;z-index:2;min-width:170px">CLIENT</th>';
+    var lastG=null;
+    BBD_COLS.forEach(function(c){
+      var isNew=c.g!==lastG; lastG=c.g;
+      head+='<th style="padding:6px 3px;font-size:8.5px;font-weight:700;letter-spacing:.4px;color:rgba(255,255,255,0.5);'
+        +(isNew?'border-left:2px solid '+accent+'55;':'')+'">'
+        +(isNew?'<div style="font-size:7.5px;opacity:.55;margin-bottom:2px">'+bbdGroupLabel(c.g,BBD_PERIOD)+'</div>':'<div style="height:11px"></div>')
+        +bbdColLabel(c,BBD_PERIOD).toUpperCase()+'</th>';
+    });
+    head+='<th style="padding:6px 6px;font-size:8.5px;color:rgba(255,255,255,0.5)">DONE</th></tr>';
+
+    var body=g.list.map(function(r){
+      var v=r.vals||{}; var pc=bbdPct(r);
+      var col=pc===100?'#00FF85':pc>0?'#f59e0b':'rgba(255,255,255,0.3)';
+      var tds=''; var lg=null;
+      BBD_COLS.forEach(function(c){
+        var isNew=c.g!==lg; lg=c.g; var on=!!v[c.k];
+        tds+='<td style="text-align:center;padding:6px 3px;'+(isNew?'border-left:2px solid '+accent+'33;':'')+'">'
+          +'<span onclick="bbdTog(\''+r.id+'\',\''+c.k+'\')" title="'+escHtml(bbdColLabel(c,BBD_PERIOD))+'" '
+          +'style="display:inline-block;width:19px;height:19px;border-radius:5px;cursor:pointer;'
+          +(on?'background:#00FF85;border:2px solid #00FF85':'background:transparent;border:2px solid rgba(255,255,255,0.18)')+'">'
+          +(on?'<svg width="9" height="7" viewBox="0 0 11 9" fill="none" style="margin:1px 0 0 2px"><path d="M1 4L4 7.5L10 1" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>':'')
+          +'</span></td>';
+      });
+      return '<tr style="border-top:1px solid rgba(255,255,255,0.05)">'
+        +'<td style="text-align:left;padding:7px 10px;font-size:12px;font-weight:600;color:#fff;position:sticky;left:0;background:#0e0e15;z-index:1">'+escHtml(r.client)+'</td>'
+        +tds
+        +'<td style="text-align:center;padding:7px 6px;font-size:11px;font-weight:800;color:'+col+'">'+pc+'%</td></tr>';
+    }).join('');
+
+    html+='<div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.08);border-radius:10px;background:rgba(255,255,255,0.02)">'
+      +'<table style="border-collapse:collapse;width:100%;min-width:1080px"><thead style="background:#12121a">'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+  });
+
+  if(!any) html+='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px;text-align:center">No clients on the board for you this period.</div>';
+  root.innerHTML=html;
+}
+
+async function bbdTog(id,k){
+  var r=BBD_ROWS.filter(function(x){return String(x.id)===String(id);})[0]; if(!r) return;
+  r.vals=r.vals||{}; r.vals[k]=!r.vals[k];
+  renderSmmDelivery();                                  // optimistic
+  try{
+    var res=await sb.from('bb_delivery').update({vals:r.vals,updated_at:new Date().toISOString()}).eq('id',id);
+    if(res.error) throw res.error;
+  }catch(e){
+    console.error('bbdTog',e); r.vals[k]=!r.vals[k]; renderSmmDelivery();
+    if(typeof toast==='function') toast('Could not save that tick','error');
+  }
 }
 
 function smmOpenClientContentPlan(id){
@@ -7909,6 +8069,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     { id:'shoot-pipeline',  icon:'', label:'Shoot Pipeline' },
     { id:'approval-queue',  icon:'', label:'Approval Queue' },
     { id:'content-overview',icon:'', label:'Content Overview' },
+    { id:'delivery',        icon:'', label:'Delivery' },
     { id:'clients',         icon:'', label:'Clients' },
     { id:'escalation',      icon:'', label:'Escalation' },
     { id:'sops',            icon:'', label:'SOPs' },
