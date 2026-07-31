@@ -2366,8 +2366,8 @@ tr:last-child td { border-bottom: none; }
 
 <div class="modal-bg" id="modal-task">
   <div class="modal">
-    <div class="modal-head"><div class="modal-title">Add Task</div><button class="modal-close" onclick="closeModal('task')">×</button></div>
-    <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="t-client"><option value="">General — No Client</option></select></div>
+    <div class="modal-head"><div class="modal-title" id="t-modal-title">Add Task</div><button class="modal-close" onclick="closeModal('task')">×</button></div>
+    <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="t-client"><option value="">General (no client)</option></select></div>
     <div class="fg"><label class="fl">Task Title</label><input class="fi" id="t-title" placeholder="What needs doing?"></div>
     <div class="g2">
       <div class="fg"><label class="fl">Priority</label><select class="fi" id="t-priority"><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></div>
@@ -2375,10 +2375,29 @@ tr:last-child td { border-bottom: none; }
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Due Date</label><input class="fi" type="date" id="t-due"></div>
-      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="TH">Thulaib</option><option value="SH">Shiara</option><option value="US">Ushane</option><option value="SU">Suhana</option><option value="RU">Rukshan</option><option value="TI">Tiana</option><option value="NV">Nirvana</option></select></div>
+      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="th">Thulaib</option><option value="sh">Shiara</option><option value="both">Thulaib and Shiara</option><option value="Ushane">Ushane</option><option value="Suhana">Suhana</option><option value="Rukshan">Rukshan</option><option value="Tiana">Tiana</option><option value="Nirvana">Nirvana</option></select></div>
     </div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="t-notes" rows="2" placeholder="Optional notes"></textarea></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitTaskAdd()">Add Task</button>
+    <button class="btn btn-primary" id="t-submit-btn" style="width:100%;justify-content:center" onclick="submitTaskAdd()">Add Task</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-task-copy">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Copy task to clients</div><button class="modal-close" onclick="closeModal('task-copy')">×</button></div>
+    <div class="fg">
+      <div id="tc-title" style="font-size:13px;font-weight:700;color:#fff"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">One separate task is created for every client you tick. Nothing is written until you press the button.</div>
+    </div>
+    <div class="fg">
+      <label class="fl" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span>Your clients</span>
+        <button class="btn btn-ghost btn-sm" id="tc-all-btn" onclick="tcToggleAll()">Select all</button>
+      </label>
+      <div id="tc-list" style="max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px"></div>
+    </div>
+    <div id="tc-count" style="font-size:12px;color:var(--text3);margin-bottom:12px">No clients selected</div>
+    <button class="btn btn-primary" id="tc-submit" style="width:100%;justify-content:center" onclick="submitTaskCopy()">Create the copies</button>
   </div>
 </div>
 
@@ -3646,7 +3665,8 @@ function renderClientTasks(id) {
 function renderTaskRow(t) {
   const overdue = !t.done && t.due && new Date(t.due) < new Date() && new Date(t.due).toDateString() !== new Date().toDateString();
   const dueStr = t.due ? new Date(t.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-  const avClass = t.assign === 'TH' ? 'av-t' : t.assign === 'SH' ? 'av-s' : 'av-k';
+  const aLow = String(t.assign || '').toLowerCase();
+  const avClass = aLow === 'th' ? 'av-t' : aLow === 'sh' ? 'av-s' : 'av-k';
   const priorityClass = t.priority === 'HIGH' ? 'tag-high' : t.priority === 'MEDIUM' ? 'tag-medium' : 'tag-low';
 
   return `<div class="task-row">
@@ -3660,8 +3680,10 @@ function renderTaskRow(t) {
       </div>
       ${t.created_at ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;font-weight:300">· ${new Date(t.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
     </div>
-    <div class="av ${avClass}">${t.assign || '?'}</div>
-    <button class="btn btn-ghost btn-sm" onclick="deleteTask(${t.id})">×</button>
+    <div class="av ${avClass}" title="${escHtml(t.assign || 'Unassigned')}">${taskAssignChip(t.assign)}</div>
+    <button class="btn btn-ghost btn-sm" title="Edit this task" onclick="openTaskEdit(${t.id})">${TASK_ICON_EDIT}</button>
+    <button class="btn btn-ghost btn-sm" title="Copy this task to other clients" onclick="openTaskCopy(${t.id})">${TASK_ICON_COPY}</button>
+    <button class="btn btn-ghost btn-sm" title="Delete this task" onclick="deleteTask(${t.id})">×</button>
   </div>`;
 }
 
@@ -3726,28 +3748,121 @@ async function deleteTask(id) {
   } catch (e) { console.error(e); toast('Failed', 'error'); }
 }
 
+// Stroke icons, one set, never emoji (bb-anti-ai-tells rule 2).
+const TASK_ICON_EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const TASK_ICON_COPY = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+// The task an open modal is editing. null means the modal is in Add mode.
+var S_taskEdit = null;
+
+/* tasks.assign is SHARED with the Command Centre, and the CC matches the string
+   exactly (index.html:4133 and 7012). Its vocabulary is lowercase role codes
+   (th, sh, both, smm, gd, video) or the person's FULL NAME. Two-letter initials
+   match nothing over there, so a task written as 'NV' is invisible in the CC.
+   Everything below writes CC-compatible values only. */
+function taskAssignFor(user) {
+  const r = USER_ROLES[user];
+  if (!r) return '';
+  if (r.code === 'TH') return 'th';
+  if (r.code === 'SH') return 'sh';
+  return r.name || '';
+}
+
+/* Old rows carry the two-letter initials this app used to write. Map them onto
+   the CC vocabulary so opening an old task in the editor does not silently
+   reassign it. Anything unrecognised is preserved verbatim, never guessed. */
+const TASK_ASSIGN_LEGACY = {
+  TH: 'th', SH: 'sh', US: 'Ushane', SU: 'Suhana',
+  RU: 'Rukshan', TI: 'Tiana', NV: 'Nirvana'
+};
+function taskAssignNormalise(v) {
+  const raw = String(v || '').trim();
+  if (!raw) return '';
+  return TASK_ASSIGN_LEGACY[raw.toUpperCase()] || raw;
+}
+
+// Short label for the round avatar chip, so 'Nirvana' does not overflow it.
+function taskAssignChip(a) {
+  a = String(a || '').trim();
+  if (!a) return '?';
+  const low = a.toLowerCase();
+  if (low === 'th') return 'TH';
+  if (low === 'sh') return 'SH';
+  if (low === 'both') return 'B';
+  if (a.length <= 3) return a.toUpperCase();
+  return a.slice(0, 2).toUpperCase();
+}
+
+function taskFillClientDropdown(selectedId) {
+  const clientSel = document.getElementById('t-client');
+  if (!clientSel) return;
+  const opts = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+  clientSel.innerHTML = '<option value="">General (no client)</option>' + opts;
+  clientSel.value = selectedId ? String(selectedId) : '';
+}
+
+function taskSetModalMode(editing) {
+  const t = document.getElementById('t-modal-title');
+  const b = document.getElementById('t-submit-btn');
+  if (t) t.textContent = editing ? 'Edit Task' : 'Add Task';
+  if (b) b.textContent = editing ? 'Save changes' : 'Add Task';
+}
+
 function openGlobalTaskModal() {
   S.currentClientId = null;
-  // Populate client dropdown
-  const clientSel = document.getElementById('t-client');
-  if (clientSel) {
-    const opts = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
-    clientSel.innerHTML = '<option value="">General — No Client</option>' + opts;
-  }
+  S_taskEdit = null;
+  taskFillClientDropdown(null);
   // Set default assign to current user
   const assignSel = document.getElementById('t-assign');
-  if (assignSel && S.currentUser) {
-    const code = USER_ROLES[S.currentUser]?.code;
-    if (code) assignSel.value = code;
+  if (assignSel) {
+    Array.from(assignSel.querySelectorAll('option[data-temp]')).forEach(o => o.remove());
+    const v = taskAssignFor(S.currentUser);
+    if (v) assignSel.value = v;
   }
   document.getElementById('t-title').value = '';
   document.getElementById('t-notes').value = '';
   document.getElementById('t-due').value = '';
+  taskSetModalMode(false);
   openModal('task');
   document.getElementById('t-title').focus();
 }
 
-function openTaskModal() { openModal('task'); document.getElementById('t-title').focus(); }
+function openTaskModal() { S_taskEdit = null; taskSetModalMode(false); openModal('task'); document.getElementById('t-title').focus(); }
+
+// ---- Edit an existing task -------------------------------------------
+function openTaskEdit(id) {
+  const t = (S.tasks || []).find(x => String(x.id) === String(id));
+  if (!t) { toast('Task not found', 'error'); return; }
+  S_taskEdit = t.id;
+  taskFillClientDropdown(t.client_id);
+  document.getElementById('t-title').value = t.title || '';
+  document.getElementById('t-notes').value = t.notes || '';
+  document.getElementById('t-due').value = t.due ? String(t.due).substring(0, 10) : '';
+  const pr = document.getElementById('t-priority'); if (pr) pr.value = t.priority || 'MEDIUM';
+  const ca = document.getElementById('t-category'); if (ca) ca.value = t.category || 'Other';
+  const asg = document.getElementById('t-assign');
+  if (asg) {
+    /* An old-style value (NV, TI, US) matches no option, so the box would fall
+       back to the first name in the list and a save would silently reassign
+       someone else's task. Translate it, and if it still matches nothing, keep
+       the original as a temporary option so saving changes nothing. */
+    // drop any temporary option left behind by a previous open
+    Array.from(asg.querySelectorAll('option[data-temp]')).forEach(o => o.remove());
+    const want = taskAssignNormalise(t.assign);
+    asg.value = want;
+    if (asg.value !== want) {
+      const keep = document.createElement('option');
+      keep.value = want;
+      keep.textContent = (want || 'Unassigned') + ' (unchanged)';
+      keep.setAttribute('data-temp', '1');
+      asg.appendChild(keep);
+      asg.value = want;
+    }
+  }
+  taskSetModalMode(true);
+  openModal('task');
+  document.getElementById('t-title').focus();
+}
 
 async function submitTaskAdd() {
   const clientSel = document.getElementById('t-client');
@@ -3764,6 +3879,27 @@ async function submitTaskAdd() {
   };
   if (!data.title) { toast('Title required', 'error'); return; }
   if (!sb) { toast('Not connected', 'error'); return; }
+
+  // Edit mode: update the row in place instead of inserting a new one.
+  if (S_taskEdit) {
+    const editId = S_taskEdit;
+    delete data.done;                       // never un-tick a finished task on save
+    data.updated_at = new Date().toISOString();
+    try {
+      const { error } = await sb.from('tasks').update(data).eq('id', editId);
+      if (error) throw error;
+      const local = (S.tasks || []).find(x => String(x.id) === String(editId));
+      if (local) Object.assign(local, data);
+      S_taskEdit = null;
+      taskSetModalMode(false);
+      closeModal('task');
+      toast('Task updated', 'success');
+      if (S.currentClientId && S.currentPage === 'client-profile') openClientProfile(S.currentClientId);
+      else renderMyTasks();
+    } catch (e) { console.error(e); toast('Failed: ' + (e.message || ''), 'error'); }
+    return;
+  }
+
   try {
     const { data: inserted, error } = await sb.from('tasks').insert([data]).select();
     if (error) throw error;
@@ -3779,6 +3915,93 @@ async function submitTaskAdd() {
       renderMyTasks();
     }
   } catch (e) { console.error(e); toast('Failed: ' + (e.message || ''), 'error'); }
+}
+
+// ---- Copy one task to many clients -----------------------------------
+var S_taskCopy = null;
+
+function openTaskCopy(id) {
+  const t = (S.tasks || []).find(x => String(x.id) === String(id));
+  if (!t) { toast('Task not found', 'error'); return; }
+  if (!S.clients.length) { toast('No clients to copy to', 'error'); return; }
+  S_taskCopy = t.id;
+  document.getElementById('tc-title').textContent = t.title || 'Untitled task';
+  /* S.clients is already filtered to this SMM's own clients by loadClients()
+     (assigned_smm), so nobody can copy into another seat's clients by accident. */
+  document.getElementById('tc-list').innerHTML = S.clients.map(function (c) {
+    const already = String(t.client_id || '') === String(c.id);
+    return '<label style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:#fff">'
+      + '<input type="checkbox" class="tc-cb" value="' + c.id + '"' + (already ? ' disabled' : '') + ' onchange="tcUpdateCount()" style="width:15px;height:15px;flex-shrink:0;accent-color:var(--accent);cursor:pointer">'
+      + '<span' + (already ? ' style="opacity:0.45"' : '') + '>' + escHtml(c.name) + (already ? ' (already has it)' : '') + '</span>'
+      + '</label>';
+  }).join('');
+  tcUpdateCount();
+  openModal('task-copy');
+}
+
+function tcUpdateCount() {
+  const boxes = Array.from(document.querySelectorAll('.tc-cb')).filter(b => !b.disabled);
+  const n = boxes.filter(b => b.checked).length;
+  const el = document.getElementById('tc-count');
+  if (el) el.textContent = n === 0 ? 'No clients selected'
+    : n === 1 ? '1 client selected, 1 task will be created'
+    : n + ' clients selected, ' + n + ' tasks will be created';
+  const btn = document.getElementById('tc-all-btn');
+  if (btn) btn.textContent = (boxes.length && n === boxes.length) ? 'Clear all' : 'Select all';
+}
+
+function tcToggleAll() {
+  const boxes = Array.from(document.querySelectorAll('.tc-cb')).filter(b => !b.disabled);
+  const all = boxes.length && boxes.every(b => b.checked);
+  boxes.forEach(function (b) { b.checked = !all; });
+  tcUpdateCount();
+}
+
+async function submitTaskCopy() {
+  if (!S_taskCopy) return;
+  if (!sb) { toast('Not connected', 'error'); return; }
+  const src = (S.tasks || []).find(x => String(x.id) === String(S_taskCopy));
+  if (!src) { toast('Task not found', 'error'); return; }
+  const ids = Array.from(document.querySelectorAll('.tc-cb'))
+    .filter(b => b.checked && !b.disabled).map(b => parseInt(b.value));
+  if (!ids.length) { toast('Pick at least one client', 'error'); return; }
+
+  // Never write in bulk silently. Show the count and the names first.
+  const names = ids.map(function (id) { const c = S.clients.find(x => x.id == id); return c ? c.name : id; });
+  if (!confirm('Create ' + ids.length + ' task' + (ids.length === 1 ? '' : 's') + '?\n\n"'
+    + (src.title || '') + '"\n\n' + names.join('\n'))) return;
+
+  const btn = document.getElementById('tc-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+  const rows = ids.map(function (cid) {
+    return {
+      client_id: cid,
+      title: src.title,
+      // keep the same person, but write the value the CC can actually see
+      assign: taskAssignNormalise(src.assign) || null,
+      due: src.due || null,
+      priority: src.priority || null,
+      category: src.category || null,
+      notes: src.notes || null,
+      done: false
+    };
+  });
+  try {
+    const { data: inserted, error } = await sb.from('tasks').insert(rows).select();
+    if (error) throw error;
+    (inserted || []).forEach(function (r) { S.tasks.unshift(r); });
+    const n = (inserted || []).length;
+    closeModal('task-copy');
+    S_taskCopy = null;
+    toast(n + ' task' + (n === 1 ? '' : 's') + ' created', 'success');
+    if (S.currentClientId && S.currentPage === 'client-profile') openClientProfile(S.currentClientId);
+    else renderMyTasks();
+  } catch (e) {
+    console.error('task copy', e);
+    toast('Failed: ' + (e.message || ''), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Create the copies'; }
+  }
 }
 
 // ============ CONTENT PIPELINE ============
@@ -5834,7 +6057,7 @@ function renderMyTasks() {
     var isDone = !!t.done;
     var pc = prioColors[t.priority] || 'var(--text3)';
     var checkInner = isDone ? '<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 7L9 1" stroke="#0B0C0F" stroke-width="2" stroke-linecap="round"/></svg>' : '';
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px' + (isDone ? ';opacity:0.55' : '') + '"><div onclick="toggleTask(' + t.id + ')" style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (isDone ? '#4ADE80' : 'var(--border)') + ';background:' + (isDone ? '#4ADE80' : 'transparent') + ';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">' + checkInner + '</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff' + (isDone ? ';text-decoration:line-through' : '') + '">' + escHtml(t.title || 'Untitled') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + (t.priority ? '<span style="font-size:10px;background:' + pc + '22;color:' + pc + ';padding:2px 7px;border-radius:20px;font-weight:700;text-transform:uppercase">' + t.priority + '</span>' : '') + (t.category ? '<span style="font-size:10px;color:var(--text3)">' + escHtml(t.category) + '</span>' : '') + (t.due ? '<span style="font-size:11px;color:var(--text3)">Due: ' + t.due.substring(0,10) + '</span>' : '') + '</div></div><button onclick="deleteTask(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;line-height:1">×</button></div>';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px' + (isDone ? ';opacity:0.55' : '') + '"><div onclick="toggleTask(' + t.id + ')" style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (isDone ? '#4ADE80' : 'var(--border)') + ';background:' + (isDone ? '#4ADE80' : 'transparent') + ';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">' + checkInner + '</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff' + (isDone ? ';text-decoration:line-through' : '') + '">' + escHtml(t.title || 'Untitled') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + (t.priority ? '<span style="font-size:10px;background:' + pc + '22;color:' + pc + ';padding:2px 7px;border-radius:20px;font-weight:700;text-transform:uppercase">' + t.priority + '</span>' : '') + (t.category ? '<span style="font-size:10px;color:var(--text3)">' + escHtml(t.category) + '</span>' : '') + (t.due ? '<span style="font-size:11px;color:var(--text3)">Due: ' + t.due.substring(0,10) + '</span>' : '') + '</div></div><div style="display:flex;align-items:center;gap:2px;flex-shrink:0"><button title="Edit this task" onclick="openTaskEdit(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;line-height:0">' + TASK_ICON_EDIT + '</button><button title="Copy this task to other clients" onclick="openTaskCopy(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;line-height:0">' + TASK_ICON_COPY + '</button><button title="Delete this task" onclick="deleteTask(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;line-height:1">×</button></div></div>';
   }
   var html = active.length ? '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">' + active.map(renderTaskRow).join('') + '</div>' : '';
   if (done.length) html += '<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Completed (' + done.length + ')</div><div style="display:flex;flex-direction:column;gap:6px">' + done.slice(0, 10).map(renderTaskRow).join('') + '</div></div>';
