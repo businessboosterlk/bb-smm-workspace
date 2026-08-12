@@ -4666,7 +4666,7 @@ async function renderSmmContentOverview(){
 // period label, not "this month"/"next month".
 var BBD_COLS=[
  {k:'posts',   g:'this', t:'Posts'},
- {k:'shorts',  g:'this', t:'Short videos'},
+ {k:'shoot',   g:'this', t:'Shoot'},
  {k:'vids',    g:'this', t:'Published videos'},
  {k:'stories', g:'this', t:'Stories'},
  {k:'scripts', g:'this', t:'Scripts sent'},
@@ -8526,10 +8526,25 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     document.body.appendChild(fab);
   }
 
+  /* The popup used to query EVERY client's content, so Tiana saw Nirvana's list
+     and the other way round. S.clients is already filtered to the signed-in
+     SMM's own clients by loadClients() (assigned_smm), so scope the query to
+     those ids. Thulaib and Shiara have no scope and still see everything. */
+  function ciScopeIds() {
+    try {
+      if (typeof currentSmmScope !== 'function' || !currentSmmScope()) return null;  // CEO/COO see all
+      if (typeof S === 'undefined' || !S.clients || !S.clients.length) return [];    // scoped but not loaded yet
+      return S.clients.map(function(c){ return c.id; });
+    } catch(e) { return null; }
+  }
+
   async function loadCheckinItems() {
     var t = today();
     try {
-      var r = await fetch(CI_SB_URL + '/rest/v1/content_plans?posted=eq.false&scheduled_date=lte.' + t + '&select=id,title,scheduled_date,client_id,type&order=scheduled_date.asc&limit=60', {
+      var ids = ciScopeIds();
+      if (ids && !ids.length) { _ciItems = []; updateFab(); return _ciItems; }
+      var scopeQ = ids ? '&client_id=in.(' + ids.join(',') + ')' : '';
+      var r = await fetch(CI_SB_URL + '/rest/v1/content_plans?posted=eq.false&scheduled_date=lte.' + t + scopeQ + '&select=id,title,scheduled_date,client_id,type&order=scheduled_date.asc&limit=60', {
         headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY }
       });
       _ciItems = r.ok ? await r.json() : [];
@@ -8652,8 +8667,28 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else setTimeout(init, 1000);
+  /* Wait for the sign-in AND the client list. This used to fire ~1s after
+     DOMContentLoaded, before either existed, which is why it showed
+     "Client 10" instead of names and every seat's content instead of its own. */
+  function ciReady() {
+    try {
+      if (typeof S === 'undefined' || !S.currentUser) return false;
+      if (typeof currentSmmScope === 'function' && currentSmmScope()) {
+        return !!(S.clients && S.clients.length);
+      }
+      return true;
+    } catch(e) { return false; }
+  }
+
+  var _ciTries = 0;
+  function ciWaitAndInit() {
+    _ciTries++;
+    if (ciReady()) { init(); return; }
+    if (_ciTries < 60) setTimeout(ciWaitAndInit, 500);   // give it up to 30s
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(ciWaitAndInit, 500); });
+  else setTimeout(ciWaitAndInit, 500);
 })();
 </script>
 
