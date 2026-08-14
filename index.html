@@ -2420,9 +2420,26 @@ const SUPABASE_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_RkGimnQ1rzRrU4Io5qn9xg_Fgi4LxiO';
 let sb = null;
 try {
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  // Silent app auth so login-only tables (clients) stay readable here
-  window._smmAuthReady = sb.auth.signInWithPassword({email:'nirvana@bb-leads.app',password:'pin2222secure'}).catch(function(e){ console.warn('[auth]',e); });
+  /* NO SHARED LOGIN. A signInWithPassword used to run here, at client creation,
+     before anyone touched the PIN screen, so opening the public URL handed the
+     visitor an authenticated session. invoices and costs carry ONLY an
+     authenticated policy, so that session could read all finance data while the
+     login screen sat on top of it. The PIN screen guards what gets DRAWN, never
+     what gets FETCHED.
+     It was also unnecessary: every one of the 21 tables this app reads has a
+     public policy, verified. The comment said it existed for `clients`, which
+     gained a public policy later and nobody removed the line.
+     persistSession:false is load bearing: removing the call does NOT log anyone
+     out, because Supabase stores the session in localStorage, so everyone who
+     had ever opened this app kept a working session. Same fix as the Video
+     System, see its LANDMINES.md L-VID-011. */
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  /* _smmAuthReady is awaited in three places, so it stays a promise. What it
+     MEANS is inverted: it now resolves once we are definitely signed OUT. */
+  window._smmAuthReady = (async function(){
+    try{ await sb.auth.signOut({scope:'local'}); }catch(e){}
+    try{ Object.keys(localStorage).forEach(function(k){ if(/^sb-.*-auth-token$/.test(k)||k.indexOf('supabase.auth.token')===0) localStorage.removeItem(k); }); }catch(e){}
+  })();
 } catch (e) { console.warn(e); }
 
 // ============ USERS (login) ============
