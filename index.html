@@ -2776,7 +2776,7 @@ function doLogin() {
 
 // ============ INIT (called after login) ============
 function updateBadges() {
-  const scope = currentSmmScope();
+  const scope = viewScope();
 
   // Approval queue — planned posts sent to client, awaiting sign-off
   const approvalCount = (S.contentPlans || []).filter(p => p.status === 'sent').length;
@@ -3259,7 +3259,7 @@ async function loadCommunity() {
   if (!sb) return;
   try {
     let q = sb.from('smm_community').select('*').order('created_at', { ascending: false });
-    const scope = currentSmmScope();
+    const scope = viewScope();
     if (scope) {
       const ids = S.clients.map(c => c.id);
       if (ids.length) q = q.in('client_id', ids); else { S.community = []; updateCommunityCount(); return; }
@@ -3410,16 +3410,51 @@ function currentSmmScope() {
   return USER_ROLES[S.currentUser]?.smm || null;
 }
 
+/* ══ VIEW MODE ═══════════════════════════════════════════════════════════
+   2026-08-21, Thulaib: both SMM seats see each other's work, with a filter
+   to narrow back to their own, like the Command Centre.
+
+   THE LINE THAT MATTERS: BOARDS open up, PERSONAL PROMPTS do not. My Tasks,
+   the daily popup and the weekly report stay yours. Open those up and the
+   app goes straight back to handing Tiana someone else's list every morning,
+   which is the exact fault fixed on 12 August. */
+function viewMode(){
+  try{ return localStorage.getItem('smm-view-'+(S.currentUser||''))==='mine' ? 'mine' : 'all'; }
+  catch(e){ return 'all'; }
+}
+/* What the BOARDS filter by. null means show every seat. */
+function viewScope(){ return viewMode()==='mine' ? currentSmmScope() : null; }
+
+/* The signed-in seat's OWN client ids, whatever the filter is set to.
+   Personal surfaces read THIS and never S.clients, because S.clients now
+   may hold everybody's. */
+var S_myClientIds = [];
+
+async function setViewMode(m){
+  try{ localStorage.setItem('smm-view-'+(S.currentUser||''), m==='mine'?'mine':'all'); }catch(e){}
+  await loadClients();
+  await Promise.all([loadTasks(),loadContent(),loadShoots(),loadContentPlans()]);
+  BBD_ROWS=[]; BBD_PERIODS=[];
+  nav(S.currentPage||'today');
+}
+
+
 async function loadClients() {
   if (!sb) return;
   try { await window._smmAuthReady; } catch(e) {}
   try {
     let query = sb.from('clients').select('*').order('name');
-    const scope = currentSmmScope();
+    const scope = viewScope();
     if (scope) query = query.eq('assigned_smm', scope);
     const { data, error } = await query;
     if (error) throw error;
     S.clients = data || [];
+    /* S.clients follows the view filter, so it may now hold every seat's
+       clients. Record the signed-in seat's OWN ids separately: personal
+       surfaces read these and must not widen when the filter does. */
+    var _mine = currentSmmScope();
+    S_myClientIds = _mine ? S.clients.filter(function(c){return c.assigned_smm===_mine;}).map(function(c){return c.id;})
+                          : S.clients.map(function(c){return c.id;});
     const sbClients = document.getElementById('sb-clients-count'); if (sbClients) sbClients.textContent = S.clients.length;
     populateClientDropdowns();
   } catch (e) { console.error(e); toast('Failed to load clients', 'error'); }
@@ -3429,9 +3464,11 @@ async function loadTasks() {
   if (!sb) return;
   try {
     let query = sb.from('tasks').select('*').order('created_at', { ascending: false });
+    /* PERSONAL. My Tasks is yours even when the boards show everyone, so this
+       reads S_myClientIds and never S.clients. */
     const scope = currentSmmScope();
     if (scope) {
-      const ids = S.clients.map(c => c.id);
+      const ids = S_myClientIds;
       if (ids.length) query = query.in('client_id', ids);
       else { S.tasks = []; return; }
     }
@@ -3445,7 +3482,7 @@ async function loadContent() {
   if (!sb) return;
   try {
     let query = sb.from('smm_content').select('*').order('created_at', { ascending: false });
-    const scope = currentSmmScope();
+    const scope = viewScope();
     if (scope) {
       const ids = S.clients.map(c => c.id);
       if (ids.length) query = query.in('client_id', ids);
@@ -3461,7 +3498,7 @@ async function loadShoots() {
   if (!sb) return;
   try {
     let query = sb.from('smm_shoots').select('*').order('shoot_date', { ascending: true });
-    const scope = currentSmmScope();
+    const scope = viewScope();
     if (scope) {
       // Must use already-loaded client IDs for scoping
       const ids = S.clients.map(c => c.id);
@@ -4154,7 +4191,7 @@ async function updateContentStatus(id, status) {
 async function loadContentPlans() {
   if (!sb) return;
   try {
-    const scope = currentSmmScope();
+    const scope = viewScope();
     let query = sb.from('content_plans').select('*').order('scheduled_date', { ascending: true });
     if (scope) {
       const ids = S.clients.map(c => c.id);
@@ -4721,6 +4758,23 @@ function bbdGroupLabel(g,period){
 }
 function bbdPct(r){ var v=r.vals||{}; return Math.round(BBD_COLS.filter(function(c){return v[c.k];}).length/BBD_COLS.length*100); }
 
+/* Everyone / Just mine. Only shown to a seat that HAS a scope: Thulaib and
+   Shiara always see every section, so a filter would say nothing to them.
+   38px minimum height because this is used on a phone. */
+function bbdViewToggle(){
+  var mine = (typeof currentSmmScope==='function') ? currentSmmScope() : null;
+  if(!mine) return '';
+  var vm = viewMode();
+  function btn(mode,label){
+    var on = vm===mode;
+    return '<button onclick="setViewMode(\''+mode+'\')" style="min-height:32px;padding:0 12px;border:none;border-radius:7px;'
+      +'font:700 12px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;'
+      +'background:'+(on?'var(--accent)':'transparent')+';color:'+(on?'#0B0C0F':'rgba(255,255,255,0.62)')+'">'+label+'</button>';
+  }
+  return '<div style="display:inline-flex;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);'
+    +'border-radius:9px;padding:3px;gap:2px">'+btn('all','Everyone')+btn('mine','Just mine')+'</div>';
+}
+
 async function renderSmmDelivery(){
   var root=document.getElementById('smm-dl-root'); if(!root) return;
   if(!BBD_ROWS.length) root.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px">Loading...</div>';
@@ -4742,15 +4796,17 @@ async function renderSmmDelivery(){
     return;
   }
 
-  var scope=(typeof currentSmmScope==='function')?currentSmmScope():null;
+  var scope=(typeof currentSmmScope==='function')?viewScope():null;
   var rows=BBD_ROWS.filter(function(x){ return !scope || String(x.owner||'').toUpperCase()===scope; });
 
   var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px">'
     +'<div><div style="font-size:22px;font-weight:800;color:#fff">Delivery</div>'
-    +'<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">'+escHtml(BBD_PERIOD)+(scope?' &middot; your clients':'')+'</div></div>'
-    +'<select onchange="BBD_PERIOD=this.value;BBD_ROWS=[];renderSmmDelivery()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">'+escHtml(BBD_PERIOD)+(scope?' &middot; your clients':' &middot; every seat')+'</div></div>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    + bbdViewToggle()
+    +'<select onchange="BBD_PERIOD=this.value;BBD_ROWS=[];renderSmmDelivery()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:8px;min-height:38px;padding:6px 10px;font-size:12px;cursor:pointer">'
       +BBD_PERIODS.map(function(p){return '<option'+(p===BBD_PERIOD?' selected':'')+'>'+escHtml(p)+'</option>';}).join('')
-    +'</select>'
+    +'</select></div>'
   +'</div>';
 
   var known=['NIRVANA','TIANA'], extras=[];
@@ -5619,7 +5675,7 @@ function renderShoots() {
   if (!board) return;
   var _sCols = Array.from(board.querySelectorAll('.kanban-cards')).map(function(c) { return c.scrollTop; });
   var fClient = (document.getElementById('sp-client-filter') || {}).value || 'all';
-  var scope = currentSmmScope();
+  var scope = viewScope();
   var shoots = (S.shoots || []).filter(function(s) {
     if (fClient !== 'all' && String(s.client_id) !== String(fClient)) return false;
     return true;
@@ -6147,7 +6203,7 @@ async function setCPlanStatus(id, status) {
 async function renderIdeas() {
   var el = document.getElementById('ideas-list');
   if (!el) return;
-  var scope = currentSmmScope();
+  var scope = viewScope();
   if (!S.ideas || !S.ideas.length) {
     try {
       var q = sb.from('shared_ideas').select('*').order('created_at', { ascending: false });
@@ -6184,7 +6240,7 @@ async function submitIdeaAdd() {
 async function renderDiary() {
   var el = document.getElementById('diary-list');
   if (!el) return;
-  var scope = currentSmmScope();
+  var scope = viewScope();
   var fClient = (document.getElementById('diary-filter-client') || {}).value || 'all';
   if (!S.diary || !S.diary.length) {
     try {
@@ -8831,4 +8887,243 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
 .tab-btn.active{font-weight:700}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 3px var(--accent-glow)}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.06s!important}}
+
+/* ══ BB APP FOUNDATIONS ═══════════════════════════════════════════════════
+   Ported from bb-systems/bswl/student on 2026-08-21. Owned by the
+   bb-app-foundations skill. Placed cascade-final on purpose so the sheet
+   height rule beats the earlier `.modal{max-height:90vh}`.
+   Before this, all nine protections counted ZERO in this file and every
+   input was 10-15px, so tapping any field zoomed the whole screen on iOS
+   and never zoomed back. ══════════════════════════════════════════════ */
+
+/* 1. Double tap no longer zooms, and the 300ms tap delay goes with it.
+      `manipulation` KEEPS panning and KEEPS pinch zoom, which is a real
+      accessibility tool. It removes only the double tap. */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+
+/* 2. No blue flash on tap, and no long press offering to copy a button.
+      Text, values and inputs stay selectable: stopping someone copying a
+      client name or a caption would be rude. */
+*{-webkit-tap-highlight-color:transparent}
+button,label,.sb-item,.tab-btn,.btn,.pill,.tag,.av,[role="button"]{
+ -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+input,textarea,p,td,th,.task-title{-webkit-user-select:auto;user-select:auto}
+
+/* 3. THE FIELD ZOOM. iOS zooms the entire viewport when a focused input has
+      text under 16px, and it does not zoom back. 16 is the platform
+      threshold, not a taste. Coarse pointers only, so the desktop keeps its
+      own scale and nothing reflows on a laptop. */
+@media (pointer:coarse){
+ input,select,textarea{font-size:16px!important}
+}
+
+/* 4. A sheet's scroll stops at the sheet instead of dragging the page behind
+      it, and the page no longer pull-to-refreshes, which in an installed app
+      reloads everything for no reason anyone expects. */
+html,body{overscroll-behavior-y:none}
+.modal,.modal-bg,#smm-checkin-body,#agent-drawer-body,#bb-detail-body,[data-scroll]{
+ overscroll-behavior:contain}
+
+/* 5. The page behind an open sheet is frozen and out of reach, not merely
+      covered. `overflow:hidden` alone does not hold on iOS. */
+body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+[inert]{pointer-events:none}
+
+/* 6. A sheet sized in vh is taller than the screen, because vh measures the
+      tallest the viewport ever gets, so the close button ends up off the
+      bottom the moment the address bar shows. */
+.modal{max-height:88dvh}
 </style>
+
+<!-- ============ BB APP FOUNDATIONS (behaviour half) ============
+     Ported from bb-systems/bswl/student on 2026-08-21, the newest copy,
+     which carries both bugs the mold shipped with: the fading-overlay
+     misread, and the observer storm that froze the app until reload.
+
+     TWO ADAPTATIONS THIS SYSTEM NEEDED, worth reading before casting on:
+     1. The agent drawer and the detail drawer sit permanently in the DOM at
+        `display:flex`, hidden by `transform:translateX(100%)`. A visibility
+        test sees width, height and opacity, so it would call them open
+        forever and the page would stay frozen. The OPEN TEST therefore
+        watches their BACKDROPS, which genuinely toggle display.
+     2. Those backdrops are SIBLINGS of their panels, so the generic shield
+        would mark the panel itself inert and the drawer would be dead to
+        the touch. KEEP names the panels so they stay reachable.
+     ============================================================== -->
+<script>
+var BBF=(function(){
+ /* Backdrops and modals only. Never the two sliding panels: see note 1. */
+ var OVS='.modal-bg, #smm-checkin-overlay, #agent-drawer-overlay, #bb-detail-overlay';
+ /* Must stay reachable while a backdrop is open: see note 2. */
+ var KEEP='#agent-drawer-panel, #bb-detail-panel';
+ var lockedY=0, locked=false, lastFocus=null, histDepth=0, closing=false;
+ try{if('scrollRestoration' in history)history.scrollRestoration='manual';}catch(e){}
+
+ /* AN OVERLAY IS OPEN WHEN IT IS VISIBLE, not when it carries a class. This
+    app opens modals with an inline style.display, the check-in popup with a
+    class, and the drawers with a backdrop. Visibility is true of all three. */
+ function isOpen(el){
+  var cs=getComputedStyle(el);
+  if(cs.display==='none'||cs.visibility==='hidden')return false;
+  var r=el.getBoundingClientRect();
+  if(!(r.width>0&&r.height>0))return false;
+  /* A FADING OVERLAY IS OPEN THE MOMENT IT STARTS. Opacity reads 0 for one
+     frame and the observer fires BEFORE that frame, so it was judged closed
+     and the body was never pinned. A running transition means it is opening. */
+  if(parseFloat(cs.opacity||'1')<0.05){
+   var moving=false;
+   try{moving=el.getAnimations().some(function(a){
+    return a.playState==='running'||a.playState==='pending';});}catch(e){}
+   if(!moving)return false;
+  }
+  return true;
+ }
+ function anyOpen(){
+  var n=document.querySelectorAll(OVS),i;
+  for(i=0;i<n.length;i++)if(isOpen(n[i]))return n[i];
+  return null;
+ }
+
+ /* THE FREEZE. overflow:hidden alone does not hold on iOS: the page keeps its
+    rubber band and forgets where it was. Pinning the body at a negative top
+    holds it exactly, and putting it back is the whole point. */
+ function lock(){
+  if(locked)return;
+  lockedY=window.scrollY||window.pageYOffset||0;
+  document.body.style.top=(-lockedY)+'px';
+  document.body.classList.add('sheet-open');
+  locked=true;
+ }
+ function unlock(){
+  if(!locked)return;
+  document.body.classList.remove('sheet-open');
+  document.body.style.top='';
+  window.scrollTo(0,lockedY);
+  locked=false;
+ }
+
+ var shielded=[];
+ function shield(ov){
+  release();
+  if(!ov)return;
+  [].slice.call(document.body.children).forEach(function(el){
+   if(el===ov||el.contains(ov))return;
+   if(/^(SCRIPT|STYLE|TEMPLATE|LINK)$/.test(el.tagName))return;
+   if(el.matches&&el.matches(KEEP))return;
+   if(el.querySelector&&el.querySelector(KEEP))return;
+   if(el.hasAttribute('inert'))return;
+   el.setAttribute('inert','');el.setAttribute('aria-hidden','true');
+   shielded.push(el);
+  });
+ }
+ function release(){
+  shielded.forEach(function(el){el.removeAttribute('inert');el.removeAttribute('aria-hidden');});
+  shielded=[];
+ }
+
+ function takeFocus(ov){
+  lastFocus=document.activeElement;
+  var f=ov.querySelector('button,[href],input,[tabindex]:not([tabindex="-1"])');
+  if(f){try{f.focus({preventScroll:true});}catch(e){}}
+ }
+ function giveBackFocus(){
+  if(lastFocus&&lastFocus.focus){try{lastFocus.focus({preventScroll:true});}catch(e){}}
+  lastFocus=null;
+ }
+
+ /* BACK CLOSES THE SHEET, it does not leave the app. On Android this is the
+    loudest tell that a product is really a web page. */
+ function closeTop(){
+  var ov=anyOpen();
+  if(!ov)return false;
+  var oc=ov.getAttribute&&ov.getAttribute('onclick');
+  if(oc&&/close/i.test(oc)){ov.click();return true;}
+  var btn=ov.querySelector('[onclick*="close"],[onclick*="Close"],[data-close]');
+  if(btn){btn.click();return true;}
+  ov.classList.remove('open');ov.style.display='none';
+  return true;
+ }
+ window.addEventListener('popstate',function(){
+  if(closing)return;
+  if(histDepth>0){histDepth--;closeTop();}
+ });
+ window.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&anyOpen()){e.preventDefault();history.back();}
+ });
+
+ /* COALESCE. A render can ask for a sync hundreds of times; the work runs
+    once. Doing layout work per mutation is what froze the OS on 11 August. */
+ var syncQueued=false,inSync=false,syncRuns=0;
+ function scheduleSync(){
+  if(syncQueued)return;
+  syncQueued=true;
+  setTimeout(function(){syncQueued=false;sync();},0);
+ }
+ function sync(){
+  if(inSync)return;
+  inSync=true;syncRuns++;
+  try{syncBody();}finally{inSync=false;}
+ }
+ function syncBody(){
+  var ov=anyOpen();
+  if(ov&&!locked){
+   lock();shield(ov);takeFocus(ov);
+   histDepth++;try{history.pushState({bbSheet:1},'');}catch(e){}
+  }else if(!ov&&locked){
+   release();giveBackFocus();
+   unlock();
+   if(histDepth>0){
+    histDepth--;closing=true;
+    try{history.back();}catch(e){}
+    setTimeout(function(){closing=false;},0);
+   }
+  }
+ }
+
+ /* ONE OBSERVER, not N edited open functions. This file opens overlays from
+    many places and will grow more. Watching the attribute covers every one
+    that exists and every one added after today. */
+ function start(){
+  var mo=new MutationObserver(scheduleSync);
+  var watch=function(el){mo.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});};
+  document.querySelectorAll(OVS).forEach(watch);
+  new MutationObserver(function(muts){
+   var sawOverlay=false;
+   muts.forEach(function(m){
+    [].slice.call(m.addedNodes).forEach(function(n){
+     if(n.nodeType===1&&n.matches&&n.matches(OVS)){watch(n);sawOverlay=true;}
+    });
+   });
+   if(sawOverlay)scheduleSync();
+  }).observe(document.body,{childList:true,subtree:true});
+  sync();
+ }
+
+ /* THE KEYBOARD SAYS WHAT THE BUTTON SAYS. Applied at focus, because most
+    fields in this app do not exist until their page renders. */
+ function hint(el){
+  if(!el||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;
+  if(el.getAttribute('enterkeyhint'))return;
+  var form=el.closest('.modal,.card,.filter-bar,form')||document.body;
+  var peers=form.querySelectorAll('input:not([type=checkbox]):not([type=radio]),textarea');
+  el.setAttribute('enterkeyhint',peers[peers.length-1]===el?'go':'next');
+  if(el.type==='email'||el.inputMode==='email'||el.inputMode==='numeric'||el.inputMode==='decimal'){
+   el.setAttribute('autocapitalize','off');
+   el.setAttribute('autocorrect','off');
+   el.setAttribute('spellcheck','false');
+  }
+ }
+ function hintKeyboards(){
+  document.addEventListener('focusin',function(e){hint(e.target);});
+  document.querySelectorAll('input,textarea').forEach(hint);
+ }
+
+ return {start:start,hintKeyboards:hintKeyboards,anyOpen:anyOpen,sync:sync,
+         overlaySelector:function(){return OVS;},
+         runs:function(){return syncRuns;},
+         isLocked:function(){return locked;}};
+})();
+if(document.readyState==='loading')
+ document.addEventListener('DOMContentLoaded',function(){BBF.start();BBF.hintKeyboards();});
+else {BBF.start();BBF.hintKeyboards();}
+</script>
