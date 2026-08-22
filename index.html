@@ -1467,6 +1467,10 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 20 6"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
       Delivery
     </button>
+    <button class="sb-item" data-page="recap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+      Monthly Recap
+    </button>
     <button class="sb-more-toggle" id="sb-more-toggle" onclick="toggleMore()" aria-expanded="false">
       <span>More</span>
       <svg class="sb-more-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2120,6 +2124,10 @@ tr:last-child td { border-bottom: none; }
 
   <section class="page" id="page-delivery">
     <div id="smm-dl-root"></div>
+  </section>
+
+  <section class="page" id="page-recap">
+    <div id="smm-recap-root"></div>
   </section>
 
   <section class="page" id="page-missions">
@@ -2945,6 +2953,7 @@ function nav(page, data) {
   if (page === 'sops') renderSOPs();
   if (page === 'content-overview') renderSmmContentOverview();
   if (page === 'delivery') renderSmmDelivery();
+  if (page === 'recap') renderRecap();
   if (page === 'video-hub') renderVideoHub();
   if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
@@ -4788,6 +4797,193 @@ function bbdGroupLabel(g,period){
   return 'ONE-TIME';
 }
 function bbdPct(r){ var v=r.vals||{}; return Math.round(BBD_COLS.filter(function(c){return v[c.k];}).length/BBD_COLS.length*100); }
+
+
+/* ══ MONTHLY RECAP ════════════════════════════════════════════════════════
+   What the month actually produced, per client. Built 2026-08-22.
+
+   THE RULE THIS PAGE IS BUILT ON: never show a figure nobody can reproduce.
+   Every derived number carries the count it was measured on, because two of
+   the three sources are incomplete and pretending otherwise would be worse
+   than leaving them out:
+
+   - Task turnaround only exists from 2026-08-22, when ticking a task started
+     stamping completed_at. 308 of 529 older finished tasks have no finish
+     time and never will.
+   - Video turnaround exists on 107 of 222 finished videos.
+   - graphic_projects holds ZERO rows. The board was cleared on 20 August to
+     fix a database disk problem. That section says so rather than drawing
+     zeros, which would read as "the designers did nothing".
+   ═══════════════════════════════════════════════════════════════════════ */
+var RECAP_MONTH = null;
+var VIDEO_DONE_STAGES = ['add_to_drive','posted'];   // the Video System's own definition
+
+function recapMonthList(){
+  var out=[], d=new Date();
+  for(var i=0;i<12;i++){
+    out.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),
+              label:d.toLocaleDateString('en-GB',{month:'long',year:'numeric'})});
+    d.setMonth(d.getMonth()-1);
+  }
+  return out;
+}
+function recapBounds(key){
+  var y=+key.split('-')[0], m=+key.split('-')[1];
+  var from=new Date(Date.UTC(y,m-1,1));
+  var to=new Date(Date.UTC(y,m,1));
+  return {from:from.toISOString(), to:to.toISOString(),
+          label:from.toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'})};
+}
+function recapDays(a,b){ return (new Date(b)-new Date(a))/86400000; }
+function recapMedian(arr){
+  if(!arr.length) return null;
+  var v=arr.slice().sort(function(x,y){return x-y;});
+  var mid=Math.floor(v.length/2);
+  return v.length%2 ? v[mid] : (v[mid-1]+v[mid])/2;
+}
+function recapDur(d){
+  if(d===null||d===undefined) return '&mdash;';
+  if(d<1) return Math.round(d*24)+'h';
+  return (d<10 ? d.toFixed(1) : Math.round(d))+'d';
+}
+
+async function renderRecap(){
+  var root=document.getElementById('smm-recap-root'); if(!root||!sb) return;
+  if(!RECAP_MONTH) RECAP_MONTH=recapMonthList()[0].key;
+  var B=recapBounds(RECAP_MONTH);
+  root.innerHTML='<div style="color:var(--text3);font-size:13px;padding:24px">Working out the month...</div>';
+  try{ await window._smmAuthReady; }catch(e){}
+
+  var scope=(typeof viewScope==='function')?viewScope():null;
+  var clients=(S.clients||[]).filter(function(c){ return !scope || c.assigned_smm===scope; });
+  var ids=clients.map(function(c){return c.id;});
+  if(!ids.length){ root.innerHTML='<div style="color:var(--text3);padding:24px">No clients in this view.</div>'; return; }
+
+  var tasks=[], vids=[], dl=[];
+  try{
+    var res=await Promise.all([
+      sb.from('tasks').select('id,client_id,title,done,created_at,completed_at,due')
+        .in('client_id',ids).gte('created_at',B.from).lt('created_at',B.to),
+      sb.from('video_projects').select('id,client_id,title,current_stage,created_at,completed_at')
+        .in('client_id',ids).gte('created_at',B.from).lt('created_at',B.to),
+      sb.from('bb_delivery').select('client,owner,vals,period').eq('period',B.label)
+    ]);
+    tasks=res[0].data||[]; vids=res[1].data||[]; dl=res[2].data||[];
+  }catch(e){
+    root.innerHTML='<div style="color:#ff6b6b;padding:24px;font-size:13px">Could not build the recap: '+escHtml(e.message||'unknown')+'</div>';
+    return;
+  }
+
+  /* ---- per client, all arithmetic in code ---- */
+  var rows=clients.map(function(c){
+    var t=tasks.filter(function(x){return x.client_id===c.id;});
+    var done=t.filter(function(x){return x.done;});
+    var timed=done.filter(function(x){return x.completed_at&&x.created_at;})
+                  .map(function(x){return recapDays(x.created_at,x.completed_at);});
+    var open=t.filter(function(x){return !x.done;});
+    var today=new Date().toISOString().slice(0,10);
+    var overdue=open.filter(function(x){return x.due&&x.due<today;});
+    var v=vids.filter(function(x){return x.client_id===c.id;});
+    var vdone=v.filter(function(x){return VIDEO_DONE_STAGES.indexOf(x.current_stage)>-1;});
+    var vtimed=vdone.filter(function(x){return x.completed_at&&x.created_at;})
+                    .map(function(x){return recapDays(x.created_at,x.completed_at);});
+    var d=dl.filter(function(x){return String(x.client||'').toLowerCase().replace(/\s+/g,'')===String(c.name||'').toLowerCase().replace(/\s+/g,'');})[0];
+    var dScore=null;
+    if(d&&typeof BBD_COLS!=='undefined'){
+      var vv=d.vals||{};
+      dScore=Math.round(BBD_COLS.filter(function(col){return vv[col.k];}).length/BBD_COLS.length*100);
+    }
+    var pct=t.length?Math.round(done.length/t.length*100):null;
+    /* THE SITUATION IS DERIVED, never typed. The rule is printed on the page
+       so nobody has to guess what "behind" meant. */
+    var sit, sitCol;
+    if(!t.length && !v.length){ sit='Nothing logged this month'; sitCol='var(--text3)'; }
+    else if(overdue.length){ sit=overdue.length+' overdue'; sitCol='#FF5252'; }
+    else if(pct===100){ sit='All clear'; sitCol='#00FF85'; }
+    else if(pct!==null&&pct>=50){ sit='In progress'; sitCol='#FBBF24'; }
+    else { sit='Behind'; sitCol='#FF8A3D'; }
+    return {c:c, opened:t.length, finished:done.length, pct:pct, open:open.length,
+            overdue:overdue.length, timedN:timed.length, med:recapMedian(timed),
+            worst:timed.length?Math.max.apply(null,timed):null,
+            vOpened:v.length, vFinished:vdone.length, vTimedN:vtimed.length, vMed:recapMedian(vtimed),
+            dScore:dScore, sit:sit, sitCol:sitCol};
+  });
+
+  var allTimed=rows.reduce(function(a,r){return a+r.timedN;},0);
+  var totOpened=rows.reduce(function(a,r){return a+r.opened;},0);
+  var totDone=rows.reduce(function(a,r){return a+r.finished;},0);
+  var full=rows.filter(function(r){return r.pct===100&&r.opened>0;}).length;
+  var medAll=recapMedian(rows.filter(function(r){return r.med!==null;}).map(function(r){return r.med;}));
+  var vOpened=rows.reduce(function(a,r){return a+r.vOpened;},0);
+  var vDone=rows.reduce(function(a,r){return a+r.vFinished;},0);
+
+  function stat(label,value,note){
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:0">'
+      +'<div style="font-size:23px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.02em">'+value+'</div>'
+      +'<div style="font-size:11px;color:var(--text2);margin-top:3px">'+label+'</div>'
+      +(note?'<div style="font-size:10px;color:var(--text3);margin-top:4px">'+note+'</div>':'')+'</div>';
+  }
+
+  var html='<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">'
+    +'<div><div style="font-size:22px;font-weight:800;color:#fff">Monthly Recap</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+escHtml(B.label)+' &middot; '+clients.length+' client'+(clients.length===1?'':'s')+(scope?' &middot; your clients':' &middot; every seat')+'</div></div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+    + (typeof bbdViewToggle==='function'?bbdViewToggle():'')
+    +'<select onchange="RECAP_MONTH=this.value;renderRecap()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;border-radius:8px;min-height:38px;padding:6px 10px;font-size:12px;cursor:pointer">'
+    + recapMonthList().map(function(m){return '<option value="'+m.key+'"'+(m.key===RECAP_MONTH?' selected':'')+'>'+m.label+'</option>';}).join('')
+    +'</select></div></div>';
+
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px">'
+    + stat('Tasks opened', totOpened, '')
+    + stat('Tasks finished', totDone, totOpened?Math.round(totDone/totOpened*100)+'% of those opened':'')
+    + stat('Clients fully done', full, 'of '+rows.filter(function(r){return r.opened>0;}).length+' with work logged')
+    + stat('Typical task turnaround', recapDur(medAll), allTimed?('measured on '+allTimed+' of '+totDone+' finished'):'no finish times yet this month')
+    + stat('Videos opened', vOpened, vDone+' reached the drive')
+    +'</div>';
+
+  /* The graphic gap is STATED. Drawing zeros here would read as "no work done". */
+  html+='<div style="background:rgba(255,138,61,0.08);border:1px solid rgba(255,138,61,0.3);border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:#FFCBA6;line-height:1.5">'
+    +'<b>Graphic figures are not in this recap.</b> The <code>graphic_projects</code> table holds zero rows: the board was cleared on 20 August to fix a database disk problem. '
+    +'These numbers will appear once the Graphic System is recording again.</div>';
+
+  html+='<div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px">'
+    +'<table style="width:100%;border-collapse:collapse;min-width:760px;font-size:12.5px">'
+    +'<tr style="background:var(--bg2)">'
+    +['CLIENT','OPENED','DONE','%','TURNAROUND','SLOWEST','OPEN','VIDEO','DELIVERY','SITUATION']
+       .map(function(h,i){return '<th style="text-align:'+(i?'center':'left')+';padding:9px 10px;font-size:10px;letter-spacing:.4px;color:var(--text2);font-weight:700;white-space:nowrap">'+h+'</th>';}).join('')
+    +'</tr>';
+
+  rows.sort(function(a,b){return (b.opened+b.vOpened)-(a.opened+a.vOpened);}).forEach(function(r){
+    html+='<tr style="border-top:1px solid var(--border)">'
+      +'<td style="padding:9px 10px;font-weight:700;color:#fff;white-space:nowrap">'+escHtml(r.c.name)
+        +'<div style="font-size:10px;color:var(--text3);font-weight:400">'+escHtml(r.c.assigned_smm||'unassigned')+'</div></td>'
+      +'<td style="text-align:center;padding:9px 10px;font-variant-numeric:tabular-nums">'+r.opened+'</td>'
+      +'<td style="text-align:center;padding:9px 10px;font-variant-numeric:tabular-nums">'+r.finished+'</td>'
+      +'<td style="text-align:center;padding:9px 10px;font-weight:700;font-variant-numeric:tabular-nums;color:'+(r.pct===100?'#00FF85':r.pct===null?'var(--text3)':'#fff')+'">'+(r.pct===null?'&mdash;':r.pct+'%')+'</td>'
+      +'<td style="text-align:center;padding:9px 10px;font-variant-numeric:tabular-nums">'+recapDur(r.med)
+        +'<div style="font-size:9.5px;color:var(--text3)">'+(r.timedN?('on '+r.timedN+' of '+r.finished):'not recorded')+'</div></td>'
+      +'<td style="text-align:center;padding:9px 10px;font-variant-numeric:tabular-nums">'+recapDur(r.worst)+'</td>'
+      +'<td style="text-align:center;padding:9px 10px;font-variant-numeric:tabular-nums">'+r.open
+        +(r.overdue?'<div style="font-size:9.5px;color:#FF5252">'+r.overdue+' overdue</div>':'')+'</td>'
+      +'<td style="text-align:center;padding:9px 10px;font-variant-numeric:tabular-nums">'+r.vFinished+' / '+r.vOpened
+        +(r.vTimedN?'<div style="font-size:9.5px;color:var(--text3)">'+recapDur(r.vMed)+' on '+r.vTimedN+'</div>':'')+'</td>'
+      +'<td style="text-align:center;padding:9px 10px;font-variant-numeric:tabular-nums">'+(r.dScore===null?'&mdash;':r.dScore+'%')+'</td>'
+      +'<td style="text-align:center;padding:9px 10px;color:'+r.sitCol+';font-weight:700;white-space:nowrap">'+r.sit+'</td>'
+      +'</tr>';
+  });
+  html+='</table></div>';
+
+  html+='<div style="margin-top:14px;font-size:11px;color:var(--text3);line-height:1.7">'
+    +'<b style="color:var(--text2)">How these are worked out.</b><br>'
+    +'A task counts in a month by the date it was <b>opened</b>, not finished. Turnaround is opened to finished, and is only counted for tasks that carry a finish time, which is why the denominator is printed next to it. '
+    +'Task finish times start on 22 August 2026; anything finished before that has none and is excluded rather than guessed. '
+    +'A video counts as finished at stage <code>add_to_drive</code> or <code>posted</code>, which is the Video System\'s own definition. '
+    +'Delivery is that client\'s score on the Delivery board for the same month, and reads &mdash; when no board exists for it. '
+    +'<b style="color:var(--text2)">Situation</b> is derived, never typed: any overdue task reads <span style="color:#FF5252">overdue</span>; otherwise 100% reads <span style="color:#00FF85">All clear</span>, 50% or more reads <span style="color:#FBBF24">In progress</span>, below that reads <span style="color:#FF8A3D">Behind</span>, and no work logged says so.'
+    +'</div>';
+
+  root.innerHTML=html;
+}
 
 /* Everyone / Just mine. Only shown to a seat that HAS a scope: Thulaib and
    Shiara always see every section, so a filter would say nothing to them.
