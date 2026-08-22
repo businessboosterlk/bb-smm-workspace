@@ -3806,7 +3806,16 @@ async function toggleTask(id) {
   else { renderClientTasks(S.currentClientId); }
   if (!sb) return;
   try {
-    await sb.from('tasks').update({ done: t.done }).eq('id', id);
+    /* STAMP WHEN IT WAS FINISHED, not just that it was.
+       This wrote only `done`, so 308 of 529 completed tasks have no finish
+       time and "how long did that take" is unanswerable for them. The column
+       existed the whole time; nothing filled it. Un-ticking clears it again so
+       a reopened task never carries a stale completion date. */
+    const patch = { done: t.done,
+                    completed_at: t.done ? new Date().toISOString() : null,
+                    updated_at: new Date().toISOString() };
+    t.completed_at = patch.completed_at;
+    await sb.from('tasks').update(patch).eq('id', id);
     toast(t.done ? 'Marked done' : 'Marked open', 'success');
     if (S.currentPage !== 'my-tasks') openClientProfile(S.currentClientId);
   } catch (e) { console.error(e); toast('Failed', 'error'); }
