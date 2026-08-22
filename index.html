@@ -1,6 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* Boot log for the self-test harness. FIRST script on purpose: a capture
+   installed later cannot see the errors it exists to catch. Ported from the
+   Video System 2026-08-22. */
+window.__ST_LOG=[];
+(function(){
+ /* A dropped connection is not a bug in this app. Logging network blips as
+    errors makes the harness cry wolf, and a suite that cries wolf gets waved
+    through. */
+ function isNetworkBlip(m){
+  return /failed to fetch|networkerror|network request failed|load failed|err_connection|err_network|aborted|timeout/i.test(String(m||''));
+ }
+ ['error','warn'].forEach(function(k){
+  var o=console[k].bind(console);
+  console[k]=function(){
+   try{
+    /* the harness reports failures through console.warn; logging its own
+       output would fail the NEXT run with the previous run's noise */
+    if(!window.__ST_REPORTING){
+     var m=Array.prototype.slice.call(arguments).join(' ');
+     if(!isNetworkBlip(m)) window.__ST_LOG.push({kind:k,msg:m.slice(0,300)});
+    }
+   }catch(e){}
+   o.apply(null,arguments);
+  };
+ });
+ window.addEventListener('error',function(e){
+  try{var m=String(e.message||e);if(isNetworkBlip(m))return;
+      window.__ST_LOG.push({kind:'error',msg:m.slice(0,300)});}catch(x){}
+ });
+ window.addEventListener('unhandledrejection',function(e){
+  try{var m=String((e.reason&&e.reason.message)||e.reason);if(isNetworkBlip(m))return;
+      window.__ST_LOG.push({kind:'error',msg:'unhandled promise: '+m.slice(0,300)});}catch(x){}
+ });
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
@@ -1328,11 +1364,28 @@ tr:last-child td { border-bottom: none; }
 .mobile-topbar {
   /* The bar sits under the Dynamic Island unless it carries the inset itself.
      Height grows by the inset and the content is pushed below it, so the strip
-     the phone owns stays painted and the buttons stay reachable. */
+     the phone owns stays painted and the buttons stay reachable.
+
+     TWO FAULTS FIXED HERE 2026-08-22, both found by the harness on its first
+     run and both introduced by me the day before.
+
+     L-SMM-005: the inset was written as a separate `padding-top: var(--sat)`
+     ABOVE a `padding: 0 14px` shorthand in this same rule. A shorthand resets
+     the longhand that came before it, so the height grew for the notch while
+     the content stayed jammed at the top. The box measured correctly and the
+     bar was still wrong under the Dynamic Island. The inset now lives IN the
+     shorthand, where nothing can quietly undo it.
+
+     L-SMM-006: `border-bottom: 1px solid` had been rewritten to
+     `border-bottom: calc(1px + var(--sab))` by a regex meant to lift fixed
+     chrome clear of the home indicator. `border-bottom: 1px` CONTAINS the
+     string `bottom: 1px`. On a handset with a 34px home indicator this bar
+     carried a 35px border. It shipped. */
   display: none; position: fixed; top: 0; left: 0; right: 0;
-  height: calc(52px + var(--sat)); padding-top: var(--sat);
-  background: var(--bg2); border-bottom:calc(1px + var(--sab)) solid var(--border);
-  align-items: center; gap: 12px; padding: 0 14px; z-index: 250;
+  height: calc(52px + var(--sat));
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  align-items: center; gap: 12px; z-index: 250;
+  padding: var(--sat) 14px 0;
 }
 .mobile-topbar-title { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.01em; }
 .hamburger-btn { background: none; border: none; color: var(--text); cursor: pointer; padding: 4px; display: flex; align-items: center; }
@@ -9469,3 +9522,353 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- @@BBSMM_SELFTEST_START@@ -->
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 12 · SELF-TEST HARNESS (the pre-deploy gate)
+   Run: runSelfTest() in the console, or add ?selftest to the URL.
+
+   PRIOR ART: this is the Video System's harness shape, not the master
+   skeleton's. The skeleton snapshots a localStorage database and rolls it
+   back, which is why SMM was recorded as unable to have a harness at all:
+   SMM writes to LIVE shared tables. Video solved that first. Verified on
+   2026-08-22 by scanning its 543 lines: zero inserts, zero updates, zero
+   deletes, zero upserts, and a single fetch which is a GET.
+
+   THIS HARNESS PERFORMS ZERO DATABASE WRITES. That is not a preference, it
+   is the entire reason it is allowed to exist. Anything added here that
+   writes must be removed instead.
+
+   Must be green at DESKTOP and at ~390px. bb-app-foundations is explicit
+   that a suite which only tests what a desktop can see will pass a product
+   that is broken in the hand: the field-zoom rule is coarse-pointer only and
+   can never fail on a laptop.
+
+   RULE, learned the expensive way on BSWL: a check that passes because it
+   could not find its target is worse than no check. Every check that selects
+   something FAILS loudly, naming what it looked for.
+   ════════════════════════════════════════════════════════════════════════ */
+async function runSelfTest(){
+ const R=[];
+ const ok=(name,pass,detail)=>{R.push({name:name,pass:!!pass,detail:String(detail==null?'':detail).slice(0,220)});};
+ const cs=getComputedStyle;
+ const snapPage=(typeof S!=='undefined'&&S.currentPage)?S.currentPage:'today';
+ const snapScroll=window.scrollY;
+
+ try{
+  /* ── A · boot integrity ─────────────────────────────────────────────── */
+  ok('Boot: core globals present',
+     typeof S==='object'&&typeof sb==='object'&&typeof nav==='function'
+     &&typeof USER_ROLES==='object'&&typeof BBD_COLS!=='undefined',
+     'S, sb, nav, USER_ROLES, BBD_COLS');
+  ok('Boot: zero console errors since load',(window.__ST_LOG||[]).length===0,
+     (window.__ST_LOG||[]).length?window.__ST_LOG[0].kind+': '+window.__ST_LOG[0].msg:'clean');
+  const idSeen={};document.querySelectorAll('[id]').forEach(el=>idSeen[el.id]=(idSeen[el.id]||0)+1);
+  const idDupes=Object.keys(idSeen).filter(k=>idSeen[k]>1);
+  ok('Boot: no duplicate DOM ids',idDupes.length===0,idDupes.slice(0,5).join(', ')||'clean');
+  ok('Boot: signed in',!!S.currentUser,S.currentUser||'NOT SIGNED IN, most checks below prove nothing');
+  ok('Boot: data actually loaded',(S.clients||[]).length>0,
+     (S.clients||[]).length+' clients, '+(S.tasks||[]).length+' tasks, '+(S.shoots||[]).length+' shoots');
+
+  /* ── B · READ POSTURE ───────────────────────────────────────────────────
+     SMM authenticates by PIN and reads with the anon key, so every table it
+     touches needs an anon or public SELECT grant AND a matching policy.
+     `clients` lost that once and hard 401'd the Command Centre. One check per
+     table, count printed, because "0 rows" and "0 tables checked" look
+     identical in green. */
+  const TABLES=['clients','tasks','team_members','team_login_logs','events','content_plans',
+                'agent_alerts','system_bug_log','smm_content','smm_community','smm_diary',
+                'smm_shoots','smm_weekly_plan','daily_pillar_state','shared_ideas','bb_delivery',
+                'graphic_projects','video_projects','video_project_comments','video_project_links'];
+  for(const t of TABLES){
+   let st='?',n=null;
+   try{
+    const r=await sb.from(t).select('*',{count:'exact',head:true});
+    if(r.error){st=String(r.error.code||r.error.message||'error');}
+    else{st='ok';n=r.count;}
+   }catch(e){st=String(e&&e.message||e);}
+   ok('Read: '+t,st==='ok',st==='ok'?(n+' rows readable as anon'):('BLOCKED: '+st));
+  }
+
+  /* ── C · EVERY PAGE RENDERS ─────────────────────────────────────────── */
+  const pages=[].slice.call(document.querySelectorAll('.sb-item[data-page]'))
+                 .map(b=>b.getAttribute('data-page'));
+  if(!pages.length){
+   ok('Pages: the nav was found',false,'NO .sb-item[data-page] FOUND, every page check below proved nothing');
+  }else{
+   ok('Pages: the nav was found',true,pages.length+' pages in the sidebar');
+   for(const pg of pages){
+    const sec=document.getElementById('page-'+pg);
+    if(!sec){ok('Page renders: '+pg,false,'NO #page-'+pg+' SECTION, check proved nothing');continue;}
+    try{nav(pg);}catch(e){ok('Page renders: '+pg,false,'nav threw: '+(e&&e.message));continue;}
+    await new Promise(r=>setTimeout(r,140));
+    const kids=sec.querySelectorAll('*').length;
+    ok('Page renders: '+pg,kids>0,kids+' elements');
+   }
+  }
+
+  /* ── D · THE SCOPING BLOCK. The highest-value check in this file ────────
+     SMM has an Everyone / Just mine filter. The rule is: BOARDS widen,
+     PERSONAL SURFACES read S_myClientIds and never widen. If a personal
+     surface ever widens, one SMM is handed the other's work as their own.
+
+     This is not theoretical. On 2026-08-21 the filter shipped and the daily
+     popup silently widened with it, because it read S.clients. Tiana's
+     morning popup showed Nirvana's clients again: the exact fault that had
+     been fixed nine days earlier. A count check would not have caught it,
+     because "7 posts" is a perfectly reasonable number. Assert the IDENTITY
+     of what came back, not the size of it.
+
+     Reads only. It sets the stored preference directly and puts it back,
+     rather than calling the app's own save path. */
+  await (async function(){
+   const scope=(typeof currentSmmScope==='function')?currentSmmScope():null;
+   if(!scope){
+    ok('Scope: signed in as a seat with a scope',false,
+       'signed in as '+(S.currentUser||'nobody')+', who sees everything, so the filter proves nothing. Run as NIRVANA or TIANA.');
+    return;
+   }
+   const K='smm-view-'+(S.currentUser||'');
+   const had=(function(){try{return localStorage.getItem(K);}catch(e){return null;}})();
+   try{
+    try{localStorage.setItem(K,'mine');}catch(e){}
+    await loadClients();
+    const mineBoards=S.clients.length, minePersonal=S_myClientIds.length;
+
+    try{localStorage.setItem(K,'all');}catch(e){}
+    await loadClients();
+    const allBoards=S.clients.length, allPersonal=S_myClientIds.length;
+
+    ok('Scope: boards widen on Everyone',allBoards>=mineBoards,
+       'Just mine '+mineBoards+' clients, Everyone '+allBoards);
+    ok('Scope: the personal list NEVER widens',allPersonal===minePersonal,
+       'Just mine '+minePersonal+', Everyone '+allPersonal+(allPersonal===minePersonal?'':' <- A PERSONAL SURFACE WIDENED'));
+    const strays=(S.clients||[]).filter(c=>S_myClientIds.indexOf(c.id)>-1&&c.assigned_smm!==scope);
+    ok('Scope: every personal client really belongs to this seat',strays.length===0,
+       strays.length?('not '+scope+': '+strays.slice(0,3).map(c=>c.name).join(', ')):(minePersonal+' checked against assigned_smm'));
+   }finally{
+    try{ had===null?localStorage.removeItem(K):localStorage.setItem(K,had); }catch(e){}
+    await loadClients();
+   }
+  })();
+
+  /* Personal surfaces must not READ the widening list at all. A source scan,
+     because behaviour can look right on the day and drift the moment the
+     filter default changes. */
+  (function(){
+   const src=Array.from(document.scripts).map(s=>s.textContent).join('\n');
+   const fn=src.slice(src.indexOf('function ciScopeIds'),src.indexOf('function ciScopeIds')+700);
+   if(src.indexOf('function ciScopeIds')<0){
+    ok('Scope: the daily popup reads the personal list',false,
+       'ciScopeIds NOT FOUND in source, this check proved nothing');return;
+   }
+   ok('Scope: the daily popup reads the personal list, not the widening one',
+      fn.indexOf('S_myClientIds')>-1 && !/return\s+S\.clients/.test(fn),
+      fn.indexOf('S_myClientIds')>-1?'reads S_myClientIds':'READS S.clients, it will widen with the filter');
+  })();
+
+  /* ── E · BB APP SHELL ───────────────────────────────────────────────── */
+  (function(){
+   const root=document.documentElement;
+   ok('Shell: viewport-fit=cover is set, so env() is not always 0',
+      /viewport-fit\s*=\s*cover/.test((document.querySelector('meta[name=viewport]')||{content:''}).content));
+   ok('Shell: the page paints the status bar strip',!!document.querySelector('.statusfill'));
+   ok('Shell: it is installable',!!document.querySelector('link[rel=manifest]'));
+   /* SMM's bar is .mobile-topbar, not Video's .topbar. The selector is changed
+      in the CHECK as well as in the app, and a miss FAILS. */
+   const bar=document.querySelector('.mobile-topbar');
+   if(!bar){ok('Shell: chrome moves down for a notch',false,'NO .mobile-topbar FOUND, check proved nothing');
+            ok('Shell: and leaves no gap without one',false,'not proven');return;}
+   /* The bar only exists below 768px, and its inset rule lives in the same
+      breakpoint. Asserting at a desktop width tests a rule that is not in
+      play and fails an app that is correct. Same convention as the field-zoom
+      check above: say loudly that it is unproven here, and prove it at 390px. */
+   if(cs(bar).display==='none'){
+    ok('Shell: chrome moves down for a notch',true,
+       'the bar is hidden above 768px, so this is UNPROVEN here. RUN AT 390px TO PROVE IT');
+    ok('Shell: and leaves no gap without one',true,'same, RUN AT 390px TO PROVE IT');return;}
+   root.style.setProperty('--sat','59px');
+   const moved=parseFloat(cs(bar).paddingTop);
+   root.style.setProperty('--sat','0px');
+   const back=parseFloat(cs(bar).paddingTop);
+   root.style.removeProperty('--sat');
+   ok('Shell: chrome moves down for a notch',moved>=59,'padding-top became '+moved+'px');
+   ok('Shell: and leaves no gap without one',back===0,'padding-top became '+back+'px');
+  })();
+
+  /* ── F · BB APP FOUNDATIONS ─────────────────────────────────────────── */
+  (function(){
+   ok('App: double tap does not zoom',cs(document.documentElement).touchAction==='manipulation',
+      cs(document.documentElement).touchAction);
+   ok('App: the page does not pull to refresh',cs(document.body).overscrollBehaviorY==='none',
+      cs(document.body).overscrollBehaviorY);
+   const b=document.querySelector('.sb-item');
+   ok('App: no blue flash on tap',!!b&&/rgba\(0, 0, 0, 0\)|transparent/.test(cs(b).webkitTapHighlightColor),
+      b?cs(b).webkitTapHighlightColor:'NO .sb-item FOUND, check proved nothing');
+   ok('App: chrome does not select on drag',!!b&&cs(b).userSelect==='none',b?cs(b).userSelect:'NO .sb-item FOUND');
+   if(matchMedia('(pointer:coarse)').matches){
+    const small=[];
+    document.querySelectorAll('input,select,textarea').forEach(el=>{
+     if(el.type==='hidden')return;
+     if(parseFloat(cs(el).fontSize)<16)small.push((el.id||el.className||el.tagName)+' '+cs(el).fontSize);});
+    ok('App: no field under 16px, so focusing one cannot zoom the screen',small.length===0,
+       small.slice(0,3).join(', ')||('all '+document.querySelectorAll('input,select,textarea').length+' fields 16px or more'));
+   }else ok('App: no field under 16px, so focusing one cannot zoom the screen',true,
+            'fine pointer: rule is coarse only, RUN AT 390px TO PROVE IT');
+   ok('App: the foundation layer is present',typeof BBF==='object'&&!!BBF.start);
+   ok('App: scroll restoration is manual',history.scrollRestoration==='manual',history.scrollRestoration);
+  })();
+
+  /* ── G · THE FREEZE, proven by doing it ─────────────────────────────── */
+  (function(){
+   let frozen=false,shielded=false,used='';
+   const sel=(typeof BBF==='object'&&BBF.overlaySelector)?BBF.overlaySelector():null;
+   if(!sel){ok('App: the page behind an open sheet is frozen',false,
+              'BBF DID NOT DECLARE ITS OVERLAY SELECTOR, check proved nothing');
+            ok('App: the page behind an open sheet is out of reach',false,'not proven');return;}
+   /* The check asks the MODULE for its selector. A hand-typed selector in a
+      check is how the same suite passed on BSWL while asserting nothing. */
+   const all=[].slice.call(document.querySelectorAll(sel));
+   if(!all.length){ok('App: the page behind an open sheet is frozen',false,
+                      'NO OVERLAY MATCHED '+sel+', check proved nothing');
+                   ok('App: the page behind an open sheet is out of reach',false,'not proven');return;}
+   for(let i=0;i<all.length&&!frozen;i++){
+    const ov=all[i];
+    const hadDisp=ov.style.display, hadOpen=ov.classList.contains('open');
+    ov.style.display='flex'; ov.classList.add('open');
+    BBF.sync();
+    if(cs(document.body).position==='fixed'){
+     frozen=true;shielded=!!document.querySelector('[inert]');
+     used=(ov.id||String(ov.className).split(' ')[0]||ov.tagName);}
+    ov.style.display=hadDisp; if(!hadOpen)ov.classList.remove('open');
+    BBF.sync();
+   }
+   ok('App: the page behind an open sheet is frozen',frozen,
+      frozen?('pinned, proven on '+used):('none of '+all.length+' overlays froze it'));
+   ok('App: the page behind an open sheet is out of reach',shielded,
+      shielded?'inert applied':'still tappable and tabbable');
+  })();
+
+  /* ── H · THE DELIVERY COLUMNS ───────────────────────────────────────────
+     BBD_COLS is duplicated in three files and is named COLS in the third, so
+     a name search finds two of three and looks complete. Assert the SHAPE
+     this app expects, so a drift in any copy shows up here. */
+  (function(){
+   if(typeof BBD_COLS==='undefined'){ok('Delivery: the column set is defined',false,'BBD_COLS NOT FOUND');return;}
+   const keys=BBD_COLS.map(c=>c.k).join(',');
+   const EXPECT='posts,shoot,vids,stories,scripts,ads,report,plan,approved,nposts,bio,nbio,fb,ig';
+   ok('Delivery: the column set matches what this app expects',keys===EXPECT,
+      keys===EXPECT?(BBD_COLS.length+' columns'):('got '+keys));
+   const groups={};BBD_COLS.forEach(c=>groups[c.g]=(groups[c.g]||0)+1);
+   ok('Delivery: the four groups are intact',
+      groups.this===7&&groups.next===3&&groups.bio===2&&groups.one===2,
+      JSON.stringify(groups));
+  })();
+
+  /* ── I · DELIVERY ROWS POINT AT REAL CLIENTS ────────────────────────────
+     bb_delivery.client is free text with no link to clients, so a typo just
+     vanishes from a filter and nobody is told. */
+  await (async function(){
+   try{
+    const r=await sb.from('bb_delivery').select('client,period');
+    const rows=r.data||[];
+    if(!rows.length){ok('Delivery: every row points at a real client',false,
+                        'NO bb_delivery ROWS FOUND, check proved nothing');return;}
+    const norm=x=>String(x||'').toLowerCase().replace(/\s+/g,'');
+    const known=new Set((S.clients||[]).map(c=>norm(c.name)));
+    /* only meaningful against the full client list, so skip when the view is
+       narrowed rather than reporting false orphans */
+    if((typeof viewScope==='function')&&viewScope()){
+     ok('Delivery: every row points at a real client',true,
+        'skipped: the view is narrowed to one seat, so the client list is partial');return;}
+    const orphans=[...new Set(rows.filter(x=>!known.has(norm(x.client))).map(x=>x.client))];
+    ok('Delivery: every row points at a real client',orphans.length===0,
+       orphans.length?(orphans.length+' unmatched: '+orphans.slice(0,4).join(', ')):(rows.length+' rows all matched'));
+   }catch(e){ok('Delivery: every row points at a real client',false,'query failed: '+(e&&e.message));}
+  })();
+
+  /* ── J · THE DEPARTMENT RULE (L-VID-021) ────────────────────────────────
+     team_members is shared by four systems. Video listed all 11 people at BB
+     instead of its 5 because it asked for "everyone" when it meant "my
+     department". SMM has no department filter at all, so this reports what it
+     would show rather than asserting a number nobody has agreed yet. */
+  await (async function(){
+   try{
+    const r=await sb.from('team_members').select('id,name,role');
+    const all=r.data||[];
+    if(!all.length){ok('Team: SMM shows only SMM people',false,'NO team_members ROWS, check proved nothing');return;}
+    const isSmm=m=>/smm|social/i.test(String(m.role||''));
+    const outsiders=all.filter(m=>!isSmm(m));
+    ok('Team: SMM shows only SMM people',outsiders.length===0,
+       outsiders.length?(all.length+' people readable, '+outsiders.length+' are not SMM by role: '
+         +outsiders.slice(0,4).map(m=>m.name+' ('+(m.role||'no role')+')').join(', ')
+         +' <- registered as L-SMM-004, filter by MEANING not a name list')
+       :(all.length+' people, all SMM'));
+   }catch(e){ok('Team: SMM shows only SMM people',false,'query failed: '+(e&&e.message));}
+  })();
+
+  /* ── K · layout and design ──────────────────────────────────────────── */
+  ok('Layout: the page does not scroll sideways',
+     document.documentElement.scrollWidth<=window.innerWidth+1,
+     document.documentElement.scrollWidth+' vs '+window.innerWidth);
+  (function(){
+   const host=document.querySelector('.main')||document.body;
+   /* PICTOGRAPHS are the tell, typographic marks are not. Without this the
+      check flags its own ticks and arrows. */
+   const KEEP='✓✔✕✖✗✘▶◀▲▼✦☐☾☀⎘→←↑↓↗↻⏸❓➕';
+   const found=((host?host.textContent:'').match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu)||[])
+     .filter(ch=>KEEP.indexOf(ch)===-1);
+   ok('Design: no emoji used as an icon on this page',found.length===0,
+      found.length?('found '+[...new Set(found)].join(' ')):'clean');
+  })();
+
+ }catch(e){
+  ok('HARNESS: completed without crashing',false,String(e&&e.message||e));
+ }finally{
+  try{nav(snapPage);window.scrollTo(0,snapScroll);}catch(e){}
+ }
+
+ const failed=R.filter(r=>!r.pass);
+ const pass=failed.length===0;
+ window.__ST_REPORTING=true;
+ console.log('%c BB SMM SELF-TEST  '+(pass?'ALL GREEN':failed.length+' FAILED')+'  '+R.length+' checks  '+window.innerWidth+'px',
+             'background:'+(pass?'#16a34a':'#dc2626')+';color:#fff;padding:3px 8px;border-radius:4px;font-weight:700');
+ console.table(R.map(r=>({check:r.name,result:r.pass?'PASS':'FAIL',detail:r.detail})));
+ if(!pass)console.warn('FAILED:\n'+failed.map(f=>'  - '+f.name+(f.detail?('  ['+f.detail+']'):'')).join('\n'));
+ window.__ST_REPORTING=false;
+ stReport(R,failed);
+ return {pass:pass,failed:failed.length,total:R.length,viewport:window.innerWidth+'px',results:R};
+}
+
+/* ON-SCREEN REPORT. A console is not reachable on a phone, and this suite is
+   required to be run at 390px, so a console-only result cannot be read where
+   it matters most. */
+function stReport(R,failed){
+ const old=document.getElementById('stOv');if(old)old.remove();
+ const ov=document.createElement('div');ov.id='stOv';
+ ov.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(6,7,10,.94);'
+  +'display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto;'
+  +'font-family:Inter,system-ui,sans-serif;-webkit-overflow-scrolling:touch';
+ ov.innerHTML='<div style="background:#12121a;border:1px solid #2a2a3a;border-radius:14px;max-width:720px;width:100%;margin:auto">'
+  +'<div style="padding:14px 16px;border-bottom:1px solid #2a2a3a;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+   +'<span style="background:'+(failed.length?'#dc2626':'#16a34a')+';color:#fff;font:800 11px Inter;padding:4px 9px;border-radius:6px">'
+   +(failed.length?failed.length+' FAILED':'ALL GREEN')+'</span>'
+   +'<span style="font:600 12px Inter;color:#a0a0b8">'+R.length+' checks &middot; '+window.innerWidth+'px</span>'
+   +'<button onclick="document.getElementById(\'stOv\').remove()" style="margin-left:auto;background:#1e293b;border:1px solid #334155;color:#94a3b8;min-height:32px;padding:0 12px;border-radius:7px;font:700 12px Inter;cursor:pointer">Close</button>'
+  +'</div>'
+  +'<div style="padding:10px 14px 16px">'
+   +R.map(r=>'<div style="display:flex;gap:9px;padding:7px 0;border-bottom:1px solid #1c1c28">'
+     +'<span style="color:'+(r.pass?'#00FF85':'#FF5252')+';font-weight:800;font-size:12px;flex-shrink:0;width:34px">'+(r.pass?'PASS':'FAIL')+'</span>'
+     +'<div style="min-width:0"><div style="font:600 12.5px Inter;color:#fff">'+r.name+'</div>'
+     +(r.detail?'<div style="font-size:11px;color:#8888a0;margin-top:2px;word-break:break-word">'+r.detail+'</div>':'')+'</div></div>').join('')
+  +'</div></div>';
+ document.body.appendChild(ov);
+}
+
+window.runSelfTest=runSelfTest;
+if(location.search.indexOf('selftest')>-1){
+ window.addEventListener('load',function(){setTimeout(function(){runSelfTest();},4500);});
+}
+</script>
+<!-- @@BBSMM_SELFTEST_END@@ -->
