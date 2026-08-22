@@ -8596,6 +8596,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
   var STORAGE_KEY = 'smm-checkin-last';
 
   var _ciItems = [];
+  var _ciTasks = [];
 
   function today() {
     var d = new Date();
@@ -8610,7 +8611,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     ov.innerHTML =
       '<div id="smm-checkin-box">' +
         '<div id="smm-checkin-head">' +
-          '<div><h3>Daily Content Check-In</h3><p>Mark posts as published to keep records accurate</p></div>' +
+          '<div><h3>Your daily check-in</h3><p>Tasks assigned to you, and posts to confirm as published</p></div>' +
           '<button onclick="closeCheckinPopup()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;"></button>' +
         '</div>' +
         '<div id="smm-checkin-body"><div style="color:#5b5b8a;text-align:center;padding:30px;font-size:13px;">Loading...</div></div>' +
@@ -8637,19 +8638,62 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
   function ciScopeIds() {
     try {
       if (typeof currentSmmScope !== 'function' || !currentSmmScope()) return null;  // CEO/COO see all
-      if (typeof S === 'undefined' || !S.clients || !S.clients.length) return [];    // scoped but not loaded yet
-      return S.clients.map(function(c){ return c.id; });
+      /* S_myClientIds, NEVER S.clients. Since the Everyone / Just mine filter
+         landed, S.clients holds every seat's clients whenever the filter is on
+         Everyone, so reading it here put Nirvana's posts back in Tiana's
+         morning popup: the exact fault this popup was fixed for on 12 August.
+         S_myClientIds is the signed-in seat's own list and never widens. */
+      if (typeof S_myClientIds === 'undefined' || !S_myClientIds.length) return [];
+      return S_myClientIds.slice();
+    } catch(e) { return null; }
+  }
+
+  /* WHO IS THIS PERSON, in every spelling tasks.assign has ever used.
+     The Command Centre matches assign as an exact string and its vocabulary is
+     lowercase role codes or a full name. This app used to write two-letter
+     initials. Old rows still carry them, so match both or the popup silently
+     misses a person's older work. */
+  function ciAssignValues() {
+    try {
+      if (typeof taskAssignFor !== 'function' || !S || !S.currentUser) return null;
+      var canon = taskAssignFor(S.currentUser);
+      if (!canon) return null;
+      var out = [canon];
+      var legacy = (typeof USER_ROLES === 'object' && USER_ROLES[S.currentUser]) ? USER_ROLES[S.currentUser].code : null;
+      if (legacy && out.indexOf(legacy) < 0) out.push(legacy);
+      return out;
     } catch(e) { return null; }
   }
 
   async function loadCheckinItems() {
     var t = today();
+    var H = { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY };
+
+    /* TASKS ASSIGNED TO THIS PERSON. Assigned to THEM, not "on their clients":
+       those are two different questions and My Tasks already answers the second. */
+    _ciTasks = [];
+    try {
+      var who = ciAssignValues();
+      if (who) {
+        var tq = CI_SB_URL + '/rest/v1/tasks?done=eq.false&assign=in.(' + who.join(',') + ')'
+               + '&or=(due.lte.' + t + ',due.is.null)'
+               + '&select=id,title,due,client_id,priority&order=due.asc.nullslast&limit=100';
+        /* 100, not 40. Nirvana alone matches 45 today, so a 40 cap would drop
+           five without saying so and the header count would be a lie. If this
+           ever caps, that is itself the signal worth seeing. */
+        var tr = await fetch(tq, { headers: H });
+        _ciTasks = tr.ok ? await tr.json() : [];
+      }
+    } catch(e) { _ciTasks = []; }
+
+    /* POSTS TO CONFIRM. Kept deliberately: this is the ONLY place `posted` gets
+       marked, and the Missed Post alert is computed from it. */
     try {
       var ids = ciScopeIds();
       if (ids && !ids.length) { _ciItems = []; updateFab(); return _ciItems; }
       var scopeQ = ids ? '&client_id=in.(' + ids.join(',') + ')' : '';
       var r = await fetch(CI_SB_URL + '/rest/v1/content_plans?posted=eq.false&scheduled_date=lte.' + t + scopeQ + '&select=id,title,scheduled_date,client_id,type&order=scheduled_date.asc&limit=60', {
-        headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY }
+        headers: H
       });
       _ciItems = r.ok ? await r.json() : [];
     } catch(e) { _ciItems = []; }
@@ -8660,48 +8704,105 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
   function updateFab() {
     var badge = document.getElementById('smm-checkin-fab-badge');
     if (!badge) return;
-    var cnt = _ciItems.length;
+    var cnt = _ciItems.length + (_ciTasks ? _ciTasks.length : 0);
     badge.textContent = cnt;
     badge.style.display = cnt > 0 ? 'flex' : 'none';
+  }
+
+  function ciClientNames() {
+    var m = {};
+    if (typeof S !== 'undefined' && S.clients) S.clients.forEach(function(c){ m[c.id] = c.name; });
+    return m;
   }
 
   function renderCheckinBody(items) {
     var body = document.getElementById('smm-checkin-body');
     if (!body) return;
-    if (!items || !items.length) {
-      body.innerHTML = '<div style="color:#00FF85;text-align:center;padding:30px;font-size:13px;">All clear — no unposted content scheduled for today or earlier.</div>';
+    var tasks = _ciTasks || [];
+    items = items || [];
+
+    if (!tasks.length && !items.length) {
+      body.innerHTML = '<div style="color:#00FF85;text-align:center;padding:30px;font-size:13px;">'
+        + 'All clear. Nothing assigned to you is due, and every scheduled post is confirmed.</div>';
       return;
     }
 
-    // Group by client
-    var groups = {};
-    items.forEach(function(item) {
-      var cid = item.client_id || 'unknown';
-      if (!groups[cid]) groups[cid] = [];
-      groups[cid].push(item);
-    });
-
-    // Get client names
-    var clientNames = {};
-    if (typeof S !== 'undefined' && S.clients) {
-      S.clients.forEach(function(c){ clientNames[c.id] = c.name; });
-    }
-
+    var names = ciClientNames();
+    var t = today();
     var html = '';
-    Object.keys(groups).forEach(function(cid) {
-      var cname = clientNames[cid] || ('Client ' + cid);
-      html += '<div class="smm-ci-client"><div class="smm-ci-client-name">' + cname + '</div>';
-      groups[cid].forEach(function(item) {
-        html += '<div class="smm-ci-item" id="ci-row-'+item.id+'" onclick="toggleCheckinItem('+item.id+')">' +
-          '<input type="checkbox" id="ci-cb-'+item.id+'" onclick="event.stopPropagation();toggleCheckinItem('+item.id+')">' +
-          '<div class="ci-title">' + (item.title || 'Untitled') + ' <span style="font-size:10px;color:#5b5b8a;">['+( item.type||'post')+']</span></div>' +
-          '<div class="ci-date">' + (item.scheduled_date || '') + '</div>' +
-        '</div>';
+
+    /* YOUR TASKS FIRST. This is what the person opened the app to find out. */
+    if (tasks.length) {
+      html += '<div class="smm-ci-client"><div class="smm-ci-client-name">Your tasks &middot; ' + tasks.length + '</div>';
+      tasks.forEach(function(tk) {
+        var overdue = tk.due && tk.due < t;
+        var who = tk.client_id ? (names[tk.client_id] || ('Client ' + tk.client_id)) : 'General';
+        html += '<div class="smm-ci-item" id="ci-task-' + tk.id + '" onclick="toggleCheckinTask(' + tk.id + ')">'
+          + '<input type="checkbox" id="ci-tcb-' + tk.id + '" onclick="event.stopPropagation();toggleCheckinTask(' + tk.id + ')">'
+          + '<div class="ci-title">' + (tk.title || 'Untitled')
+          + ' <span style="font-size:10px;color:#5b5b8a;">' + who + '</span></div>'
+          + '<div class="ci-date"' + (overdue ? ' style="color:#FF5252;font-weight:700"' : '') + '>'
+          + (tk.due ? (overdue ? 'overdue ' : '') + tk.due.substring(0,10) : 'no date') + '</div>'
+          + '</div>';
       });
       html += '</div>';
-    });
+    }
+
+    /* POSTS TO CONFIRM, grouped by client as before. */
+    if (items.length) {
+      var groups = {};
+      items.forEach(function(item) {
+        var cid = item.client_id || 'unknown';
+        if (!groups[cid]) groups[cid] = [];
+        groups[cid].push(item);
+      });
+      Object.keys(groups).forEach(function(cid) {
+        var cname = names[cid] || ('Client ' + cid);
+        html += '<div class="smm-ci-client"><div class="smm-ci-client-name">' + cname + ' &middot; posts to confirm</div>';
+        groups[cid].forEach(function(item) {
+          html += '<div class="smm-ci-item" id="ci-row-'+item.id+'" onclick="toggleCheckinItem('+item.id+')">' +
+            '<input type="checkbox" id="ci-cb-'+item.id+'" onclick="event.stopPropagation();toggleCheckinItem('+item.id+')">' +
+            '<div class="ci-title">' + (item.title || 'Untitled') + ' <span style="font-size:10px;color:#5b5b8a;">['+( item.type||'post')+']</span></div>' +
+            '<div class="ci-date">' + (item.scheduled_date || '') + '</div>' +
+          '</div>';
+        });
+        html += '</div>';
+      });
+    }
     body.innerHTML = html;
   }
+
+  /* Ticking a task here marks it done AND stamps when, exactly as toggleTask
+     does on the page. Two paths writing the same row must agree, or half the
+     completions carry no finish time and the monthly recap cannot measure
+     turnaround. That is the fault that left 308 rows unstamped. */
+  window.toggleCheckinTask = async function(id) {
+    var row = document.getElementById('ci-task-' + id);
+    var cb  = document.getElementById('ci-tcb-' + id);
+    if (!row || !cb) return;
+    cb.checked = true;
+    row.style.opacity = '0.45';
+    var now = new Date().toISOString();
+    try {
+      var r = await fetch(CI_SB_URL + '/rest/v1/tasks?id=eq.' + id, {
+        method: 'PATCH',
+        headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY,
+                   'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ done: true, completed_at: now, updated_at: now })
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      _ciTasks = (_ciTasks || []).filter(function(x){ return String(x.id) !== String(id); });
+      /* keep the page in step so My Tasks does not show it open */
+      if (typeof S !== 'undefined' && S.tasks) {
+        var local = S.tasks.find(function(x){ return String(x.id) === String(id); });
+        if (local) { local.done = true; local.completed_at = now; }
+      }
+      updateFab();
+    } catch(e) {
+      cb.checked = false; row.style.opacity = '1';
+      console.warn('[check-in] task not saved', e && e.message);
+    }
+  };
 
   window.toggleCheckinItem = async function(id) {
     var row = document.getElementById('ci-row-' + id);
