@@ -3489,6 +3489,14 @@ async function submitCommunityAdd() {
 
 // ============ SUPABASE LOADERS ============
 // Returns the assigned_smm value for the logged-in user, or null if they see all
+/* Name any client, whatever the current view holds. Pipelines only. */
+function anyClientName(id) {
+  if (!id) return null;
+  var cl = (S.clients || []).find(function(c){ return c.id == id; });
+  if (cl) return cl.name;
+  return (S.clientNames || {})[id] || null;
+}
+
 function currentSmmScope() {
   if (!S.currentUser) return null;
   return USER_ROLES[S.currentUser]?.smm || null;
@@ -3533,6 +3541,16 @@ async function loadClients() {
     const { data, error } = await query;
     if (error) throw error;
     S.clients = data || [];
+    /* EVERY client's name, unscoped, for the three production mirrors.
+       Those pipelines show the whole company's work (2026-08-22, Thulaib:
+       full access like the Command Centre), so their cards must be able to
+       name a client that S.clients does not hold when the view is narrowed.
+       id and name only: two small columns, never the full rows. */
+    try {
+      const nr = await sb.from('clients').select('id,name');
+      S.clientNames = {};
+      (nr.data || []).forEach(function(c){ S.clientNames[c.id] = c.name; });
+    } catch(e) { S.clientNames = S.clientNames || {}; }
     /* S.clients follows the view filter, so it may now hold every seat's
        clients. Record the signed-in seat's OWN ids separately: personal
        surfaces read these and must not widen when the filter does. */
@@ -3581,14 +3599,12 @@ async function loadContent() {
 async function loadShoots() {
   if (!sb) return;
   try {
+    /* FULL ACCESS (2026-08-22, Thulaib): the Shoot Pipeline shows every
+       shoot in the company, like the Command Centre, whatever the
+       Everyone / Just mine filter says. The filter still governs boards
+       that are ABOUT your own delivery; a production pipeline is about
+       what the whole team is shooting. */
     let query = sb.from('smm_shoots').select('*').order('shoot_date', { ascending: true });
-    const scope = viewScope();
-    if (scope) {
-      // Must use already-loaded client IDs for scoping
-      const ids = S.clients.map(c => c.id);
-      if (ids.length) query = query.in('client_id', ids);
-      else { S.shoots = []; return; } // no clients = no shoots
-    }
     const { data, error } = await query;
     if (error) throw error;
     S.shoots = data || [];
@@ -5248,7 +5264,7 @@ async function renderVideoHub() {
         html += '<div class="vh-stage-empty">No projects</div>';
       } else {
         items.forEach(function(p) {
-          var cl = S.clients.find(function(c) { return c.id == p.client_id; });
+          var clName = anyClientName(p.client_id);
           var ed = VH_teamMembers.find(function(m) { return m.id == p.assigned_editor_id; });
           var prio = (p.priority || 'medium').toLowerCase();
           var dl = p.deadline ? new Date(p.deadline + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
@@ -5256,7 +5272,7 @@ async function renderVideoHub() {
           html += '<div class="vh-card pr-' + prio + '" data-vh-pid="' + p.id + '" draggable="true">';
           html += '<button class="vh-card-menu" data-vh-menu="' + p.id + '" onclick="event.stopPropagation();vhOpenDetail(' + p.id + ');">⋮</button>';
           html += '<div class="vh-card-title">' + escHtml(p.title || 'Untitled') + '</div>';
-          html += '<div class="vh-card-client">' + escHtml(cl ? cl.name : '— No client —') + '</div>';
+          html += '<div class="vh-card-client">' + escHtml(clName || 'No client') + '</div>';
           html += '<span class="vh-card-type">' + escHtml((p.type || 'reel').toUpperCase()) + '</span>';
           html += '<div class="vh-card-meta"><div class="vh-card-meta-left"><div class="vh-priority-dot ' + prio + '"></div>';
           if (dl) html += '<div class="vh-card-deadline' + (ov ? ' overdue' : '') + '">' + (ov ? 'OVERDUE · ' : '') + dl + '</div>';
@@ -5770,7 +5786,7 @@ async function renderGraphicHub() {
   if (!root) return;
   root.innerHTML = '<div class="loading-row loading-dots">Loading</div>';
   await loadProduction();
-  renderProdKanban(root, S.graphicProd || [], GRAPHIC_PROD_STAGES, 'graphic', "No graphic projects for your clients right now — this mirrors the design team's pipeline and fills as they add work.");
+  renderProdKanban(root, S.graphicProd || [], GRAPHIC_PROD_STAGES, 'graphic', "No graphic projects on the board right now. This mirrors the design team's whole pipeline and fills as they add work.");
 }
 
 // ============ TOAST ============
@@ -5970,7 +5986,7 @@ function renderShoots() {
     var col = board.querySelector('[data-sdrop="' + key + '"]');
     if (!col) { col = board.querySelector('[data-sdrop="videos-confirmed"]'); }
     if (!col) return;
-    var cl = S.clients.find(function(c) { return c.id == shoot.client_id; });
+    var cl = { name: anyClientName(shoot.client_id) || 'Unknown' };
     var card = document.createElement('div');
     card.className = 'kanban-card';
     card.draggable = true;
@@ -6137,18 +6153,19 @@ const GRAPHIC_PROD_STAGES = [
   {key:'revisions',label:'Revisions'},{key:'head_review',label:'Head Review'},
   {key:'sent_to_client',label:'Sent to Client'},{key:'client_changes',label:'Client Changes'},{key:'approved',label:'Approved'}
 ];
-// Load the video + graphic production rows for ONLY the SMM's clients (read-only).
+// Load the WHOLE video + graphic production board (read-only mirror).
+// FULL ACCESS 2026-08-22: these pages mirror the video and design teams'
+// pipelines the way the Command Centre does, so they are not narrowed to the
+// signed-in seat's clients or by the Everyone / Just mine filter.
 async function loadProduction() {
   if (!sb) return;
-  const ids = (S.clients || []).map(c => c.id);
-  if (!ids.length) { S.videoProd = []; S.graphicProd = []; return; }
   try {
     // Explicit columns — never pull graphic_projects.image_url (base64 blobs) into the SMM board; it's not displayed and kills load speed
     const G_COLS = 'id,title,client_id,client_name,current_stage,priority,deadline,assigned_designer,assigned_designer_id,type,target_month,target_year,is_archived,created_at';
     const V_COLS = 'id,title,client_id,current_stage,priority,deadline,assigned_editor_id,target_month,target_year,is_archived,created_at';
     const [v, g, tm] = await Promise.all([
-      sb.from('video_projects').select(V_COLS).in('client_id', ids),
-      sb.from('graphic_projects').select(G_COLS).in('client_id', ids),
+      sb.from('video_projects').select(V_COLS),
+      sb.from('graphic_projects').select(G_COLS),
       sb.from('team_members').select('id,name')
     ]);
     S.videoProd = (v.data || []).filter(p => !p.is_archived);
@@ -6300,8 +6317,7 @@ function renderClientReadinessStrip(c) {
     + '</div></div>';
 }
 function prodCard(p, kind) {
-  const cl = S.clients.find(c => c.id == p.client_id);
-  const clientName = cl ? cl.name : (p.client_name || '—');
+  const clientName = anyClientName(p.client_id) || p.client_name || '—';
   const who = kind === 'video' ? ((S.teamMap || {})[p.assigned_editor_id] || '') : (p.assigned_designer || '');
   const dl = p.deadline ? new Date(p.deadline) : null;
   const overdue = dl && dl < new Date(new Date().toDateString());
@@ -6352,7 +6368,7 @@ function renderProdKanban(host, items, stages, kind, emptyMsg) {
     cols += '<div class="kanban-col" style="border-top:2px solid var(--text3)"><div class="kanban-col-hdr"><div class="kanban-col-title" style="color:var(--text2)">Other</div><div class="kanban-col-cnt">' + other.length + '</div></div><div class="kanban-cards">' + other.map(p => prodCard(p, kind)).join('') + '</div></div>';
   }
   const ncols = stages.length + (other.length ? 1 : 0);
-  host.innerHTML = '<div class="prod-summary" style="margin-bottom:12px">' + items.length + ' ' + (kind === 'video' ? 'video' : 'graphic') + ' project' + (items.length !== 1 ? 's' : '') + ' across your clients · read-only mirror of the ' + (kind === 'video' ? 'video' : 'design') + ' team\'s pipeline</div>'
+  host.innerHTML = '<div class="prod-summary" style="margin-bottom:12px">' + items.length + ' ' + (kind === 'video' ? 'video' : 'graphic') + ' project' + (items.length !== 1 ? 's' : '') + ' across every client · read-only mirror of the ' + (kind === 'video' ? 'video' : 'design') + ' team\'s pipeline</div>'
     + '<div class="kanban-board" style="grid-template-columns:repeat(' + ncols + ',minmax(200px,1fr));overflow-x:auto;gap:8px">' + cols + '</div>';
 }
 async function deleteContentCard() {
