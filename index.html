@@ -4422,6 +4422,7 @@ function renderCPlanRow(p, num, type) {
     ${p.image_url ? `<img src="${p.image_url}" style="width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;cursor:pointer;${p.posted ? 'opacity:0.5' : ''}" onclick="openCPlanModal('${type}', ${p.id})">` : ''}
     <div style="flex:1;font-size:12px;font-weight:${p.posted ? 400 : 600};color:${p.posted ? 'var(--text3)' : 'var(--text)'};${p.posted ? 'text-decoration:line-through' : ''};cursor:pointer" onclick="openCPlanModal('${type}', ${p.id})">${escHtml(p.title || 'Untitled')}</div>
     <div style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:${p.posted ? 'var(--bg4)' : bg};color:${p.posted ? 'var(--text3)' : color};white-space:nowrap;flex-shrink:0">${dateStr}</div>
+    ${typeof ptBoxesHtml === 'function' ? ptBoxesHtml('content_plans', p.id, p.client_id, p.month, p.year) : ''}
     <button onclick="duplicateSmmCPlanItem(${p.id})" title="Duplicate" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:0 4px;flex-shrink:0" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">⧉</button>
     <button onclick="deleteCPlanItem(${p.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;flex-shrink:0">×</button>
   </div>`;
@@ -9888,3 +9889,158 @@ if(location.search.indexOf('selftest')>-1){
 }
 </script>
 <!-- @@BBSMM_SELFTEST_END@@ -->
+<!-- @@BBSMM_PUBTRACK_BEGIN@@ -->
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+   PUBLISH TRACKER (hub build, 2026-08-26)
+   Finished Graphic and Video work appears on the Posting Plan by itself, and
+   every row carries four platform ticks (TikTok, Instagram, Facebook,
+   LinkedIn) written to smm_publish_log with a timestamp AND a name.
+
+   ARCHITECTURE: nothing is copied. Production rows are read live from
+   graphic_projects and video_projects (their own systems are unchanged).
+   Ticks live in smm_publish_log, written ONLY by this app. The Command
+   Centre renders the same data read-only.
+
+   Finished means: graphic current_stage = 'approved' (last of its STAGES),
+   video current_stage in ('add_to_drive','posted') (its own DELIVERED_STAGES,
+   where 'posted' is a retired value still on archived rows).
+
+   Month keys are the sources' own integer target_year and target_month,
+   picked by a human. NEVER derive a month from a timestamp (L-VID-012,
+   L-GFX-016).
+
+   graphic_projects columns are NAMED because image_url holds base64
+   (bb-base64-image-perf-landmine). Never select * there.
+   ════════════════════════════════════════════════════════════════════════ */
+var PT_PLATFORMS = [
+  { key: 'tiktok',    label: 'TT', name: 'TikTok'    },
+  { key: 'instagram', label: 'IG', name: 'Instagram' },
+  { key: 'facebook',  label: 'FB', name: 'Facebook'  },
+  { key: 'linkedin',  label: 'LI', name: 'LinkedIn'  }
+];
+var PT = { graphic: [], video: [], log: [], loadedFor: '' };
+
+function ptLogRow(srcTable, srcId) {
+  for (var i = 0; i < PT.log.length; i++) {
+    if (PT.log[i].source_table === srcTable && PT.log[i].source_id === srcId) return PT.log[i];
+  }
+  return null;
+}
+
+async function ptLoad(cid, month, year) {
+  if (!sb || !cid) { PT.graphic = []; PT.video = []; PT.log = []; return; }
+  var key = cid + ':' + month + ':' + year;
+  try {
+    var res = await Promise.allSettled([
+      sb.from('graphic_projects')
+        .select('id,title,client_id,type,current_stage,target_month,target_year')
+        .eq('client_id', cid).eq('target_month', month).eq('target_year', year)
+        .eq('current_stage', 'approved'),
+      sb.from('video_projects')
+        .select('id,title,client_id,type,current_stage,target_month,target_year')
+        .eq('client_id', cid).eq('target_month', month).eq('target_year', year)
+        .in('current_stage', ['add_to_drive', 'posted']),
+      sb.from('smm_publish_log')
+        .select('*')
+        .eq('client_id', cid).eq('target_year', year).eq('target_month', month)
+    ]);
+    /* One failed read empties ONE list, never all three (the L-GFX-008 class) */
+    PT.graphic = res[0].status === 'fulfilled' && !res[0].value.error ? (res[0].value.data || []) : [];
+    PT.video   = res[1].status === 'fulfilled' && !res[1].value.error ? (res[1].value.data || []) : [];
+    PT.log     = res[2].status === 'fulfilled' && !res[2].value.error ? (res[2].value.data || []) : [];
+    PT.loadedFor = key;
+  } catch (e) { console.error('Publish tracker load failed:', e); }
+}
+
+function ptBoxesHtml(srcTable, srcId, clientId, month, year) {
+  var row = ptLogRow(srcTable, srcId);
+  var h = '<div style="display:flex;gap:5px;flex-shrink:0;align-items:center">';
+  PT_PLATFORMS.forEach(function(pl) {
+    var at = row ? row[pl.key + '_at'] : null;
+    var by = row ? row[pl.key + '_by'] : null;
+    var on = !!at;
+    var tip = on ? (pl.name + ' · ' + (by || '') + ' · ' + new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) : ('Mark posted on ' + pl.name);
+    h += '<button type="button" onclick="ptToggle(\'' + srcTable + '\',' + srcId + ',' + clientId + ',' + month + ',' + year + ',\'' + pl.key + '\')" title="' + tip + '"'
+      + ' style="min-width:30px;height:24px;padding:0 5px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:0.04em;cursor:pointer;'
+      + (on ? 'background:var(--accent);color:#00252a;border:1px solid var(--accent)'
+            : 'background:transparent;color:var(--text3);border:1px solid var(--border2)')
+      + '">' + pl.label + '</button>';
+  });
+  h += '</div>';
+  return h;
+}
+
+async function ptToggle(srcTable, srcId, clientId, month, year, platform) {
+  if (!sb) return;
+  var who = (typeof USER_ROLES !== 'undefined' && USER_ROLES[S.currentUser] && USER_ROLES[S.currentUser].name) || S.currentUser || 'SMM';
+  var row = ptLogRow(srcTable, srcId);
+  var ticked = row && row[platform + '_at'];
+  try {
+    if (ticked) {
+      /* untick: clear the pair. The row stays, the grant allows no DELETE. */
+      var upd = {}; upd[platform + '_at'] = null; upd[platform + '_by'] = null; upd.updated_at = new Date().toISOString();
+      var r1 = await sb.from('smm_publish_log').update(upd)
+        .eq('source_table', srcTable).eq('source_id', srcId).select();
+      if (r1.error) throw r1.error;
+      row[platform + '_at'] = null; row[platform + '_by'] = null;
+    } else {
+      /* tick: timestamp AND name together, the DB rejects one without the other */
+      var payload = { source_table: srcTable, source_id: srcId, client_id: clientId, target_year: year, target_month: month, updated_at: new Date().toISOString() };
+      payload[platform + '_at'] = new Date().toISOString();
+      payload[platform + '_by'] = who;
+      var r2 = await sb.from('smm_publish_log').upsert(payload, { onConflict: 'source_table,source_id' }).select();
+      if (r2.error) throw r2.error;
+      if (r2.data && r2.data[0]) {
+        if (row) { var idx = PT.log.indexOf(row); PT.log[idx] = r2.data[0]; }
+        else PT.log.push(r2.data[0]);
+      }
+    }
+    renderContentPlan();
+  } catch (e) { console.error('Tick failed:', e); toast('Could not save the tick: ' + (e.message || ''), 'error'); }
+}
+
+function ptProdRowHtml(item, srcTable, num) {
+  var isVideo = srcTable === 'video_projects';
+  var color = isVideo ? 'var(--pink)' : 'var(--cyan)';
+  var srcLabel = isVideo ? 'VIDEO SYSTEM' : 'GRAPHIC SYSTEM';
+  var typeLbl = (item.type || (isVideo ? 'reel' : 'post')).toUpperCase();
+  return '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-left:3px solid ' + color + ';border-radius:var(--rs);margin-bottom:6px">'
+    + '<div style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:800;color:' + color + ';min-width:22px">' + String(num).padStart(2, '0') + '</div>'
+    + '<div style="flex:1;min-width:0">'
+    +   '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">' + escHtml(item.title || 'Untitled') + '</div>'
+    +   '<div style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:var(--text3);margin-top:2px">' + typeLbl + ' · FROM THE ' + srcLabel + '</div>'
+    + '</div>'
+    + ptBoxesHtml(srcTable, item.id, item.client_id, item.target_month, item.target_year)
+    + '</div>';
+}
+
+/* Wrap the existing renderer: original first, production rows appended after,
+   then a refresh if the view moved to a month not yet loaded. */
+var ptOrigRender = renderContentPlan;
+renderContentPlan = function() {
+  ptOrigRender();
+  var month = parseInt(document.getElementById('cplan-month') && document.getElementById('cplan-month').value || new Date().getMonth() + 1);
+  var year = parseInt(document.getElementById('cplan-year') && document.getElementById('cplan-year').value || new Date().getFullYear());
+  var cid = S.currentClientId;
+  if (!cid) return;
+  var key = cid + ':' + month + ':' + year;
+  if (PT.loadedFor !== key) {
+    ptLoad(cid, month, year).then(function() { if (PT.loadedFor === key) renderContentPlan(); });
+    return;
+  }
+  var postsEl = document.getElementById('cplan-posts');
+  var videosEl = document.getElementById('cplan-videos');
+  if (postsEl && PT.graphic.length) {
+    var startP = postsEl.querySelectorAll('[data-pt-row]').length;
+    postsEl.insertAdjacentHTML('beforeend', '<div data-pt-row>' + PT.graphic.map(function(g, i) { return ptProdRowHtml(g, 'graphic_projects', i + 1); }).join('') + '</div>');
+    if (startP) postsEl.querySelector('[data-pt-row]').remove();
+  }
+  if (videosEl && PT.video.length) {
+    var startV = videosEl.querySelectorAll('[data-pt-row]').length;
+    videosEl.insertAdjacentHTML('beforeend', '<div data-pt-row>' + PT.video.map(function(v, i) { return ptProdRowHtml(v, 'video_projects', i + 1); }).join('') + '</div>');
+    if (startV) videosEl.querySelector('[data-pt-row]').remove();
+  }
+};
+</script>
+<!-- @@BBSMM_PUBTRACK_END@@ -->
