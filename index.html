@@ -5053,6 +5053,43 @@ async function renderRecap(){
     + recapMonthList().map(function(m){return '<option value="'+m.key+'"'+(m.key===RECAP_MONTH?' selected':'')+'>'+m.label+'</option>';}).join('')
     +'</select></div></div>';
 
+  /* THREE MEALS this month, per seat. A working day with no row at all is
+     three missed meals: nothing ticked is the record. Counted from the day
+     the strip went live, never before. */
+  try{
+    var seats = Object.keys(USER_ROLES).filter(function(u){ return USER_ROLES[u].smm; });
+    var ctx = await mealsContext();
+    var mFrom = B.from.slice(0,10) < MEALS_SINCE ? MEALS_SINCE : B.from.slice(0,10);
+    var mTo = B.to.slice(0,10);
+    var todayStr = mealsToday();
+    if(mTo > todayStr) mTo = todayStr;
+    if(mFrom <= mTo){
+      html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px">';
+      for(var si=0; si<seats.length; si++){
+        /* mrows, not rows: renderRecap already has a function-scoped `rows`
+           (the per-client table) and `var` would have overwritten it. The
+           Sentinel caught "rows.filter is not a function" on the first run. */
+        var u=seats[si]; var mrows=await mealsRowsForSeat(u, mFrom, mTo);
+        var tally={done:0,late:0,missed:0,open:0,days:0};
+        var md=new Date(mFrom+'T00:00:00');
+        while(toDateStr(md) <= mTo){
+          if(mealsWorkingDay(md)){ tally.days++; var ds=toDateStr(md); var meals=mrows[ds]||{};
+            MEALS.forEach(function(m){ tally[mealDayStatus(m, meals[m.key]||{}, mealExpected(u,m.key,ctx), ds)]++; }); }
+          md.setDate(md.getDate()+1);
+        }
+        var closed=tally.done+tally.late+tally.missed;
+        html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">'
+          +'<div style="font-size:12px;font-weight:800;color:#fff;margin-bottom:6px">Three meals &middot; '+escHtml(USER_ROLES[u].name)+'</div>'
+          +'<div style="display:flex;gap:14px;font-variant-numeric:tabular-nums">'
+          +'<div><div style="font-size:20px;font-weight:800;color:#00FF85">'+tally.done+'</div><div style="font-size:10px;color:var(--text3)">done</div></div>'
+          +'<div><div style="font-size:20px;font-weight:800;color:#FBBF24">'+tally.late+'</div><div style="font-size:10px;color:var(--text3)">late</div></div>'
+          +'<div><div style="font-size:20px;font-weight:800;color:#FF5252">'+tally.missed+'</div><div style="font-size:10px;color:var(--text3)">missed</div></div>'
+          +'</div><div style="font-size:10px;color:var(--text3);margin-top:6px">of '+closed+' meals closed over '+tally.days+' working days since '+mFrom+'</div></div>';
+      }
+      html+='</div>';
+    }
+  }catch(e){ console.warn('[recap meals]', e && e.message); }
+
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px">'
     + stat('Tasks opened', totOpened, '')
     + stat('Tasks finished', totDone, totOpened?Math.round(totDone/totOpened*100)+'% of those opened':'')
@@ -5118,6 +5155,7 @@ var MEALS = [
   { key:'evening',   name:'Evening',   from:'17:00', to:'19:30' }
 ];
 var MEAL_SYSTEMS = [ {k:'sys_smm',t:'SMM Workspace'}, {k:'sys_graphic',t:'Graphic System'}, {k:'sys_video',t:'Video System'} ];
+var MEALS_SINCE = '2026-09-04';   // the day the strip went live; nothing before it is a miss
 var MEALS_STATE = null;      // today's state.meals for the signed-in seat
 var MEALS_OPEN = {};         // meal keys the person has opened by hand today
 var MEALS_DATE = null;
@@ -5139,6 +5177,17 @@ function mealItems(){
     { key:'chats',   name:'WhatsApp chats checked', ticks: cl.map(function(c){return {k:'chat_'+c.id,t:c.name};}) },
     { key:'inbox',   name:'DMs and comments answered', ticks: [ {k:'inbox_ig',t:'Instagram'}, {k:'inbox_fb',t:'Facebook'} ] }
   ];
+}
+/* Morning only: one ads tick per client whose Ads live box is ticked on this
+   month's Delivery board. If no board exists for the month there is nothing
+   to check and the item does not appear, which is itself a signal. */
+function mealItemsFor(mealKey){
+  var items = mealItems();
+  if(mealKey==='morning' && MEALS_CTX && S.currentUser){
+    var names = MEALS_CTX.adsClientsBySeat[S.currentUser]||[];
+    if(names.length) items.push({ key:'ads', name:'Ads checked', ticks: names.map(function(nm){ return {k:'ads_'+nm.toLowerCase().replace(/[^a-z0-9]+/g,'_'), t:nm}; }) });
+  }
+  return items;
 }
 function mealStatus(meal, done, expected){
   var now = new Date(); var mins = now.getHours()*60+now.getMinutes();
@@ -5181,13 +5230,89 @@ async function mealTick(mealKey, tickKey, force){
   await mealsSave();
 }
 async function mealTickAll(mealKey, itemKey){
-  var item = mealItems().filter(function(i){return i.key===itemKey;})[0]; if(!item) return;
+  var item = mealItemsFor(mealKey).filter(function(i){return i.key===itemKey;})[0]; if(!item) return;
   if(!MEALS_STATE) MEALS_STATE = {}; if(!MEALS_STATE[mealKey]) MEALS_STATE[mealKey] = {};
   var allOn = item.ticks.every(function(t){ return !!MEALS_STATE[mealKey][t.k]; });
   var stamp = new Date().toISOString();
   item.ticks.forEach(function(t){ if(allOn) delete MEALS_STATE[mealKey][t.k]; else if(!MEALS_STATE[mealKey][t.k]) MEALS_STATE[mealKey][t.k]=stamp; });
   renderMeals(); await mealsSave();
 }
+/* Is this a BB working day? The BB week is Monday to Friday. */
+function mealsWorkingDay(d){ var w=d.getDay(); return w>=1 && w<=5; }
+/* Status of ONE meal on ONE date from its stored ticks and the window.
+   Past dates: every window is closed. Today: only windows already closed count.
+   Returns 'done' | 'late' | 'missed' | 'open' (window not closed yet). */
+function mealDayStatus(meal, ticks, expected, dateStr){
+  var today = mealsToday();
+  var count=0, last=null;
+  Object.keys(ticks||{}).forEach(function(k){ count++; var d=new Date(ticks[k]); if(!last||d>last) last=d; });
+  var closed = dateStr < today;
+  if(!closed){ var now=new Date(); closed = (now.getHours()*60+now.getMinutes()) > mealMinutes(meal.to); }
+  if(expected>0 && count>=expected){
+    var lastMins = last ? (last.getHours()*60+last.getMinutes()) : 0;
+    var lateFlag = last && (toDateStr(last)!==dateStr || lastMins>mealMinutes(meal.to));
+    return lateFlag ? 'late' : 'done';
+  }
+  return closed ? 'missed' : 'open';
+}
+/* What a seat is expected to tick in a meal: 3 systems + a page and a chat
+   per client + 2 inboxes, and in the morning one ads tick per client with ads
+   live on this month's Delivery board. One formula, used by the strip, the
+   team view and the recap, so "done" means the same thing everywhere. */
+function mealExpected(seatUser, mealKey, ctx){
+  var n = (ctx && ctx.clientsBySeat && ctx.clientsBySeat[seatUser]) || 0;
+  var ads = (mealKey==='morning' && ctx && ctx.adsBySeat && ctx.adsBySeat[seatUser]) || 0;
+  return 3 + 2*n + 2 + ads;
+}
+/* Streak: consecutive working days ending yesterday (or today once all three
+   windows have closed) where no meal was missed. Late keeps the streak; the
+   point is that it was done. */
+function mealsStreak(rowsByDate, seatUser, ctx){
+  var d=new Date(); var today=mealsToday();
+  var now=new Date(); var allClosed = (now.getHours()*60+now.getMinutes()) > mealMinutes(MEALS[2].to);
+  if(!allClosed) d.setDate(d.getDate()-1);
+  var streak=0;
+  for(var i=0;i<120;i++){
+    var ds=toDateStr(d);
+    if(ds<MEALS_SINCE) break;
+    if(mealsWorkingDay(d)){
+      var meals=(rowsByDate[ds]||{});
+      var missed=false;
+      MEALS.forEach(function(m){ var st=mealDayStatus(m, meals[m.key]||{}, mealExpected(seatUser,m.key,ctx), ds); if(st==='missed') missed=true; });
+      if(missed) break;
+      streak++;
+    }
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+/* Every seat's client count and ads-live count, for expected totals. Reads the
+   full client list (id,name only is not enough here) and this month's
+   Delivery rows. Cheap, and cached for the page. */
+var MEALS_CTX=null;
+async function mealsContext(){
+  if(MEALS_CTX && MEALS_CTX.date===mealsToday()) return MEALS_CTX;
+  var ctx={date:mealsToday(), clientsBySeat:{}, adsBySeat:{}, adsClientsBySeat:{}};
+  try{
+    var cr=await sb.from('clients').select('id,name,assigned_smm,status');
+    (cr.data||[]).forEach(function(c){ if(c.status==='ended'||c.status==='churned') return; if(c.assigned_smm){ ctx.clientsBySeat[c.assigned_smm]=(ctx.clientsBySeat[c.assigned_smm]||0)+1; } });
+  }catch(e){}
+  try{
+    var label=new Date().toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+    var dr=await sb.from('bb_delivery').select('client,owner,vals').eq('period',label);
+    (dr.data||[]).forEach(function(r){ if(r.vals&&r.vals.ads&&r.owner){ ctx.adsBySeat[r.owner]=(ctx.adsBySeat[r.owner]||0)+1; (ctx.adsClientsBySeat[r.owner]=ctx.adsClientsBySeat[r.owner]||[]).push(r.client); } });
+  }catch(e){}
+  MEALS_CTX=ctx; return ctx;
+}
+async function mealsRowsForSeat(seatUser, fromStr, toStr){
+  var out={};
+  try{
+    var r=await sb.from('daily_pillar_state').select('pillar_date,state').eq('user_name',seatUser).gte('pillar_date',fromStr).lte('pillar_date',toStr);
+    (r.data||[]).forEach(function(row){ if(row.state&&row.state.meals) out[row.pillar_date]=row.state.meals; });
+  }catch(e){}
+  return out;
+}
+
 function mealSummary(mealState, items){
   var expected=0, count=0, last=null;
   items.forEach(function(it){ it.ticks.forEach(function(t){ expected++; var v=mealState&&mealState[t.k]; if(v){count++; var d=new Date(v); if(!last||d>last) last=d;} }); });
@@ -5200,8 +5325,15 @@ async function renderMeals(){
   var scope = (typeof currentSmmScope==='function') ? currentSmmScope() : null;
   if(!scope){ return renderMealsTeam(root); }
   if(MEALS_STATE===null || MEALS_DATE!==mealsToday()){ MEALS_DATE=mealsToday(); MEALS_STATE = await mealsLoad(); }
-  var items = mealItems();
-  root.innerHTML = MEALS.map(function(meal){
+  var ctx = await mealsContext();
+  /* streak: the seat's rows since launch */
+  var since=new Date(); since.setDate(since.getDate()-120);
+  var rows = await mealsRowsForSeat(S.currentUser, MEALS_SINCE > toDateStr(since) ? MEALS_SINCE : toDateStr(since), mealsToday());
+  rows[mealsToday()] = MEALS_STATE;
+  var streak = mealsStreak(rows, S.currentUser, ctx);
+  var streakHtml = '<div class="meal-streak">'+(streak>0 ? ('<b>'+streak+'</b> working day'+(streak===1?'':'s')+' without a miss') : 'No streak yet. Three meals today starts one.')+'</div>';
+  root.innerHTML = streakHtml + MEALS.map(function(meal){
+    var items = mealItemsFor(meal.key);
     var ms = MEALS_STATE[meal.key]||{};
     var sum = mealSummary(ms, items);
     var st = mealStatus(meal, sum, sum.expected);
@@ -5225,25 +5357,24 @@ async function renderMeals(){
 /* Thulaib and Shiara: both seats at a glance, read-only. */
 async function renderMealsTeam(root){
   var seats = Object.keys(USER_ROLES).filter(function(u){ return USER_ROLES[u].smm; });
-  var states = {}; for (var i=0;i<seats.length;i++){ states[seats[i]] = await mealsLoad(seats[i]); }
-  var items = mealItems();   /* expected counts differ per seat; approximate with the viewer's list size is wrong, so count what the seat has */
+  var states = {}, rowsBySeat = {};
+  var ctx = await mealsContext();
+  var since=new Date(); since.setDate(since.getDate()-120); var fromStr = MEALS_SINCE > toDateStr(since) ? MEALS_SINCE : toDateStr(since);
+  for (var i=0;i<seats.length;i++){ states[seats[i]] = await mealsLoad(seats[i]); rowsBySeat[seats[i]] = await mealsRowsForSeat(seats[i], fromStr, mealsToday()); }
   root.innerHTML = '<div class="meal-team">' + seats.map(function(u){
     var st = states[u]||{};
     /* what THIS seat is expected to tick: 3 systems + a page and a chat per
        client + 2 inboxes. The viewer sees every client, so count the seat's. */
-    var nClients = (S.clients||[]).filter(function(c){ return c.assigned_smm===u; }).length;
-    var expected = 3 + 2*nClients + 2;
     var rows = MEALS.map(function(meal){
       var ms = st[meal.key]||{}; var ticked = Object.keys(ms).length;
-      var last=null; Object.keys(ms).forEach(function(k){ var d=new Date(ms[k]); if(!last||d>last) last=d; });
-      var now=new Date(); var mins=now.getHours()*60+now.getMinutes();
-      var complete = ticked>=expected && expected>0;
-      var s = complete ? ((last && (last.getHours()*60+last.getMinutes())>mealMinutes(meal.to)) ? 'late':'done')
-            : (mins<mealMinutes(meal.from) ? 'soon' : (mins>mealMinutes(meal.to) ? 'missed' : 'now'));
+      var expected = mealExpected(u, meal.key, ctx);
+      var s = mealDayStatus(meal, ms, expected, mealsToday());
+      if(s==='open'){ var now=new Date(); var mins=now.getHours()*60+now.getMinutes(); s = mins<mealMinutes(meal.from) ? 'soon' : 'now'; }
       var label={now:'in progress',done:'done',late:'done late',missed:'MISSED',soon:'later'}[s];
       return '<div class="row"><span>'+meal.name+'</span><span class="meal-state '+s+'">'+label+' &middot; '+ticked+' / '+expected+'</span></div>';
     }).join('');
-    return '<div class="seat"><div class="seat-name">'+escHtml(USER_ROLES[u].name)+'</div>'+rows+'</div>';
+    var streak = mealsStreak(rowsBySeat[u]||{}, u, ctx);
+    return '<div class="seat"><div class="seat-name">'+escHtml(USER_ROLES[u].name)+' <span class="meal-streak-sm">'+(streak>0?(streak+' day'+(streak===1?'':'s')+' without a miss'):'no streak')+'</span></div>'+rows+'</div>';
   }).join('') + '</div>';
 }
 
@@ -9559,6 +9690,8 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .meal-tick.on .box{background:#00FF85;border-color:#00FF85}
 .meal-tick span.lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .meal-all{margin-left:auto;font:700 11px Inter,system-ui,sans-serif;color:var(--accent);background:none;border:none;cursor:pointer;min-height:32px;padding:0 6px}
+.meal-streak{grid-column:1/-1;font-size:12px;color:var(--text2);padding:2px 2px 0}.meal-streak b{color:#00FF85;font-size:14px}
+.meal-streak-sm{font-size:11px;font-weight:600;color:var(--text3);margin-left:8px}
 .meal-team{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .meal-team .seat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
 .meal-team .seat-name{font-size:13px;font-weight:800;color:#fff;margin-bottom:8px}
@@ -9608,6 +9741,10 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
   .task-check::before,div[onclick^="toggleTask"]::before,.wp-check::before{content:"";position:absolute;inset:-10px}
   /* Weekly Plan rows: the row is the target, the chip is readable */
   .wp-task-main{min-height:44px;display:flex;align-items:center}
+  /* Today's agenda rows (tasks due, posts due, approvals, community) are
+     18px on a mouse layout. They only exist when something is due TODAY,
+     which is why no earlier phone run caught them. */
+  .ta-row{min-height:40px;align-items:center;padding:2px 0}
   .wp-task-chip{font-size:11px!important}
   #smm-dl-root span[onclick^="bbdTog"]{width:28px!important;height:28px!important;position:relative}
   #smm-dl-root span[onclick^="bbdTog"]::before{content:"";position:absolute;inset:-8px}
