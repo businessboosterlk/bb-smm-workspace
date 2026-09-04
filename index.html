@@ -1591,6 +1591,9 @@ tr:last-child td { border-bottom: none; }
       <div><div class="ph-title">Today</div><div class="ph-sub" id="today-sub">Your daily operating system</div></div>
     </div>
 
+    <!-- THREE MEALS: the checks done three times a day, every day -->
+    <div id="meals-strip" class="meals"></div>
+
     <!-- BB INTELLIGENCE PANEL -->
     <div id="intel-panel" style="margin-bottom:18px"></div>
 
@@ -3039,6 +3042,7 @@ function populateCalFilterDropdowns() {
 
 // ============ TODAY ============
 function renderToday() {
+  try { renderMeals(); } catch(e) { console.warn('[meals]', e && e.message); }
   const now = new Date();
   const hour = now.getHours();
   let greet = 'Good morning';
@@ -3208,6 +3212,14 @@ async function syncPillarsToDb(date) {
   if (!sb || !S.currentUser) return;
   var dateStr = toDateStr(date);
   var state = {};
+  /* MERGE, never overwrite. This row is shared with the three-meals strip,
+     which keeps its timestamps under state.meals. Rebuilding state from the
+     pillar checkboxes alone and upserting would wipe the meals every time a
+     pillar was ticked: two writers, one row, same class as L-SMM-008. */
+  try {
+    var cur = await sb.from('daily_pillar_state').select('state').eq('user_name', S.currentUser).eq('pillar_date', dateStr).maybeSingle();
+    if (cur.data && cur.data.state) state = Object.assign({}, cur.data.state);
+  } catch(e) {}
   document.querySelectorAll('.pillar-check').forEach(function(cb) {
     state[cb.dataset.key] = cb.checked;
   });
@@ -5091,6 +5103,148 @@ async function renderRecap(){
     +'</div>';
 
   root.innerHTML=html;
+}
+
+/* ══ THREE MEALS ═════════════════════════════════════════════════════════
+   The same checks at three times of day, for each SMM seat, every day.
+   Stored in daily_pillar_state.state.meals as TIMESTAMPS, not booleans, so
+   the record says when each check was done. Same row as the Seven Pillars,
+   same upsert, no new table. Thulaib and Shiara see both seats' status
+   instead of their own checklist, because the point is that nothing is
+   missed and the person who would notice is not the one ticking. */
+var MEALS = [
+  { key:'morning',   name:'Morning',   from:'08:30', to:'11:00' },
+  { key:'afternoon', name:'Afternoon', from:'13:00', to:'15:30' },
+  { key:'evening',   name:'Evening',   from:'17:00', to:'19:30' }
+];
+var MEAL_SYSTEMS = [ {k:'sys_smm',t:'SMM Workspace'}, {k:'sys_graphic',t:'Graphic System'}, {k:'sys_video',t:'Video System'} ];
+var MEALS_STATE = null;      // today's state.meals for the signed-in seat
+var MEALS_OPEN = {};         // meal keys the person has opened by hand today
+var MEALS_DATE = null;
+
+function mealsToday(){ return toDateStr(new Date()); }
+function mealMinutes(hhmm){ var p=hhmm.split(':'); return (+p[0])*60+(+p[1]); }
+function mealClients(){
+  /* PERSONAL: the seat's own clients, never the widening list */
+  var ids = (typeof S_myClientIds!=='undefined' && S_myClientIds.length) ? S_myClientIds : (S.clients||[]).map(function(c){return c.id;});
+  return ids.map(function(id){ return { id:id, name:(typeof anyClientName==='function'?anyClientName(id):null) || ('Client '+id) }; })
+            .sort(function(a,b){ return a.name.localeCompare(b.name); });
+}
+/* Every tick a meal expects, given the seat's clients. */
+function mealItems(){
+  var cl = mealClients();
+  return [
+    { key:'systems', name:'Systems checked',  ticks: MEAL_SYSTEMS.map(function(x){return {k:x.k,t:x.t};}) },
+    { key:'pages',   name:'Pages checked',    ticks: cl.map(function(c){return {k:'page_'+c.id,t:c.name};}) },
+    { key:'chats',   name:'WhatsApp chats checked', ticks: cl.map(function(c){return {k:'chat_'+c.id,t:c.name};}) },
+    { key:'inbox',   name:'DMs and comments answered', ticks: [ {k:'inbox_ig',t:'Instagram'}, {k:'inbox_fb',t:'Facebook'} ] }
+  ];
+}
+function mealStatus(meal, done, expected){
+  var now = new Date(); var mins = now.getHours()*60+now.getMinutes();
+  var from=mealMinutes(meal.from), to=mealMinutes(meal.to);
+  var complete = expected>0 && done.count===expected;
+  if(complete){
+    /* late if the LAST tick landed after the window closed */
+    var lastMins = done.last ? (done.last.getHours()*60+done.last.getMinutes()) : 0;
+    return (done.last && toDateStr(done.last)===mealsToday() && lastMins>to) ? 'late' : 'done';
+  }
+  if(mins<from) return 'soon';
+  if(mins>to) return 'missed';
+  return 'now';
+}
+async function mealsLoad(user){
+  if(!sb) return {};
+  try{
+    var r = await sb.from('daily_pillar_state').select('state').eq('user_name', user||S.currentUser).eq('pillar_date', mealsToday()).maybeSingle();
+    return (r.data && r.data.state && r.data.state.meals) ? r.data.state.meals : {};
+  }catch(e){ return {}; }
+}
+async function mealsSave(){
+  if(!sb || !S.currentUser) return;
+  var dateStr = mealsToday();
+  try{
+    /* merge into the row the pillars also write; never overwrite their keys */
+    var cur = await sb.from('daily_pillar_state').select('state').eq('user_name', S.currentUser).eq('pillar_date', dateStr).maybeSingle();
+    var state = (cur.data && cur.data.state) ? Object.assign({}, cur.data.state) : {};
+    state.meals = MEALS_STATE;
+    var r = await sb.from('daily_pillar_state').upsert({ user_name:S.currentUser, pillar_date:dateStr, state:state, updated_at:new Date().toISOString() }, { onConflict:'user_name,pillar_date' });
+    if(r.error) throw r.error;
+  }catch(e){ console.warn('[meals] not saved', e && e.message); if(typeof toast==='function') toast('Could not save that tick','error'); }
+}
+async function mealTick(mealKey, tickKey, force){
+  if(!MEALS_STATE) MEALS_STATE = {};
+  if(!MEALS_STATE[mealKey]) MEALS_STATE[mealKey] = {};
+  var on = force!==undefined ? force : !MEALS_STATE[mealKey][tickKey];
+  if(on) MEALS_STATE[mealKey][tickKey] = new Date().toISOString(); else delete MEALS_STATE[mealKey][tickKey];
+  renderMeals();                       /* optimistic */
+  await mealsSave();
+}
+async function mealTickAll(mealKey, itemKey){
+  var item = mealItems().filter(function(i){return i.key===itemKey;})[0]; if(!item) return;
+  if(!MEALS_STATE) MEALS_STATE = {}; if(!MEALS_STATE[mealKey]) MEALS_STATE[mealKey] = {};
+  var allOn = item.ticks.every(function(t){ return !!MEALS_STATE[mealKey][t.k]; });
+  var stamp = new Date().toISOString();
+  item.ticks.forEach(function(t){ if(allOn) delete MEALS_STATE[mealKey][t.k]; else if(!MEALS_STATE[mealKey][t.k]) MEALS_STATE[mealKey][t.k]=stamp; });
+  renderMeals(); await mealsSave();
+}
+function mealSummary(mealState, items){
+  var expected=0, count=0, last=null;
+  items.forEach(function(it){ it.ticks.forEach(function(t){ expected++; var v=mealState&&mealState[t.k]; if(v){count++; var d=new Date(v); if(!last||d>last) last=d;} }); });
+  return { expected:expected, count:count, last:last };
+}
+function fmtTime(d){ return d ? d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''; }
+
+async function renderMeals(){
+  var root = document.getElementById('meals-strip'); if(!root) return;
+  var scope = (typeof currentSmmScope==='function') ? currentSmmScope() : null;
+  if(!scope){ return renderMealsTeam(root); }
+  if(MEALS_STATE===null || MEALS_DATE!==mealsToday()){ MEALS_DATE=mealsToday(); MEALS_STATE = await mealsLoad(); }
+  var items = mealItems();
+  root.innerHTML = MEALS.map(function(meal){
+    var ms = MEALS_STATE[meal.key]||{};
+    var sum = mealSummary(ms, items);
+    var st = mealStatus(meal, sum, sum.expected);
+    var label = {now:'NOW', done:'DONE', late:'DONE LATE', missed:'MISSED', soon:'LATER'}[st];
+    /* NOW stays open. Anything else folds to its header, because on a phone
+       three meals of thirteen clients each is a long scroll; a tap opens it. */
+    var folded = (st!=='now') && !MEALS_OPEN[meal.key];
+    var html = '<div class="meal '+st+(folded?' folded':'')+'"><div class="meal-head" onclick="MEALS_OPEN[\''+meal.key+'\']=!MEALS_OPEN[\''+meal.key+'\'];renderMeals()"><div><div class="meal-name">'+meal.name+'</div><div class="meal-win">'+meal.from+' to '+meal.to+(sum.last&&st!=='missed'?' &middot; last tick '+fmtTime(sum.last):'')+'</div></div><span class="meal-state '+st+'">'+label+'</span></div>';
+    items.forEach(function(it){
+      var doneN = it.ticks.filter(function(t){return !!ms[t.k];}).length;
+      var allOn = doneN===it.ticks.length && it.ticks.length>0;
+      html += '<div class="meal-item"><div class="meal-item-head"><span class="meal-item-name">'+it.name+'</span><span class="meal-item-count">'+doneN+' / '+it.ticks.length+'</span>'
+        + (it.ticks.length>1 ? '<button class="meal-all" onclick="mealTickAll(\''+meal.key+'\',\''+it.key+'\')">'+(allOn?'Clear':'All done')+'</button>' : '')
+        + '</div><div class="meal-ticks">'
+        + it.ticks.map(function(t){ var on=!!ms[t.k]; return '<button class="meal-tick'+(on?' on':'')+'" title="'+(on?('done '+fmtTime(new Date(ms[t.k]))):'not yet')+'" onclick="mealTick(\''+meal.key+'\',\''+t.k+'\')"><span class="box"></span><span class="lbl">'+escHtml(t.t)+'</span></button>'; }).join('')
+        + '</div></div>';
+    });
+    return html+'</div>';
+  }).join('');
+}
+/* Thulaib and Shiara: both seats at a glance, read-only. */
+async function renderMealsTeam(root){
+  var seats = Object.keys(USER_ROLES).filter(function(u){ return USER_ROLES[u].smm; });
+  var states = {}; for (var i=0;i<seats.length;i++){ states[seats[i]] = await mealsLoad(seats[i]); }
+  var items = mealItems();   /* expected counts differ per seat; approximate with the viewer's list size is wrong, so count what the seat has */
+  root.innerHTML = '<div class="meal-team">' + seats.map(function(u){
+    var st = states[u]||{};
+    /* what THIS seat is expected to tick: 3 systems + a page and a chat per
+       client + 2 inboxes. The viewer sees every client, so count the seat's. */
+    var nClients = (S.clients||[]).filter(function(c){ return c.assigned_smm===u; }).length;
+    var expected = 3 + 2*nClients + 2;
+    var rows = MEALS.map(function(meal){
+      var ms = st[meal.key]||{}; var ticked = Object.keys(ms).length;
+      var last=null; Object.keys(ms).forEach(function(k){ var d=new Date(ms[k]); if(!last||d>last) last=d; });
+      var now=new Date(); var mins=now.getHours()*60+now.getMinutes();
+      var complete = ticked>=expected && expected>0;
+      var s = complete ? ((last && (last.getHours()*60+last.getMinutes())>mealMinutes(meal.to)) ? 'late':'done')
+            : (mins<mealMinutes(meal.from) ? 'soon' : (mins>mealMinutes(meal.to) ? 'missed' : 'now'));
+      var label={now:'in progress',done:'done',late:'done late',missed:'MISSED',soon:'later'}[s];
+      return '<div class="row"><span>'+meal.name+'</span><span class="meal-state '+s+'">'+label+' &middot; '+ticked+' / '+expected+'</span></div>';
+    }).join('');
+    return '<div class="seat"><div class="seat-name">'+escHtml(USER_ROLES[u].name)+'</div>'+rows+'</div>';
+  }).join('') + '</div>';
 }
 
 /* Everyone / Just mine. Only shown to a seat that HAS a scope: Thulaib and
@@ -9375,6 +9529,42 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
       bottom the moment the address bar shows. */
 .modal{max-height:88dvh}
 
+/* ══ THREE MEALS ═══════════════════════════════════════════════════════
+   Thulaib, 2026-09-04: like three meals a day, the same checks morning,
+   afternoon and evening, every day, no excuses. Systems, pages, chats. ══ */
+.meals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.meal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 14px 12px;min-width:0;position:relative}
+.meal.now{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.meal.done{border-color:rgba(0,255,133,.45)}
+.meal.missed{border-color:rgba(255,82,82,.55)}
+.meal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;cursor:pointer;min-height:44px}
+.meal.folded .meal-item{display:none}
+.meal.folded .meal-head{margin-bottom:0}
+.meal-name{font-size:14px;font-weight:800;color:#fff;letter-spacing:-.01em}
+.meal-win{font-size:11px;color:var(--text3);margin-top:1px}
+.meal-state{font-size:10px;font-weight:800;letter-spacing:.4px;padding:4px 8px;border-radius:6px;white-space:nowrap}
+.meal-state.now{background:var(--accent);color:#0B0C0F}
+.meal-state.done{background:rgba(0,255,133,.15);color:#00FF85}
+.meal-state.late{background:rgba(251,191,36,.15);color:#FBBF24}
+.meal-state.missed{background:rgba(255,82,82,.18);color:#FF5252}
+.meal-state.soon{background:rgba(255,255,255,.06);color:var(--text3)}
+.meal-item{padding:8px 0;border-top:1px solid var(--border)}
+.meal-item-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.meal-item-name{font-size:12.5px;font-weight:700;color:var(--text)}
+.meal-item-count{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
+.meal-ticks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.meal-tick{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font:600 12px Inter,system-ui,sans-serif;cursor:pointer;max-width:100%}
+.meal-tick .box{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0}
+.meal-tick.on{border-color:rgba(0,255,133,.5);color:#fff}
+.meal-tick.on .box{background:#00FF85;border-color:#00FF85}
+.meal-tick span.lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meal-all{margin-left:auto;font:700 11px Inter,system-ui,sans-serif;color:var(--accent);background:none;border:none;cursor:pointer;min-height:32px;padding:0 6px}
+.meal-team{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.meal-team .seat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.meal-team .seat-name{font-size:13px;font-weight:800;color:#fff;margin-bottom:8px}
+.meal-team .row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+@media (max-width:900px){.meals{grid-template-columns:1fr}.meal.soon{opacity:.75}}
+
 /* ══ PHONE LAYER, 2026-09-04. The foundation layer above stops the phone doing
    things nobody asked for. This layer fixes what this app's OWN stylesheet
    did for a mouse. Measured before: Shoot Pipeline 591px wide on a 375px
@@ -9932,6 +10122,22 @@ async function runSelfTest(){
       shielded?'inert applied':'still tappable and tabbable');
   })();
 
+  /* ── THREE MEALS render ─────────────────────────────────────────────── */
+  await (async function(){
+   try{ nav('today'); await renderMeals(); }catch(e){}
+   const strip=document.getElementById('meals-strip');
+   if(!strip){ ok('Meals: the strip exists on Today',false,'NO #meals-strip, check proved nothing'); return; }
+   const scope=(typeof currentSmmScope==='function')?currentSmmScope():null;
+   if(scope){
+    const meals=strip.querySelectorAll('.meal').length, ticks=strip.querySelectorAll('.meal-tick').length;
+    ok('Meals: three meals render for this seat',meals===3,meals+' meals');
+    const expect=3*(3+2*mealClients().length+2);
+    ok('Meals: every expected tick is on screen',ticks===expect,ticks+' ticks, expected '+expect+' for '+mealClients().length+' clients');
+   }else{
+    ok('Meals: the team view renders for the CEO/COO',strip.querySelectorAll('.meal-team .seat').length>=2,strip.querySelectorAll('.meal-team .seat').length+' seats');
+   }
+  })();
+
   /* ── H · THE DELIVERY COLUMNS ───────────────────────────────────────────
      BBD_COLS is duplicated in three files and is named COLS in the third, so
      a name search finds two of three and looks complete. Assert the SHAPE
@@ -10237,15 +10443,6 @@ var BBPUSH=(function(){
   function standalone(){ return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }
   function supported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
   function b64ToU8(b){ var p='='.repeat((4-b.length%4)%4); var s=(b+p).replace(/-/g,'+').replace(/_/g,'/'); var r=atob(s); var a=new Uint8Array(r.length); for(var i=0;i<r.length;i++) a[i]=r.charCodeAt(i); return a; }
-  function withTimeout(p,ms,what){ return Promise.race([p, new Promise(function(_,rej){ setTimeout(function(){ rej(new Error(what+' timed out after '+(ms/1000)+'s')); },ms); })]); }
-  async function swReady(ms){
-    ms=ms||15000;
-    var reg=await withTimeout(navigator.serviceWorker.getRegistration(), 5000, 'service worker lookup');
-    if(!reg){ reg=await withTimeout(navigator.serviceWorker.register('./sw.js'), 8000, 'service worker install'); }
-    var t0=Date.now();
-    while(!reg.active){ if(Date.now()-t0>ms) throw new Error('service worker never became active'); await new Promise(function(r){ setTimeout(r,250); }); }
-    return reg;
-  }
   async function resolveMember(){
     if(memberId) return memberId;
     var n=name(); if(!n) return null;
@@ -10253,21 +10450,21 @@ var BBPUSH=(function(){
     var d=await r.json(); memberId=(d&&d[0]&&d[0].id)||null; return memberId;
   }
   async function subscribe(){
-    var reg=await swReady(15000);
-    var kr=await withTimeout(fetch(FN+'?action=public-key'), 10000, 'key fetch'); var k=(await kr.json()).publicKey;
+    var reg=await navigator.serviceWorker.ready;
+    var kr=await fetch(FN+'?action=public-key'); var k=(await kr.json()).publicKey;
     var sub=await reg.pushManager.getSubscription();
-    if(!sub) sub=await withTimeout(reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(k)}), 15000, 'phone subscription');
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(k)});
     var m=await resolveMember(); if(!m) throw new Error('no active team member row named '+name());
     var j=sub.toJSON();
-    var res=await withTimeout(fetch(FN+'?action=subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({team_member_id:m,app:APP,endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,ua:navigator.userAgent})}), 10000, 'server registration');
+    var res=await fetch(FN+'?action=subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({team_member_id:m,app:APP,endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,ua:navigator.userAgent})});
     var out=await res.json(); if(!res.ok) throw new Error(out.error||'subscribe failed');
-    try{ localStorage.setItem('bbpush_ok_'+APP,String(Date.now())); }catch(e){}
+    try{ localStorage.setItem('bbpush_ok',String(Date.now())); }catch(e){}
     return out;
   }
   function say(t){ try{ if(typeof toast==='function'){ toast(t); return; } }catch(e){} console.log('[BBPUSH]',t); }
   function hide(){ if(banner){ banner.remove(); banner=null; } }
-  function dismiss(){ try{ localStorage.setItem('bbpush_dismiss_'+APP,String(Date.now())); }catch(e){} hide(); }
-  function dismissed(){ try{ var t=+localStorage.getItem('bbpush_dismiss_'+APP)||0; return (Date.now()-t)<7*864e5; }catch(e){ return false; } }
+  function dismiss(){ try{ localStorage.setItem('bbpush_dismiss',String(Date.now())); }catch(e){} hide(); }
+  function dismissed(){ try{ var t=+localStorage.getItem('bbpush_dismiss')||0; return (Date.now()-t)<7*864e5; }catch(e){ return false; } }
   async function enable(){
     var p=await Notification.requestPermission();
     if(p!=='granted'){ hide(); return false; }
@@ -10316,26 +10513,14 @@ var BBPUSH=(function(){
       };
       document.body.appendChild(pillEl); }
     var p=('Notification' in window)?Notification.permission:'n/a';
+    /* Show only a state a tap can change. "Blocked" and "needs install" sat
+       over page content permanently on iOS Safari, where neither can be
+       changed from this page. Those states now live on the Agents page. */
+    if(p==='denied'||(isIOS()&&!standalone())){ pillEl.style.display='none'; return; }
+    pillEl.style.display='';
     if(registered){ pillEl.textContent='Alerts on · tap to test'; pillEl.style.color='var(--accent,#00E5FF)'; }
-    else if(p==='denied'){ pillEl.textContent='Alerts blocked in Settings'; }
-    else if(isIOS()&&!standalone()){ pillEl.textContent='Alerts need Home Screen install'; }
     else if(lastError){ pillEl.textContent='Alerts failed · tap to retry'; }
     else { pillEl.textContent='Alerts off · tap to turn on'; }
-  }
-  async function diagnose(onLine){
-    var L=[]; function add(s,ok,d){ var line=(ok?'PASS ':'FAIL ')+s+(d?': '+d:''); L.push(line); try{ if(onLine) onLine(L.slice()); }catch(e){} }
-    add('Push supported by this browser', supported(), supported()?'':'on iPhone, open from the Home Screen icon');
-    add('Running as installed app', standalone(), standalone()?'':'browser tab');
-    add('Signed in as', !!name(), name()||'nobody yet');
-    try{ var m=await withTimeout(resolveMember(), 10000, 'lookup'); add('Team record found', !!m, m?('id '+m):('no active team member named '+name())); }catch(e){ add('Team record found',false,String(e&&e.message||e)); }
-    var reg=null;
-    try{ reg=await swReady(12000); add('Service worker active', true, reg.scope); }catch(e){ add('Service worker active',false,String(e&&e.message||e)); }
-    try{ var k=await withTimeout(fetch(FN+'?action=public-key').then(function(r){ return r.json(); }), 10000, 'key fetch'); add('Server key fetched', !!k.publicKey, k.publicKey?(k.publicKey.length+' chars'):JSON.stringify(k)); }catch(e){ add('Server key fetched',false,String(e&&e.message||e)); }
-    add('Notification permission', ('Notification' in window)&&Notification.permission==='granted', ('Notification' in window)?Notification.permission:'API absent');
-    if(reg){ try{ var sub=await withTimeout(reg.pushManager.getSubscription(), 5000, 'subscription check'); add('Phone subscription exists', !!sub, sub?(sub.endpoint.slice(0,40)+'…'):'none yet'); }catch(e){ add('Phone subscription exists',false,String(e&&e.message||e)); } }
-    else add('Phone subscription exists', false, 'no service worker');
-    add('Registered with server', registered, lastError||'');
-    return L;
   }
   function status(){ return { app:APP, supported:supported(), permission:('Notification' in window)?Notification.permission:'n/a', ios:isIOS(), standalone:standalone(), user:name(), memberId:memberId, registered:registered, lastError:lastError }; }
   async function test(){
@@ -10344,7 +10529,7 @@ var BBPUSH=(function(){
     return r.json();
   }
   window.addEventListener('load',function(){ setTimeout(boot,2500); });
-  return { enable:enable, test:test, status:status, boot:boot, diagnose:diagnose };
+  return { enable:enable, test:test, status:status, boot:boot };
 })();
 </script>
 <!-- @@BB_PUSH_END@@ -->
@@ -10372,7 +10557,7 @@ var BBSET=(function(){
     var alertsLine = st.registered ? 'On for this phone' : (st.permission==='denied' ? 'Blocked in phone Settings' : (st.ios&&!st.standalone ? 'Needs Home Screen install' : 'Off'));
     var alertsBtns = st.registered ? btn('Send a test alert','BBSET.test()',true) : (st.ios&&!st.standalone ? '' : btn('Turn on alerts','BBSET.enable()',true));
     var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div><div style="font-size:18px;font-weight:800">Settings</div><div style="font-size:11px;color:var(--text3,#9aa3ad)">'+APP_LABEL+'</div></div><button type="button" onclick="BBSET.close()" aria-label="Close" style="border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer;padding:4px 8px">×</button></div>';
-    html+=card('Phone alerts', row('Status',alertsLine)+row('Quiet hours','9pm to 7am, held until 7am')+'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'+alertsBtns+btn('Run diagnostics','BBSET.diag()',false)+'</div><pre id="bbset-diag" style="display:none;white-space:pre-wrap;font-size:11px;line-height:1.5;margin:10px 0 0;padding:10px;border-radius:8px;background:var(--bg,#0c0d10);color:var(--text,#fff)"></pre>'+(st.lastError?'<div style="margin-top:8px;font-size:11px;color:#f87171">'+st.lastError+'</div>':''));
+    html+=card('Phone alerts', row('Status',alertsLine)+row('Quiet hours','9pm to 7am, held until 7am')+'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'+alertsBtns+'</div>'+(st.lastError?'<div style="margin-top:8px;font-size:11px;color:#f87171">'+st.lastError+'</div>':''));
     html+=card('Installed as an app', row('This device', standalone()?'Yes':'No, running in the browser')+(!standalone()?'<div style="margin-top:8px;font-size:12px;color:var(--text3,#9aa3ad)">'+(isIOS()?'Share, then Add to Home Screen. Alerts only work from the installed app.':'Use your browser menu, then Add to Home screen.')+'</div>':''));
     html+=card('Account', row('Signed in as', st.user||'Not signed in')+(logoutFn()?'<div style="margin-top:12px">'+btn('Sign out','BBSET.signout()',false)+'</div>':''));
     html+=card('App', row('Build', document.lastModified||'')+'<div style="margin-top:12px">'+btn('Reload latest version','BBSET.reload()',false)+'</div>');
@@ -10393,7 +10578,6 @@ var BBSET=(function(){
   function close(){ if(sheet){ sheet.style.display='none'; back.style.display='none'; } }
   async function enable(){ try{ await BBPUSH.enable(); }catch(e){} render(); }
   async function test(){ try{ var r=await BBPUSH.test(); alert(r&&r.sent?'Test sent. Check your phone.':'Nothing sent: '+(r&&r.error||'no phone registered')); }catch(e){ alert('Test failed: '+(e&&e.message||e)); } }
-  async function diag(){ var el=document.getElementById('bbset-diag'); if(!el) return; el.style.display='block'; el.textContent='Checking, one line per step'; try{ var L=await BBPUSH.diagnose(function(lines){ el.textContent=lines.join('\n')+'\n…'; }); el.textContent=L.join('\n'); }catch(e){ el.textContent='Diagnostics failed: '+(e&&e.message||e); } }
   function signout(){ var f=logoutFn(); close(); if(f) f(); }
   async function reload(){
     try{ if('serviceWorker' in navigator){ var rs=await navigator.serviceWorker.getRegistrations(); for(var i=0;i<rs.length;i++) await rs[i].unregister(); } if(window.caches){ var ks=await caches.keys(); for(var j=0;j<ks.length;j++) await caches.delete(ks[j]); } }catch(e){}
@@ -10418,7 +10602,7 @@ var BBSET=(function(){
   }
   var tries=0; function boot(){ if(!inject() && tries++<60) setTimeout(boot,2000); }
   window.addEventListener('load',function(){ setTimeout(boot,1500); });
-  return { open:open, close:close, enable:enable, test:test, signout:signout, reload:reload, inject:inject, diag:diag };
+  return { open:open, close:close, enable:enable, test:test, signout:signout, reload:reload, inject:inject };
 })();
 </script>
 <!-- @@BB_SETTINGS_END@@ -->

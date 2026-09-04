@@ -63,6 +63,20 @@ occurrences of `assign` inside that function. The filter does nothing at all.
 
 ## FIXED. The entry stays anyway
 
+### L-SMM-016 · the pillars save rebuilt the whole row and would have wiped the meals
+**Found 2026-09-04 while building the three-meals strip, before it shipped.**
+`syncPillarsToDb` built `state` from the pillar checkboxes alone and upserted
+the whole row. The meals strip stores its timestamps in the same row under
+`state.meals`, so every pillar tick would have deleted the day's meal record.
+The Video System writes its own keys into this table too, so the class was
+already live for it.
+**Fixed before shipping.** Both writers read the row, merge their own keys and
+upsert. Same class as L-SMM-008: two writers, one row. **Before adding a key
+to a shared jsonb column, read every writer of that column.**
+**Verified.** A meal tick landed as a timestamp under `meals` with the rest of
+the row untouched, then was reverted.
+
+
 ### L-SMM-011 · page headers do not wrap, so two pages are wider than the phone
 **Symptom, measured 2026-09-04 at 375px and again at 320px.** Shoot Pipeline is
 **591px wide** on a 375px screen and the whole page drags sideways. Weekly Plan
