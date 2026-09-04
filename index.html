@@ -9414,8 +9414,11 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
   .filter-select{font-size:14px;padding:8px 10px}
   .ta-more{font-size:13px}
   /* ticks: 24px to look at, 44px to hit */
-  .task-check,div[onclick^="toggleTask"]{width:24px!important;height:24px!important;position:relative}
-  .task-check::before,div[onclick^="toggleTask"]::before{content:"";position:absolute;inset:-10px}
+  .task-check,div[onclick^="toggleTask"],.wp-check{width:24px!important;height:24px!important;position:relative}
+  .task-check::before,div[onclick^="toggleTask"]::before,.wp-check::before{content:"";position:absolute;inset:-10px}
+  /* Weekly Plan rows: the row is the target, the chip is readable */
+  .wp-task-main{min-height:44px;display:flex;align-items:center}
+  .wp-task-chip{font-size:11px!important}
   #smm-dl-root span[onclick^="bbdTog"]{width:28px!important;height:28px!important;position:relative}
   #smm-dl-root span[onclick^="bbdTog"]::before{content:"";position:absolute;inset:-8px}
   #smm-dl-root td{padding-top:8px!important;padding-bottom:8px!important}
@@ -9756,7 +9759,7 @@ async function runSelfTest(){
     ok('Type: '+pg+' has nothing to read under 10px',true,'fine pointer: RUN AT 390px TO PROVE IT');return;}
    const vis=[].slice.call(sec.querySelectorAll('*')).filter(e=>{const c=cs(e);return c.display!=='none'&&c.visibility!=='hidden'&&e.getBoundingClientRect().width>0;});
    const taps=vis.filter(e=>e.matches('button,a[href],[onclick],select,input:not([type=hidden]),.sb-item,.tab-btn'))
-     .filter(e=>!e.matches('.task-check,[onclick^="bbdTog"],div[onclick^="toggleTask"],div[onclick^="openShootCard"]'));   /* these own a 44px ::before hit box */
+     .filter(e=>!e.matches('.task-check,[onclick^="bbdTog"],div[onclick^="toggleTask"],div[onclick^="openShootCard"],.wp-check'));   /* these own a 44px ::before hit box */
    const box=e=>{ if(e.matches('input[type=checkbox]')){const row=e.closest('label,li,tr,.task-row')||e.parentElement; if(row) return row.getBoundingClientRect();} return e.getBoundingClientRect(); };
    const small=taps.filter(e=>{const r=box(e);return r.height<36||r.width<36;});
    ok('Touch: '+pg+' has no tap target under 36px',small.length===0,
