@@ -290,7 +290,7 @@ The Sentinel banner is what caught it, so leave it on.
 `clients.assigned_smm` keeps its value after a client churns, so `S_myClientIds`
 carried Excellent and LGL for Nirvana and Guiding Steps for Tiana. The strip
 listed 13 pages, `mealExpected()` and the server's `bb_meals_check()` counted 11
-active. A seat could have been told "done" at 27 ticks with two pages unticked,
+active. A seat could have been told "done" at 27 ticks with two pages unticked
 or nagged for pages of clients who left. `mealClients()` now skips `ended` and
 `churned`, and harness check "Meals: the strip and the expected count agree on
 clients" fails if the two ever drift again.
