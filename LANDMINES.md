@@ -263,3 +263,24 @@ console does the same thing.
 **The harness performs zero database writes.** That is the whole reason it is
 allowed to exist in a system that reads and writes live shared tables. Anything
 added to it that writes must be removed instead.
+
+### L-SMM-017 · Today's agenda rows were 18px tall on the phone
+**Found:** 2026-09-04, by the harness's per-page touch check, only once a task
+fell due on the day of the run. **Status:** FIXED.
+`.ta-row` (tasks due, posts due, approvals, community mentions on Today) is a
+13px flex row with no height, so on a phone it was an 18px tap target. Every
+earlier phone run passed because nothing was due that day, so the rows did not
+exist. Fixed in the `pointer:coarse` layer: `min-height:40px`.
+**Lesson:** a render-only check sees what the data draws. Run the harness on a
+day with data in every list or seed the list first. Otherwise the check is a
+coin toss.
+
+### L-SMM-018 · A `var` in a long function silently reused an earlier name
+**Found:** 2026-09-04, by the Sentinel banner on the first run of the recap
+meals block: "rows.filter is not a function". **Status:** FIXED.
+`renderRecap` builds a per-client `rows` array. The meals block added below it
+declared `var rows = await mealsRowsForSeat(...)`, and `var` is function-scoped,
+so the array became an object and the table build failed. Renamed to `mrows`.
+**Lesson:** in this file every function is one long `var` scope. Before adding a
+block to a function, grep that function for the names you are about to declare.
+The Sentinel banner is what caught it, so leave it on.
