@@ -40,66 +40,10 @@ outsiders rather than counting them.
 **When fixed, fix it by MEANING.** A role predicate like Video's `isVideoRole()`,
 never a list of today's names. A name list is wrong the day someone joins.
 
-### L-SMM-011 · page headers do not wrap, so two pages are wider than the phone
-**Symptom, measured 2026-09-04 at 375px and again at 320px.** Shoot Pipeline is
-**591px wide** on a 375px screen and the whole page drags sideways. Weekly Plan
-is 396px. Video Hub's title is crushed into a four-word column beside its
-buttons. This is what "not working on the phone" looks like from the hand.
-**Root cause.** `.ph-right { flex-shrink: 0 }` and the 768px breakpoint has no
-rule for `.ph` at all, so the two filter selects and a button (482px together)
-refuse to shrink or wrap and push the page out. Weekly Plan's inner button row
-has no `flex-wrap` either.
-**Why the harness missed it.** Its no-sideways-scroll check ran ONCE, on
-whichever page was current at the end of the walk, which is SOPs. Every page
-walked green while two of them were wider than the screen. The check must run
-INSIDE the page loop, per page. Fixed in the harness alongside the page fix.
-**The block.** Per-page `Layout: <page> does not scroll sideways` checks.
 
-### L-SMM-012 · tap targets are built for a mouse
-**Symptom, measured at 375px.** My Tasks: 238 of 241 tap targets under 32px.
-Delivery: 322 of 325, the tick boxes are 19px. Video Hub: 404 of 404. Today: the
-"more" buttons are 17px tall. The task tick circle is 17px. Apple's floor is
-44pt, Google's 48dp. A thumb hits the box next to the one it meant.
-**Root cause.** `.btn-sm { padding: 5px 10px }`, `.task-check { 17px }`, the
-Delivery tick `width:19px;height:19px` inline, `.vh-card-menu` 19x20, `.sb-item
-{ padding: 8px 10px }`. All sized for a cursor and never revisited for a finger.
-**The block, when built.** A `@media (pointer:coarse)` layer that raises every
-interactive element to a 44px hit area (a 22px tick can keep its look and still
-own a 44px touch box via padding or `::before`), and a harness check that counts
-interactive elements under 40px at coarse pointer and FAILS above zero.
 
-### L-SMM-013 · the side menu is not an overlay the foundation layer knows about
-**Symptom, measured 2026-09-04.** Tap the hamburger: the menu slides in. The
-page behind still scrolls, nothing is `inert`, Back leaves the app instead
-of closing the menu. The hamburger ends up underneath the open menu.
-Tapping the backdrop closes it, so it is usable. It still breaks three of
-the nine phone rules. The sidebar also has no `--sat` inset, so on a real
-handset the logo sits under the Dynamic Island.
-**Root cause.** `BBF`'s overlay selector lists `.modal-bg`, the check-in overlay
-and the two drawer backdrops. `.sidebar-backdrop` is not in it, so freeze,
-inert and Back are never applied. The 768px block sets the sidebar width and
-transform and nothing else.
-**The block, when built.** Add `.sidebar-backdrop` to the overlay selector and
-`.sidebar` to KEEP, one line each. The three behaviours are inherited.
-`.sidebar { padding-top: var(--sat) }` at 768px.
 
-### L-SMM-014 · the PIN box brings up the letter keyboard
-**Symptom.** The login PIN is `type="password"` with no `inputmode`, so a
-four-digit number gets a full QWERTY keyboard every single morning. iOS
-offers to save it as a website password. The keyboard's action key reads "next"
-on the last field because the foundation layer's hint scope does not include
-the login card.
-**The block, when built.** `inputmode="numeric" pattern="[0-9]*"
-autocomplete="one-time-code"`, the login card added to the hint scope. The
-name is remembered so the morning login is one tap and four digits.
 
-### L-SMM-015 · type below 11px on a phone
-**Symptom.** `.round` at 7.5px (the JULY / AUGUST group labels on Delivery),
-`.sb-sub` and `.wp-sec-label` at 8px, `.cp-field-lbl` at 8.5px, twenty-odd
-selectors at 9px, 163 declarations at 10px or under. Video Hub renders 608 text
-elements under 11px at phone width. Unreadable without pinching.
-**The block, when built.** A coarse-pointer floor: nothing renders under 11px. The Delivery group labels go to 10px. Harness check counts visible text
-under 11px and FAILS above a stated allowance.
 
 ### L-SMM-009 · `bbdTog` optimistic write race
 **Symptom.** `bbdTog` flips a tick, re-renders, and `renderSmmDelivery()`
@@ -118,6 +62,95 @@ occurrences of `assign` inside that function. The filter does nothing at all.
 ---
 
 ## FIXED. The entry stays anyway
+
+### L-SMM-011 · page headers do not wrap, so two pages are wider than the phone
+**Symptom, measured 2026-09-04 at 375px and again at 320px.** Shoot Pipeline is
+**591px wide** on a 375px screen and the whole page drags sideways. Weekly Plan
+is 396px. Video Hub's title is crushed into a four-word column beside its
+buttons. This is what "not working on the phone" looks like from the hand.
+**Root cause.** `.ph-right { flex-shrink: 0 }` and the 768px breakpoint has no
+rule for `.ph` at all, so the two filter selects and a button (482px together)
+refuse to shrink or wrap and push the page out. Weekly Plan's inner button row
+has no `flex-wrap` either.
+**Why the harness missed it.** Its no-sideways-scroll check ran ONCE, on
+whichever page was current at the end of the walk, which is SOPs. Every page
+walked green while two of them were wider than the screen. The check must run
+INSIDE the page loop, per page. Fixed in the harness alongside the page fix.
+**The block.** Per-page `Layout: <page> does not scroll sideways` checks.
+**Fixed 2026-09-04.** At 768px `.ph` stacks, `.ph-right` wraps and shrinks, the
+Weekly Plan row wraps. Measured after at 375px: all 16 pages exactly 375px
+wide, at 320px all 12 walked pages exactly 320px. The harness now runs the
+sideways check inside the page loop, one result per page.
+
+### L-SMM-012 · tap targets are built for a mouse
+**Symptom, measured at 375px.** My Tasks: 238 of 241 tap targets under 32px.
+Delivery: 322 of 325, the tick boxes are 19px. Video Hub: 404 of 404. Today: the
+"more" buttons are 17px tall. The task tick circle is 17px. Apple's floor is
+44pt, Google's 48dp. A thumb hits the box next to the one it meant.
+**Root cause.** `.btn-sm { padding: 5px 10px }`, `.task-check { 17px }`, the
+Delivery tick `width:19px;height:19px` inline, `.vh-card-menu` 19x20, `.sb-item
+{ padding: 8px 10px }`. All sized for a cursor and never revisited for a finger.
+**The block, when built.** A `@media (pointer:coarse)` layer that raises every
+interactive element to a 44px hit area (a 22px tick can keep its look and still
+own a 44px touch box via padding or `::before`), and a harness check that counts
+interactive elements under 40px at coarse pointer and FAILS above zero.
+**Fixed 2026-09-04.** A `@media (pointer:coarse)` layer, cascade-final. Most of
+the small controls turned out to be INLINE styles built by JavaScript, which a
+class selector never reaches, so the layer targets element types with
+`!important` and reaches inline text through `[style*="font-size:9px"]`.
+Ticks keep their look and own a 44px hit box through `::before`. A checkbox's
+row is its target. Measured after: zero tap targets under 36px on all 16 pages
+at 375px, from 238 of 241 on My Tasks and 322 of 325 on Delivery. Harness
+checks `Touch: <page> has no tap target under 36px`, per page.
+
+### L-SMM-013 · the side menu is not an overlay the foundation layer knows about
+**Symptom, measured 2026-09-04.** Tap the hamburger: the menu slides in. The
+page behind still scrolls, nothing is `inert`, Back leaves the app instead
+of closing the menu. The hamburger ends up underneath the open menu.
+Tapping the backdrop closes it, so it is usable. It still breaks three of
+the nine phone rules. The sidebar also has no `--sat` inset, so on a real
+handset the logo sits under the Dynamic Island.
+**Root cause.** `BBF`'s overlay selector lists `.modal-bg`, the check-in overlay
+and the two drawer backdrops. `.sidebar-backdrop` is not in it, so freeze,
+inert and Back are never applied. The 768px block sets the sidebar width and
+transform and nothing else.
+**The block, when built.** Add `.sidebar-backdrop` to the overlay selector and
+`.sidebar` to KEEP, one line each. The three behaviours are inherited.
+`.sidebar { padding-top: var(--sat) }` at 768px.
+**Fixed 2026-09-04.** `.sidebar-backdrop` added to the foundation layer's overlay
+selector and `.sidebar` to its keep list, one line each; `closeTop` clicks any
+backdrop that carries an onclick. Measured after: opening the menu pins the
+body, marks the page inert. Back closes the menu without leaving the app.
+`.sidebar` carries `padding-top: var(--sat)` at 768px.
+
+### L-SMM-014 · the PIN box brings up the letter keyboard
+**Symptom.** The login PIN is `type="password"` with no `inputmode`, so a
+four-digit number gets a full QWERTY keyboard every single morning. iOS
+offers to save it as a website password. The keyboard's action key reads "next"
+on the last field because the foundation layer's hint scope does not include
+the login card.
+**The block, when built.** `inputmode="numeric" pattern="[0-9]*"
+autocomplete="one-time-code"`, the login card added to the hint scope. The
+name is remembered so the morning login is one tap and four digits.
+**Fixed 2026-09-04.** `inputmode="numeric" pattern="[0-9]*"
+autocomplete="one-time-code" enterkeyhint="go"` on the PIN; the login card is in
+the keyboard-hint scope; the name is remembered on the device (never the PIN),
+filled in on load, cursor waiting in the PIN box. Verified by attribute on the
+rendered field.
+
+### L-SMM-015 · type below 11px on a phone
+**Symptom.** `.round` at 7.5px (the JULY / AUGUST group labels on Delivery),
+`.sb-sub` and `.wp-sec-label` at 8px, `.cp-field-lbl` at 8.5px, twenty-odd
+selectors at 9px, 163 declarations at 10px or under. Video Hub renders 608 text
+elements under 11px at phone width. Unreadable without pinching.
+**The block, when built.** A coarse-pointer floor: nothing renders under 11px. The Delivery group labels go to 10px. Harness check counts visible text
+under 11px and FAILS above a stated allowance.
+**Fixed 2026-09-04.** Floor of 10px on a coarse pointer: named selectors to 11px,
+Delivery group labels to 10px. Five attribute selectors that reach the 72
+inline sizes from 7.5px to 9.5px. Measured after: zero text under 10px on all
+16 pages at 375px, from 608 elements on Video Hub. Harness check
+`Type: <page> has nothing to read under 10px`, per page.
+
 
 ### L-SMM-001 · `tasks.assign` vocabulary drift hides work from the Command Centre
 **Symptom.** 44 tasks written 30 to 31 July were invisible in the Command Centre
