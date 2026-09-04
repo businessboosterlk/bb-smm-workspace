@@ -284,3 +284,15 @@ so the array became an object and the table build failed. Renamed to `mrows`.
 **Lesson:** in this file every function is one long `var` scope. Before adding a
 block to a function, grep that function for the names you are about to declare.
 The Sentinel banner is what caught it, so leave it on.
+
+### L-SMM-019 · churned clients stayed in the meals strip
+**Found:** 2026-09-04, live, first day of three meals. **Status:** FIXED.
+`clients.assigned_smm` keeps its value after a client churns, so `S_myClientIds`
+carried Excellent and LGL for Nirvana and Guiding Steps for Tiana. The strip
+listed 13 pages, `mealExpected()` and the server's `bb_meals_check()` counted 11
+active. A seat could have been told "done" at 27 ticks with two pages unticked,
+or nagged for pages of clients who left. `mealClients()` now skips `ended` and
+`churned`, and harness check "Meals: the strip and the expected count agree on
+clients" fails if the two ever drift again.
+**Lesson:** three places count the same thing (screen, expected, server). Write
+the check that compares them before the first day, not after.

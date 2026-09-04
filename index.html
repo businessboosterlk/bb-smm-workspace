@@ -5165,6 +5165,12 @@ function mealMinutes(hhmm){ var p=hhmm.split(':'); return (+p[0])*60+(+p[1]); }
 function mealClients(){
   /* PERSONAL: the seat's own clients, never the widening list */
   var ids = (typeof S_myClientIds!=='undefined' && S_myClientIds.length) ? S_myClientIds : (S.clients||[]).map(function(c){return c.id;});
+  /* Churned and ended clients stay assigned to a seat in `clients`, so the
+     id list carries them. Nobody checks a page for a client who has left, and
+     mealExpected() and the server's bb_meals_check() both count ACTIVE only.
+     Found live on the first day: Nirvana's strip listed 13, the count said 11. */
+  var gone = {}; (S.clients||[]).forEach(function(c){ if(c.status==='ended'||c.status==='churned') gone[c.id]=true; });
+  ids = ids.filter(function(id){ return !gone[id]; });
   return ids.map(function(id){ return { id:id, name:(typeof anyClientName==='function'?anyClientName(id):null) || ('Client '+id) }; })
             .sort(function(a,b){ return a.name.localeCompare(b.name); });
 }
@@ -10270,6 +10276,10 @@ async function runSelfTest(){
     ok('Meals: three meals render for this seat',meals===3,meals+' meals');
     const expect=3*(3+2*mealClients().length+2);
     ok('Meals: every expected tick is on screen',ticks===expect,ticks+' ticks, expected '+expect+' for '+mealClients().length+' clients');
+    /* The strip, mealExpected() and the server's bb_meals_check() must count the
+       same clients or a seat gets a push for a meal the screen calls done. */
+    const ctxN=(typeof MEALS_CTX!=='undefined' && MEALS_CTX && MEALS_CTX.clientsBySeat) ? MEALS_CTX.clientsBySeat[S.currentUser] : null;
+    ok('Meals: the strip and the expected count agree on clients', ctxN!==null && ctxN===mealClients().length, 'strip '+mealClients().length+', expected count '+ctxN);
    }else{
     ok('Meals: the team view renders for the CEO/COO',strip.querySelectorAll('.meal-team .seat').length>=2,strip.querySelectorAll('.meal-team .seat').length+' seats');
    }
