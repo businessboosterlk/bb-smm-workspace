@@ -320,7 +320,7 @@ that reading first.
 The `@@BB_PUSH_BEGIN@@` block is meant to be identical in every app bar three
 lines. It was not. SMM was missing the 4 September no-hang fix (timeouts on
 every await, register the worker if it is missing) and the `diagnose()` used by
-the Settings sheet, and it wrote its localStorage keys WITHOUT the app suffix,
+the Settings sheet. It also wrote its localStorage keys WITHOUT the app suffix,
 which matters because all six apps share one origin, so dismissing the banner
 in one app dismissed it in all of them. Meanwhile SMM alone had the better
 pill, which hides a state a tap cannot change instead of parking "Alerts
