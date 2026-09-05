@@ -296,3 +296,36 @@ or nagged for pages of clients who left. `mealClients()` now skips `ended` and
 clients" fails if the two ever drift again.
 **Lesson:** three places count the same thing (screen, expected, server). Write
 the check that compares them before the first day, not after.
+
+### L-SMM-020 · a zero-width preview pane read as sixteen broken pages
+**Found:** 2026-09-05, verifying the ported push block. **Status:** FIXED.
+A freshly opened preview pane reports `innerWidth` 0. Every per-page check
+`scrollWidth <= innerWidth + 1` then compares a real width against nothing, so
+all sixteen pages failed at once on a file whose only change was inside a
+script block. The first reading of that report was "I have broken every page",
+which is the expensive part: it is a false alarm that looks exactly like a
+disaster. `bb-app-foundations` names this trap ("if a whole suite goes red
+together, read the viewport before reading the code") and the harness did not
+know it. Now one named check, `Viewport: the pane is a real size to measure`,
+fails with the measured size and SKIPS the layout checks rather than letting
+them lie. Proven by forcing `innerWidth` to 0: the run goes 116 to 101 checks
+with the viewport check red and zero layout checks attempted.
+**Lesson:** a check that reports a FALSE failure costs nearly as much as one
+that passes wrongly, because it spends the trust you need when a real failure
+comes. Any check whose verdict depends on an environment reading must test
+that reading first.
+
+### L-SMM-021 · the push block drifted between apps in both directions
+**Found:** 2026-09-05. **Status:** FIXED in SMM, open elsewhere.
+The `@@BB_PUSH_BEGIN@@` block is meant to be identical in every app bar three
+lines. It was not. SMM was missing the 4 September no-hang fix (timeouts on
+every await, register the worker if it is missing) and the `diagnose()` used by
+the Settings sheet, and it wrote its localStorage keys WITHOUT the app suffix,
+which matters because all six apps share one origin, so dismissing the banner
+in one app dismissed it in all of them. Meanwhile SMM alone had the better
+pill, which hides a state a tap cannot change instead of parking "Alerts
+blocked" over the page forever on iOS Safari.
+**Lesson:** a block copied into five files drifts in BOTH directions, so the
+merge is never one-way. Diff every copy against every other before porting,
+and carry the best of each back. The four other apps are still on the worse
+pill: that is an open item, not a done one.
