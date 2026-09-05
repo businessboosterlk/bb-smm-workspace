@@ -326,6 +326,6 @@ in one app dismissed it in all of them. Meanwhile SMM alone had the better
 pill, which hides a state a tap cannot change instead of parking "Alerts
 blocked" over the page forever on iOS Safari.
 **Lesson:** a block copied into five files drifts in BOTH directions, so the
-merge is never one-way. Diff every copy against every other before porting,
+merge is never one-way. Diff every copy against every other before porting
 and carry the best of each back. The four other apps are still on the worse
 pill: that is an open item, not a done one.
