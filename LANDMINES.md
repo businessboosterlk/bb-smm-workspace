@@ -420,15 +420,15 @@ both halves miss. The identical class had already slipped through once, when the
 Command Centre held `pass:'pin1031secure'`.
 **What it actually costs, stated honestly:** the same file publishes the anon
 key, where anon holds INSERT, UPDATE and DELETE on `bb_delivery`, `tasks` and the
-rest. So the PIN is not what protects the data, and hiding it while the anon key
+rest. So the PIN is not what protects the data. Hiding it while the anon key
 stays public would be theatre. What the exposed PIN really buys an insider is
 the ability to sign in AS somebody else, which corrupts the only audit trail
-this system has: `team_login_logs`, `created_by`, whose meals were ticked, and
+this system has: `team_login_logs`, `created_by`, whose meals were ticked, plus
 which seat's scoping applies. That matches the recorded threat model, which is
 own-team mistake rather than bots.
 **The block, today:** new `guard.py` rule L-016w flags any map of ALL-CAPS names
 to 3 to 8 digit strings. It WARNS rather than fails, deliberately: removing the
-PINs is an auth decision only Thulaib can take, and failing the build would stop
+PINs is an auth decision only Thulaib can take, while failing the build would stop
 four other chats on a decision none of them can make. Proven both ways: it fires
 on the live file and goes silent on a copy with the PINs removed, and it is
 silent on all five other BB systems.
