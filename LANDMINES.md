@@ -426,9 +426,26 @@ the ability to sign in AS somebody else, which corrupts the only audit trail
 this system has: `team_login_logs`, `created_by`, whose meals were ticked, plus
 which seat's scoping applies. That matches the recorded threat model, which is
 own-team mistake rather than bots.
+**IT IS NOT ONE SYSTEM, IT IS THREE.** Counted 7 September: SMM 4 PINs, Graphic
+8, Video 9. The Command Centre already fixed this and is the model to copy: its
+PIN map is deleted and only a comment remains saying why, with the real check at
+Supabase against a password that is nowhere in the file. The Dev System uses
+real auth too. The Leads System keeps a PIN map but the PIN only SELECTS who you
+are, while a typed password is what authenticates, so its PINs are not credentials.
+
 **The block, today:** new `guard.py` rule L-016w flags any map of ALL-CAPS names
 to 3 to 8 digit strings. It WARNS rather than fails, deliberately: removing the
 PINs is an auth decision only Thulaib can take, while failing the build would stop
-four other chats on a decision none of them can make. Proven both ways: it fires
+four other chats on a decision none of them can make. **And the first version of that rule was wrong in the way this file has a
+comment warning about.** It caught only `THULAIB: '1031'` and pronounced the
+estate clean apart from SMM. It was not clean: Graphic writes
+`'1031': { name:'THULAIB' }` and Video writes `{ name:'THULAIB', pin:'1031' }`.
+Both walked past. Widening a rule for one shape does not cover the next
+shape, which is written eight lines above the rule I had just added. It now
+carries three shapes and found all 21 PINs. It stays silent on Leads for a
+reason that is right by accident, since that map uses unquoted keys rather than
+because the rule understands Leads authenticates properly, so if it ever fires
+there, mark it GUARD-ALLOW rather than deleting the PIN selector.
+Proven both ways: it fires
 on the live file and goes silent on a copy with the PINs removed. It is
 also silent on all five other BB systems.
