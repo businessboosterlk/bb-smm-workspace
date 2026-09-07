@@ -2839,6 +2839,87 @@ const SOPS = [
   setInterval(updateClock, 1000);
 })();
 
+/* ── THE SEAT SURVIVES A RELOAD, NEVER A RELAUNCH ──────────────────────────
+   Thulaib, 7 September 2026: stay signed in, and only ask for the PIN again
+   after the app has been swiped away and opened fresh.
+
+   sessionStorage IS that lifetime, exactly, with no expiry to invent and
+   nothing to tidy up: it survives a reload and a return from the background,
+   and the phone throws it away when the installed app is closed for real. The
+   Video System and the Graphic System already do this; SMM was the only one
+   that did not, which is why a reload used to drop you at the door.
+
+   IT DOES NOT TOUCH SUPABASE AUTH. `persistSession:false` stays exactly as it
+   is, and that flag is load-bearing: a shared pre-login database session used
+   to hand every visitor an authenticated read of invoices and costs, and
+   turning persistence back on is what would revive it. This remembers a NAME
+   this device already typed a PIN for, which is a different thing entirely.
+
+   IT ALSO REMEMBERS NO PIN. The stored value is the seat name. Anyone who
+   could read it could read the PINs out of this page anyway, which is a
+   separate problem with its own entry at L-SMM-025. */
+function smmSaveSeat(name){ try { sessionStorage.setItem('smm-seat', name); } catch (e) {} }
+function smmClearSeat(){ try { sessionStorage.removeItem('smm-seat'); } catch (e) {} }
+
+function smmEnterApp(name, isFreshLogin) {
+  document.getElementById('login').classList.add('gone');
+  S.currentUser = name;
+
+  /* Only a real PIN entry is a login. A reload is not, so restoring a seat
+     writes nothing here: otherwise every refresh would inflate the login log
+     the Command Centre reads, and the one audit trail this system has would
+     start lying. */
+  if (isFreshLogin && sb) {
+    /* THE ID IS LOOKED UP, NEVER MAPPED. This was `{ THULAIB: 1, SHIARA: 2,
+       NIRVANA: 12 }`. There is no member 1, and member 2 is KANEESHA, who left,
+       so every one of Thulaib's logins was filed against nobody and Shiara's
+       against a former employee. TIANA was missing from the map entirely, so
+       hers filed as null. Resolve it by name and a new seat needs no code. */
+    sb.from('team_members').select('id').eq('name', name).eq('active', true).limit(1)
+      .then(function (r) {
+        var mid = (r && r.data && r.data[0] && r.data[0].id) || null;
+        return sb.from('team_login_logs').insert([{
+          team_member_id: mid,
+          member_name: name,
+          logged_in_at: new Date().toISOString(),
+          app: 'smm-workspace'
+        }]);
+      }).then(function(){}).catch(function(){});
+  }
+
+  const sbd = document.getElementById('sb-date');
+  if (sbd) sbd.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const lbl = document.getElementById('sb-live-label');
+  const userInfo = USER_ROLES[name];
+  if (lbl) lbl.textContent = 'Live · ' + (userInfo ? userInfo.name : name);
+  init();
+}
+
+/* Restore on boot. A saved seat that is no longer a real seat is thrown away
+   rather than trusted, so removing somebody from USERS logs them out. */
+function smmRestoreSeat() {
+  var saved = null;
+  try { saved = sessionStorage.getItem('smm-seat'); } catch (e) {}
+  if (!saved) return false;
+  if (!USERS[saved]) { smmClearSeat(); return false; }
+  try { smmEnterApp(saved, false); return true; }
+  catch (e) {
+    /* A restore that fails must not leave a half-open app. Send them to the
+       door instead, the way the Graphic System does. */
+    console.error('seat restore failed', e);
+    smmClearSeat();
+    try { document.getElementById('login').classList.remove('gone'); } catch (_) {}
+    return false;
+  }
+}
+window.addEventListener('load', function () {
+  var tries = 0;
+  (function go() {
+    if (typeof sb !== 'undefined' && sb && typeof init === 'function') { smmRestoreSeat(); return; }
+    if (tries++ < 40) setTimeout(go, 100);   /* wait for the client, up to 4s */
+  })();
+});
+
 function doLogin() {
   const name = document.getElementById('log-name').value.trim().toUpperCase();
   const pin = document.getElementById('log-pin').value.trim();
@@ -2847,25 +2928,8 @@ function doLogin() {
     err.style.display = 'none';
     /* remember WHO, never the PIN, so tomorrow is one tap and four digits */
     try { localStorage.setItem('smm-last-name', name); } catch (e) {}
-    document.getElementById('login').classList.add('gone');
-    S.currentUser = name;
-    // Write login to team_login_logs so CC Team page can see it
-    if (sb) {
-      const _memberIds = { THULAIB: 1, SHIARA: 2, NIRVANA: 12 };
-      sb.from('team_login_logs').insert([{
-        team_member_id: _memberIds[name] || null,
-        member_name: name,
-        logged_in_at: new Date().toISOString(),
-        app: 'smm-workspace'
-      }]).then(function(){}).catch(function(){});
-    }
-    // Update sidebar date
-    const sbd = document.getElementById('sb-date');
-    if (sbd) sbd.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-    const lbl = document.getElementById('sb-live-label');
-    const userInfo = USER_ROLES[name];
-    if (lbl) lbl.textContent = 'Live · ' + (userInfo ? userInfo.name : name);
-    init();
+    smmSaveSeat(name);
+    smmEnterApp(name, true);
   } else {
     err.style.display = 'block';
     document.getElementById('log-pin').value = '';

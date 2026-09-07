@@ -449,3 +449,38 @@ there, mark it GUARD-ALLOW rather than deleting the PIN selector.
 Proven both ways: it fires
 on the live file and goes silent on a copy with the PINs removed. It is
 also silent on all five other BB systems.
+
+### L-SMM-026 · the seat is remembered for a reload, never for a relaunch
+**Built:** 2026-09-07, on Thulaib's instruction: stay signed in, ask for the PIN
+again only after the app has been swiped away and reopened.
+`sessionStorage` IS that lifetime exactly, with no expiry to invent and nothing
+to tidy up. It survives a reload and a return from the background. The phone
+throws it away when an installed app is closed for real. The Video System
+(`bb_video_user`) and the Graphic System (`bbgfx_user`) already did this. SMM was
+the only one that did not, which is why a reload dropped people at the door.
+**It does not go near Supabase auth.** `persistSession:false` is untouched and
+must stay: a shared pre-login database session once handed every visitor an
+authenticated read of invoices and costs. Turning persistence back on is
+what would revive it. Remembering a name this device already typed a PIN for is
+a different thing from persisting a database session.
+**Proven, three states:** nothing stored gives the login screen; a stored seat
+reloads straight in as NIRVANA with 27 clients loaded; a stored seat that is no
+longer in `USERS` is discarded and the login screen returns. The fourth state,
+swipe away and relaunch, is `sessionStorage`'s defined lifetime rather than
+anything this code does, so it is worth one check on a real phone.
+
+### L-SMM-027 · every login was filed against the wrong person
+**Found:** 2026-09-07 while adding the seat restore. **Status:** FIXED.
+`doLogin` wrote `team_login_logs` with a hardcoded
+`{ THULAIB: 1, SHIARA: 2, NIRVANA: 12 }`. There is no member 1, so every one of
+Thulaib's logins was filed against nobody. Member 2 is KANEESHA, who has left, so
+every one of Shiara's was filed against a former employee. TIANA was not in the
+map at all, so hers filed as null. Only Nirvana was right.
+Nothing failed and nothing was reported, because a foreign key that points at a
+real row does not care whether it points at the RIGHT row.
+**The block:** the id is looked up by name at login time, so it is correct by
+meaning and a new seat needs no code change. A restore does NOT write a login
+row, because a reload is not a login and inflating that log would corrupt the
+only audit trail this system has.
+**Lesson: a hardcoded id map is a fact frozen on the day somebody typed it. The
+day it goes stale it does not break, it lies.**
