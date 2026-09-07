@@ -356,3 +356,40 @@ blocked" over the page forever on iOS Safari.
 merge is never one-way. Diff every copy against every other before porting
 and carry the best of each back. The four other apps are still on the worse
 pill: that is an open item, not a done one.
+
+### L-SMM-022 · a panel injected above the pages sat under the fixed topbar
+**Found:** 2026-09-07, by Thulaib on his own iPhone. **Status:** FIXED.
+`.page` carried `padding-top: 64px` inside the 768px block to clear the fixed
+`.mobile-topbar`. That was correct while a page was the first child of `<main>`.
+The Agent Alerts panel is injected with
+`target.insertBefore(section, target.firstChild)`, so it became the first child,
+inherited no clearance. Its top 52px (more on a notched phone) sat UNDER the
+bar: the "AGENT ALERTS" heading and the "Run All" button were invisible and the
+alert card titles were sliced off. At the same time the page's 64px stopped
+clearing anything and became a dead hole between the panel and "Today".
+**Measured before:** topbar bottom 52, panel top 0, gap to first content 89px.
+**After:** panel top 64, gap 39px.
+**The block:** the clearance moved to the box that actually touches the bar,
+`.main{padding-top:calc(52px + var(--sat))}`, with `.page{padding-top:14px}`.
+New harness check `Layout: nothing sits under the fixed topbar` measures EVERY
+visible direct child of `<main>` against the bar, so a panel injected by any
+future chat is caught the same way. Proven by forcing `main` back to
+`padding-top:0`: the check went red naming `#bbs-agent-alerts-section`.
+**Lesson: an offset that clears fixed chrome belongs on the container, never on
+one child, because the next thing inserted above that child inherits nothing and
+the child's own offset turns into a hole.** Same family as L-SMM-005.
+
+### L-SMM-023 · a floating pill sat on the content saying nothing actionable
+**Found:** 2026-09-07, same screenshot. **Status:** FIXED.
+Once alerts were on, `#bbpush-pill` stayed on screen for ever reading "Alerts on
+· tap to test", covering a client tile at the bottom left. A permanent floating
+label that asks nothing is the same fault as the two floating buttons Thulaib
+had removed in August. The block's own comment already said it should never
+show a state a tap cannot change. Being ON is such a state.
+**The block:** the pill hides itself once registered. It stays while alerts are
+OFF, because that is the one state a tap can change and it is how the remaining
+people turn them on. The test send lives in Settings, where somebody looking for
+it would go.
+**Note for the other four apps:** this pill is the shared canonical block, so
+they carry the same behaviour. Written up in
+`~/bb-systems/push/SHARED-CHANGES.md`.

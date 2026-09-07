@@ -9724,6 +9724,19 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
   .sidebar{padding-top:var(--sat)}
   /* room under the last card for the two fixed pills */
   .main{padding-bottom:calc(84px + var(--sab))}
+
+  /* THE TOPBAR CLEARANCE BELONGS TO THE CONTAINER, NOT TO THE PAGE. L-SMM-022.
+     `.page` carried `padding-top:64px` to clear the fixed mobile topbar, which
+     was right while a page was the first thing inside `<main>`. The Agent
+     Alerts panel is injected with `insertBefore(section, main.firstChild)`, so
+     it became the first thing and inherited no clearance at all: its top sat
+     UNDER the topbar, which is why the alert card titles were sliced off on
+     Thulaib's phone. Meanwhile the page's own 64px stopped clearing anything
+     and became a dead hole between the alerts and "Today".
+     One offset, on the box that actually touches the bar. */
+  .main{padding-top:calc(52px + var(--sat))}
+  .page{padding-top:14px}
+  #bbs-agent-alerts-section{margin-top:12px}
 }
 
 /* Fingers, not cursors. Apple's floor is 44pt. L-SMM-012.
@@ -10110,6 +10123,27 @@ async function runSelfTest(){
   const vpOK=window.innerWidth>=200&&window.innerHeight>=200;
   ok('Viewport: the pane is a real size to measure',vpOK,
      window.innerWidth+'x'+window.innerHeight+(vpOK?'':' — layout checks below are SKIPPED, they would all fail on this alone'));
+
+  /* NOTHING MAY SIT UNDER THE FIXED TOPBAR. L-SMM-022. The clearance used to
+     live on `.page`, which was right until a panel was injected as main's first
+     child and inherited none: its heading and its card titles were sliced off
+     on a real phone, and the page's now-pointless 64px became a hole. This
+     measures every visible direct child of <main> against the bar itself, so a
+     panel injected by any future chat is caught the same way. */
+  (function(){
+   const bar=document.querySelector('.mobile-topbar');
+   if(!vpOK||!bar||getComputedStyle(bar).display==='none'){
+    ok('Layout: nothing sits under the fixed topbar',true,'no fixed topbar at this width, not judged');
+    return;
+   }
+   const barBottom=bar.getBoundingClientRect().bottom;
+   const kids=[].slice.call(document.querySelector('main.main').children)
+     .filter(e=>{const r=e.getBoundingClientRect();return r.height>0&&getComputedStyle(e).position!=='fixed';});
+   const under=kids.filter(e=>e.getBoundingClientRect().top < barBottom-1);
+   ok('Layout: nothing sits under the fixed topbar',under.length===0,
+      under.length? (under.length+' of '+kids.length+' hidden behind the bar: '+under.map(e=>'#'+(e.id||e.className||e.tagName)).join(', '))
+                  : (kids.length+' children checked, bar bottom '+Math.round(barBottom)+'px'));
+  })();
   const pages=[].slice.call(document.querySelectorAll('.sb-item[data-page]'))
                  .map(b=>b.getAttribute('data-page'));
   if(!pages.length){
@@ -10685,7 +10719,14 @@ var BBPUSH=(function(){
        this page (SMM Workspace found it first). Those states live in Settings. */
     if(p==='denied'||(isIOS()&&!standalone())){ pillEl.style.display='none'; return; }
     pillEl.style.display='';
-    if(registered){ pillEl.textContent='Alerts on · tap to test'; pillEl.style.color='var(--accent,#00E5FF)'; }
+    /* ONCE ALERTS ARE ON, THE PILL HAS NOTHING LEFT TO ASK. It sat on the page
+       for ever saying "Alerts on", covering a client tile at the bottom left on
+       a phone. A permanent floating label that needs no action is the same
+       fault as the two floating buttons Thulaib had removed in August. The test
+       send lives in Settings, which is where somebody goes looking for it. The
+       pill stays while alerts are OFF, because that is the one state a tap can
+       change and it is how the remaining people turn them on. */
+    if(registered){ pillEl.style.display='none'; return; }
     else if(p==='denied'){ pillEl.textContent='Alerts blocked in Settings'; }
     else if(isIOS()&&!standalone()){ pillEl.textContent='Alerts need Home Screen install'; }
     else if(lastError){ pillEl.textContent='Alerts failed · tap to retry'; }
