@@ -28,6 +28,33 @@ view is narrowed to one seat, rather than reporting false orphans.
 **Not fixed.** Renaming touches live data the Command Centre also reads, so it
 needs Thulaib's per-name approval.
 
+**7 September 2026 update.** The nine unmatched names were never one problem,
+they were two. Thulaib cleared the churned half: the July rows for **Excellent
+Mobile** and **LGL** were deleted, restore SQL at
+`~/bb-systems/push/rollback/bb_delivery-excellent-lgl-2026-09-07.sql`. Their
+CLIENT records were deliberately left alone, because 79 tasks, 56 video
+projects, 2 shoots and 10 invoices hang off those two ids and invoices are money
+history. July went from 23 rows to 21.
+
+Seven names remain and only one of them is the same kind of problem:
+
+| Board name | Client record | Status |
+|---|---|---|
+| Ceylon Carriers | CEYLON CARRIER TRAVELS | active |
+| Clove Waduwa | CLOVE WADDUWA | active |
+| Fusion Media | FUSION | active |
+| Home Depot | HOMEDEPOT | active |
+| Seekers | SEEKERS WORLDWIDE | active |
+| Square One AI | SQUARE 1 AI | active |
+| Guiding Steps | GUIDING STEPS COLLEGE | **churned** |
+
+**Six are spelling drift on LIVE clients**, which is the dangerous half: those
+clients are still being delivered and their rows silently miss any count that
+joins on the name. **One, Guiding Steps, is churned** and is the same case as
+Excellent and LGL, so it is a one-line removal whenever Thulaib says so.
+**Lesson: before fixing a list of mismatches, sort it by what the mismatch
+MEANS. Six renames and one deletion is a different job from nine renames.**
+
 ### L-SMM-004 · `team_members` has no department filter at all
 **Symptom.** SMM reads the whole company roster. 16 people readable, 14 of them
 are not SMM: `SUHANA (Graphic Designer)`, `RAMANI (editor)`, `USHANE
