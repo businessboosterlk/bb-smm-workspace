@@ -430,5 +430,5 @@ own-team mistake rather than bots.
 to 3 to 8 digit strings. It WARNS rather than fails, deliberately: removing the
 PINs is an auth decision only Thulaib can take, while failing the build would stop
 four other chats on a decision none of them can make. Proven both ways: it fires
-on the live file and goes silent on a copy with the PINs removed, and it is
-silent on all five other BB systems.
+on the live file and goes silent on a copy with the PINs removed. It is
+also silent on all five other BB systems.
