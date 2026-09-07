@@ -393,3 +393,42 @@ it would go.
 **Note for the other four apps:** this pill is the shared canonical block, so
 they carry the same behaviour. Written up in
 `~/bb-systems/push/SHARED-CHANGES.md`.
+
+### L-SMM-024 · the delivery check reported its own blindness as a fault
+**Found:** 2026-09-07, by a second chat scanning this system. **Status:** FIXED.
+`Delivery: every row points at a real client` builds its known-client set from
+`S.clients`. Run signed out, that array is empty, so every row looks like an
+orphan and the check printed **"21 unmatched"**. The true number is 7, verified
+against the database. The check already skipped when the view was narrowed to
+one seat; nothing guarded the empty case, which is the more obvious one.
+A second chat spent time investigating that 21 before finding it was fiction.
+**The block:** an explicit empty-list guard that fails by name and says why:
+"THE CLIENT LIST IS EMPTY, so all N rows would read as orphans. Sign in before
+believing any number from this check."
+**Lesson, the same one as L-SMM-020 in a different costume: a check must know
+the difference between "I looked and found a fault" and "I could not see". The
+first is a finding, the second is a false alarm wearing a finding's clothes. It
+costs you the trust you need for the other 117.**
+
+### L-SMM-025 · four live PINs are published in the page, invisible to the guard
+**Found:** 2026-09-07. **Status:** REGISTERED, the fix is Thulaib's call.
+`USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '2222', TIANA: '1010' }`
+is in the deployed public file. `guard.py` L-015 passes it: that rule needs the
+KEY to be spelled password, passwd, pass or pwd AND the value to be 6 or more
+characters. Here the key is a person's name and the value is four digits, so
+both halves miss. The identical class had already slipped through once, when the
+Command Centre held `pass:'pin1031secure'`.
+**What it actually costs, stated honestly:** the same file publishes the anon
+key, where anon holds INSERT, UPDATE and DELETE on `bb_delivery`, `tasks` and the
+rest. So the PIN is not what protects the data, and hiding it while the anon key
+stays public would be theatre. What the exposed PIN really buys an insider is
+the ability to sign in AS somebody else, which corrupts the only audit trail
+this system has: `team_login_logs`, `created_by`, whose meals were ticked, and
+which seat's scoping applies. That matches the recorded threat model, which is
+own-team mistake rather than bots.
+**The block, today:** new `guard.py` rule L-016w flags any map of ALL-CAPS names
+to 3 to 8 digit strings. It WARNS rather than fails, deliberately: removing the
+PINs is an auth decision only Thulaib can take, and failing the build would stop
+four other chats on a decision none of them can make. Proven both ways: it fires
+on the live file and goes silent on a copy with the PINs removed, and it is
+silent on all five other BB systems.

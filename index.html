@@ -10357,6 +10357,13 @@ async function runSelfTest(){
                         'NO bb_delivery ROWS FOUND, check proved nothing');return;}
     const norm=x=>String(x||'').toLowerCase().replace(/\s+/g,'');
     const known=new Set((S.clients||[]).map(c=>norm(c.name)));
+    /* AN EMPTY CLIENT LIST MAKES EVERY ROW AN ORPHAN. Run signed out, S.clients
+       is [] and this printed "21 unmatched", which is not a finding, it is the
+       check describing its own blindness in the language of a fault. A second
+       chat spent time on that number on 7 September. The narrowed-view guard
+       below already existed; nothing guarded the empty case. L-SMM-024. */
+    if(!known.size){ok('Delivery: every row points at a real client',false,
+       'THE CLIENT LIST IS EMPTY, so all '+rows.length+' rows would read as orphans. Sign in before believing any number from this check.');return;}
     /* only meaningful against the full client list, so skip when the view is
        narrowed rather than reporting false orphans */
     if((typeof viewScope==='function')&&viewScope()){
