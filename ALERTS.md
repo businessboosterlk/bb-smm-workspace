@@ -12,12 +12,12 @@ about somebody else's clients are how a channel gets ignored.
 ## WHAT IS LIVE, all of it from 9 September 2026
 
 The rule: one push when it needs HER, never about her own action, never the
-other seat's clients, and silent when there is nothing.
+other seat's clients. Silent when there is nothing.
 
 | When | What | Who | Function |
 |---|---|---|---|
 | on assignment | A task is assigned to her | the assignee | `bb_notify_on_task`, debounced |
-| on stage move | Her client's video or graphic reaches the client, comes back changed, or is ready to post | the client's SMM | `bb_notify_rules` |
+| on stage move | Her client's video or graphic reaches the client, comes back changed or is ready to post | the client's SMM | `bb_notify_rules` |
 | 08:30 | Good morning | everyone | `bb_team_message` |
 | **09:00** | **Her morning: overdue tasks, work sitting with her clients past a week, on Monday the week ahead and what carried over, in the last week of the month the delivery board** | the seat alone | `bb_smm_morning_brief` |
 | 11:01, 15:31, 19:31 | Her meal is short | the seat, Thulaib, Shiara | `bb_meals_check` |
