@@ -30,10 +30,10 @@ other seat's clients, and silent when there is nothing.
 A normal good day is four pushes, three of them the messages Thulaib wrote. Every
 function takes a dry switch that performs the real insert inside a subtransaction
 and rolls it back, plus a date override so it can be rehearsed off its firing
-day, and a partial unique index makes a double send structurally impossible.
+day. A partial unique index makes a double send structurally impossible.
 
 The screen shows what the push says: Today carries a "With Clients" panel and a
-"Posts Today" panel read from the weekly plan, and the Weekly Plan opens with
+"Posts Today" panel read from the weekly plan. The Weekly Plan opens with
 "Last week is not finished" when it is.
 
 ## WHAT SAYS NOTHING, ON PURPOSE
