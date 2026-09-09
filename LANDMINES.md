@@ -484,3 +484,34 @@ row, because a reload is not a login and inflating that log would corrupt the
 only audit trail this system has.
 **Lesson: a hardcoded id map is a fact frozen on the day somebody typed it. The
 day it goes stale it does not break, it lies.**
+
+### L-SMM-028 · the help card answered for one seat and printed a PIN
+**Found:** 2026-09-09, from Thulaib's rule that every reminder Nirvana gets,
+Tiana gets. **Status:** FIXED.
+The in-app assistant answered "login", "my pin" and "forgot pin" with a fixed
+string naming ONE seat and that seat's four digits. So Tiana asking about her own
+login was handed a colleague's username and a colleague's PIN. The PIN itself
+was a fifth copy of a credential in a public file, on top of the four in
+L-SMM-025.
+**The block:** the answer is now built at ask time from the signed-in seat, using
+the `__PLACEHOLDER__` pattern the error report already used. It names whoever is
+asking, and prints NO PIN: the person reading it has just typed theirs to get
+in. A credential in a help card is a credential in the page.
+Proven both ways: as TIANA it reads "You are signed in as TIANA", as NIRVANA it
+reads NIRVANA, and neither answer contains any of the four PINs.
+**Lesson: a hardcoded answer is written for whoever was in the room that day.
+Anything that says "your" must be computed from who is asking.**
+
+### L-SMM-029 · a whole page of tap targets that only one seat could see
+**Found:** 2026-09-09, on the first harness run signed in as TIANA.
+**Status:** FIXED.
+`.wp-auto` on the Weekly Plan, the rows that pull in that week's shoots and
+posts, were 329x25 and they navigate. Four of them failed the 36px floor. Every
+previous run was as NIRVANA, whose week had no auto rows, so the check reported
+24 clean targets and meant "I found nothing to look at".
+**The block:** `.wp-auto{min-height:36px}` in the phone layer. After: 24 targets,
+green, as TIANA.
+**Lesson, and it is the second time this exact page has taught it (see
+L-SMM-012): a check that walks a list proves nothing about the rows that were
+not there. THE HARNESS MUST BE RUN AS BOTH SEATS, because an empty week hides
+its own faults, and the seat with the fuller week is the one that finds them.**

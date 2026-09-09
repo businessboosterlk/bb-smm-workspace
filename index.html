@@ -7745,7 +7745,7 @@ function updateSmmAgentsBadge(count) {
     },
     {
       keys: ['login','pin','password','sign in','credentials','forgot pin','my pin'],
-      ans: '<strong>Your Login Details:</strong>\n\n• <strong>Username:</strong> NIRVANA\n• <strong>PIN:</strong> 2222\n\nIf you get logged out just enter these on the login screen. Your data is always safe in Supabase, nothing is lost if you log out.'
+      ans: '__LOGIN_HELP__'
     },
     {
       keys: ['not working','broken','error','bug','issue','problem','crash','loading','something wrong','not loading','cant see','not showing'],
@@ -7866,6 +7866,23 @@ function updateSmmAgentsBadge(count) {
 
   function buildAnswer(entry) {
     if (!entry) return fallback();
+    /* WHOEVER IS ASKING, NOT WHOEVER WAS FIRST. This card used to read
+       one seat's username and that seat's PIN for everybody, so Tiana asking
+       about her own login was handed a colleague's name and a colleague's PIN. Every
+       reminder one seat gets, the other gets, and that includes the ones the
+       app answers rather than pushes.
+       IT ALSO PRINTS NO PIN. A PIN written into a help card is a credential in
+       a public file, which is the same fault as L-SMM-025, and the person
+       reading it has just typed theirs to get in. */
+    if (entry.ans === '__LOGIN_HELP__') {
+      var who = (S && S.currentUser) ? S.currentUser : null;
+      return '<strong>Your login</strong>\n\n' +
+        (who ? ('You are signed in as <strong>' + who + '</strong>. That is your username.')
+             : 'Your username is your first name in capitals.') +
+        '\n\nYour PIN is the four digits you type on the sign in screen. It is not shown here, and it is not written down in the app.' +
+        '\n\nThe app keeps you signed in through a reload. It asks for the PIN again only after you close it completely and open it fresh.' +
+        '\n\nForgotten it? Ask Thulaib. Nobody else can look it up for you.';
+    }
     if (entry.ans === '__SHOW_ERRORS__') return buildErrorReport();
     if (entry.ans === '__LIVE_URGENT__') return buildLiveAnswer('urgent');
     if (entry.ans === '__CLEAR_ERRORS__') {
@@ -9824,6 +9841,14 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
   .task-check::before,div[onclick^="toggleTask"]::before,.wp-check::before{content:"";position:absolute;inset:-10px}
   /* Weekly Plan rows: the row is the target, the chip is readable */
   .wp-task-main{min-height:44px;display:flex;align-items:center}
+  /* The Weekly Plan's auto rows, the shoots and posts the week pulls in. 25px
+     tall and they navigate, so they are a real target. They exist only when
+     that seat HAS a shoot or a post that week, which is why every run as
+     Nirvana walked past them and the first run as Tiana caught them.
+     L-SMM-028, and the same lesson as the Weekly Plan tap targets in
+     L-SMM-012: verify as BOTH seats, because an empty week hides its own
+     faults. */
+  .wp-auto{min-height:36px}
   /* Today's agenda rows (tasks due, posts due, approvals, community) are
      18px on a mouse layout. They only exist when something is due TODAY,
      which is why no earlier phone run caught them. */
