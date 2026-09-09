@@ -495,10 +495,10 @@ was a fifth copy of a credential in a public file, on top of the four in
 L-SMM-025.
 **The block:** the answer is now built at ask time from the signed-in seat, using
 the `__PLACEHOLDER__` pattern the error report already used. It names whoever is
-asking, and prints NO PIN: the person reading it has just typed theirs to get
+asking. It prints NO PIN: the person reading it has just typed theirs to get
 in. A credential in a help card is a credential in the page.
 Proven both ways: as TIANA it reads "You are signed in as TIANA", as NIRVANA it
-reads NIRVANA, and neither answer contains any of the four PINs.
+reads NIRVANA. Neither answer contains any of the four PINs.
 **Lesson: a hardcoded answer is written for whoever was in the room that day.
 Anything that says "your" must be computed from who is asking.**
 
@@ -506,12 +506,11 @@ Anything that says "your" must be computed from who is asking.**
 **Found:** 2026-09-09, on the first harness run signed in as TIANA.
 **Status:** FIXED.
 `.wp-auto` on the Weekly Plan, the rows that pull in that week's shoots and
-posts, were 329x25 and they navigate. Four of them failed the 36px floor. Every
+posts, were 329x25 and they navigate somewhere. Four of them failed the 36px floor. Every
 previous run was as NIRVANA, whose week had no auto rows, so the check reported
 24 clean targets and meant "I found nothing to look at".
 **The block:** `.wp-auto{min-height:36px}` in the phone layer. After: 24 targets,
 green, as TIANA.
-**Lesson, and it is the second time this exact page has taught it (see
-L-SMM-012): a check that walks a list proves nothing about the rows that were
+**Lesson, the second time this exact page has taught it (see L-SMM-012): a check that walks a list proves nothing about the rows that were
 not there. THE HARNESS MUST BE RUN AS BOTH SEATS, because an empty week hides
 its own faults, and the seat with the fuller week is the one that finds them.**
