@@ -513,4 +513,4 @@ previous run was as NIRVANA, whose week had no auto rows, so the check reported
 green, as TIANA.
 **Lesson, the second time this exact page has taught it (see L-SMM-012): a check that walks a list proves nothing about the rows that were
 not there. THE HARNESS MUST BE RUN AS BOTH SEATS, because an empty week hides
-its own faults, and the seat with the fuller week is the one that finds them.**
+its own faults. The seat with the fuller week is the one that finds them.**
