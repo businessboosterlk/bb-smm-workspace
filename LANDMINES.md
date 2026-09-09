@@ -514,3 +514,72 @@ green, as TIANA.
 **Lesson, the second time this exact page has taught it (see L-SMM-012): a check that walks a list proves nothing about the rows that were
 not there. THE HARNESS MUST BE RUN AS BOTH SEATS, because an empty week hides
 its own faults. The seat with the fuller week is the one that finds them.**
+
+### L-SMM-030 · the home screen's most prominent panel was five dead agents
+**Found:** 2026-09-09, the final round. **Status:** FIXED, by deletion.
+The "Agent Alerts" panel at the top of Today ran five in-app agents. Content Gap
+and Missed Post read `content_plans`, which nobody had written to since 21
+August; Approval Stuck read `smm_content`, three rows; Shoot Stall compared
+`smm_shoots.status`, which reads `requested` on 37 of 38 rows whatever the
+stage; Overdue Tasks counted the whole company. Between them they posted 213
+rows to `agent_alerts` in a fortnight, including "Nirvana, please post these
+ASAP" about July posts, 26 times. The red card in Thulaib's screenshot of 7
+September was one of them.
+**The block:** the five agents, their panel, their floating button and their
+`bb-alert` posts are gone. The push channel is the alert layer: one morning
+brief per seat at 09:00, silent when clear. Today shows what the brief says, in
+a "With Clients" panel that never existed before.
+**Lesson: an alert fed by a table nobody writes to is not an alert, it is a
+sign that never changes. Before trusting any alert, ask when its source table
+was last written.**
+
+### L-SMM-031 · seven screens fed by nothing
+**Found:** 2026-09-09. **Status:** FIXED, by deletion.
+Approval Queue, Calendar, Readiness (content pipeline) and Content Plans all
+read `content_plans`, 0 writes in 14 days. Community, Diary and Ideas had no
+route from the sidebar and 0, 0 and 1 rows behind them. Missions had no route
+either. The nav went from 16 pages to 11. `nav()` now sends any stale link to a
+missing page home instead of to a blank. Three states nothing fills any more
+(`S.content`, `S.community`, `S.contentPlans`) start as empty arrays so the
+handful of helpers that still name them render nothing rather than throw.
+**Lesson: the sidebar is the truth about where people work. A section with no
+sidebar entry and an empty table is weight, not a feature.**
+
+### L-SMM-032 · every week was labelled by the Sunday before it
+**Found:** 2026-09-09. **Status:** FIXED, in the app and the data.
+`wpGetMonday` found the right Monday in Colombo time, then
+`toISOString().slice(0,10)` took the UTC date. Monday 00:00 in Colombo is
+Sunday 18:30 in UTC. All 237 rows in `smm_weekly_plan` carried a Sunday. The
+Command Centre's spine fixed the same fault for itself on 2 August and this app
+never took it. The forge learnings carried the landmine from the gym mold.
+**The block:** `wpDateStr()` builds the string from local parts; the 237 rows
+were shifted forward one day; a CHECK constraint now refuses any `week_start`
+that is not a Monday. Restore in `~/bb-systems/push/rollback/smm-final-round-2026-09-09.sql`.
+**Lesson: `toISOString()` on a date-only value loses a day east of Greenwich.
+Fixing it in one place is not fixing it; this is the third BB surface to learn
+it.**
+
+### L-SMM-033 · last week's unfinished work vanished on Monday
+**Found:** 2026-09-09. **Status:** FIXED.
+`wpCarryOver` existed as a button that moved last week's not-done rows forward.
+Nothing SHOWED that last week was unfinished, so the button was for people
+who already knew. Ported the Video System's panel: "Last week is not finished,
+N", each row with Move here or Done, plus Move all. Proven as Tiana: one row,
+"Sapphire Trails, Create August Content Plan".
+**Lesson: a control for a state nobody can see is a control nobody uses.**
+
+### L-SMM-034 · the reporter was blind, noisy and heard from nobody
+**Found:** 2026-09-09, from the estate bug-catcher cast. **Status:** FIXED.
+Three faults in one layer. The outside script carried no `crossorigin`, so any
+error inside it logged as the two words "Script error." with no file, line or
+stack. A dropped connection logged once per probed table and read as a storm. A
+developer's localhost logged as a live fault. A second chat spent time on a
+26 August row that was a preview.
+**The block:** `crossorigin="anonymous"` on the one outside script; the
+reporter skips localhost and keys network faults on category alone, one row per
+app per ten minutes; the Sentinel probes only tables the app still reads. Two
+additions from the same cast: the harness writes one silent row to
+`bb_harness_runs` per person per day (twenty seconds after sign-in on a desk,
+on the first background on a phone, because the page walk is visible), and the
+Settings sheet has Report a problem, one box, one button, one `user_report`
+row.

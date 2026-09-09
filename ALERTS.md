@@ -9,37 +9,32 @@ A person is told when something needs THEM. Nobody is told about their own
 action. The client's OWN SMM, never both: one SMM runs a client. Alerts
 about somebody else's clients are how a channel gets ignored.
 
-## WHAT IS LIVE
+## WHAT IS LIVE, all of it from 9 September 2026
 
-| What happens | Who is told | How |
-|---|---|---|
-| A task is assigned to you | the assignee | `bb_notify_on_task`, debounced, twenty at once become one |
-| Your meal is short | the SMM, plus Thulaib and Shiara | `bb_meals_check`, cron 11:01, 15:31, 19:31 Colombo Mon to Fri |
+The rule: one push when it needs HER, never about her own action, never the
+other seat's clients, and silent when there is nothing.
 
-## WHAT IS BUILT AND WAITING FOR A CRON JOB
+| When | What | Who | Function |
+|---|---|---|---|
+| on assignment | A task is assigned to her | the assignee | `bb_notify_on_task`, debounced |
+| on stage move | Her client's video or graphic reaches the client, comes back changed, or is ready to post | the client's SMM | `bb_notify_rules` |
+| 08:30 | Good morning | everyone | `bb_team_message` |
+| **09:00** | **Her morning: overdue tasks, work sitting with her clients past a week, on Monday the week ahead and what carried over, in the last week of the month the delivery board** | the seat alone | `bb_smm_morning_brief` |
+| 11:01, 15:31, 19:31 | Her meal is short | the seat, Thulaib, Shiara | `bb_meals_check` |
+| 14:30 | Nothing ticked on her pillars yet | the seat alone | `bb_smm_pillars_untouched` |
+| **Friday 16:00** | **Her clients with nothing in next week's plan** | the seat alone | `bb_smm_next_week_gap` |
+| 17:00 | A shoot tomorrow, on Friday the next three days | the client's SMM and the video head | `bb_smm_shoot_tomorrow` |
+| 17:30 | Recheck your pillars | everyone | `bb_team_message` |
+| 19:45 | Day done | everyone | `bb_team_message` |
 
-Thulaib's go is needed for any new scheduled job, so these three exist as
-functions, rehearsed, scheduled by nobody yet.
+A normal good day is four pushes, three of them the messages Thulaib wrote. Every
+function takes a dry switch that performs the real insert inside a subtransaction
+and rolls it back, plus a date override so it can be rehearsed off its firing
+day, and a partial unique index makes a double send structurally impossible.
 
-```sql
--- a shoot is tomorrow. The client's SMM plus the video head, found by MEANING
--- (is_head plus a video role), so a new head needs no code change. On a Friday
--- it looks to Monday, because nothing runs at the weekend.
-select cron.schedule('bb-smm-shoot-tomorrow','30 11 * * 1-5', $$select public.bb_smm_shoot_tomorrow(false)$$);  -- 17:00 Colombo
-
--- the delivery board in the last week of the month. The owning SMM plus the
--- COO, found by role. Its FIRST question is whether a board exists at all.
-select cron.schedule('bb-smm-delivery-short','0 4 * * 1-5', $$select public.bb_smm_delivery_short(false)$$);      -- 09:30 Colombo
-
--- pillars untouched by the afternoon. That SMM alone.
-select cron.schedule('bb-smm-pillars','0 9 * * 1-5', $$select public.bb_smm_pillars_untouched(false)$$);          -- 14:30 Colombo
-```
-
-Every one of them takes a dry switch that performs the REAL insert inside a
-subtransaction and rolls it back, plus a date override so it can be rehearsed
-on a day that is not the day it fires. That is not decoration. The meals check
-shipped with a dry run that skipped the insert. A missing NOT NULL column
-killed all three of its runs the next day with nobody told.
+The screen shows what the push says: Today carries a "With Clients" panel and a
+"Posts Today" panel read from the weekly plan, and the Weekly Plan opens with
+"Last week is not finished" when it is.
 
 ## WHAT SAYS NOTHING, ON PURPOSE
 
@@ -68,5 +63,5 @@ killed all three of its runs the next day with nobody told.
   flagged and deliberately unchanged. It is Thulaib's call, not mine.
 - `bb_delivery.client` is free text with no link to `clients`, so a renamed
   client silently drops out of a board count.
-- Only "July 2026" exists on the delivery board, two months on. The alert above
-  is written to shout about the missing board first for exactly that reason.
+- The delivery board can lag a month. The morning brief asks whether the board
+  EXISTS before it computes a percentage against nothing.

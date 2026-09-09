@@ -49,7 +49,7 @@ window.__ST_LOG=[];
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 <style>
 /* ============================================================
    BB SMM WORKSPACE V4, MATCHES COMMAND CENTRE LAYOUT
@@ -609,8 +609,6 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   .g3-stack { grid-template-columns: 1fr; }
   /* Agent alerts: swipeable single row on phones instead of a tall stack
      (two-id specificity beats the runtime-injected #bbs-alert-grid rule) */
-  #bbs-agent-alerts-section #bbs-alert-grid { display: flex; overflow-x: auto; gap: 8px; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
-  #bbs-agent-alerts-section .bbs-alert-card { flex: 0 0 80%; scroll-snap-align: start; }
 }
 .today-date { font-size: 11px; color: var(--text2); margin-top: 3px; }
 .today-stats { display: flex; gap: 24px; }
@@ -1430,6 +1428,14 @@ tr:last-child td { border-bottom: none; }
 .wp-task-main { flex: 1; min-width: 0; cursor: pointer; }
 .wp-task-text { font-size: 11.5px; font-weight: 600; color: var(--text); line-height: 1.3; word-break: break-word; }
 .wp-task.done .wp-task-text { text-decoration: line-through; color: var(--text3); font-weight: 400; }
+.wp-carry { background: var(--bg2); border: 1px solid var(--yellow,#FBBF24); border-radius: var(--r); padding: 14px 16px; margin-bottom: 14px; }
+.wp-carry-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.wp-carry-title { font-size: 14px; font-weight: 800; }
+.wp-carry-count { font-size: 22px; font-weight: 900; color: var(--yellow,#FBBF24); }
+.wp-carry-sub { font-size: 11.5px; color: var(--text3); margin-bottom: 8px; }
+.wp-carry-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--border); flex-wrap: wrap; }
+.wp-carry-what { flex: 1; min-width: 0; font-size: 13px; }
+.wp-carry-acts { display: flex; gap: 6px; }
 .wp-task-chip { display: inline-block; font-size: 9px; font-weight: 700; color: var(--accent); background: var(--accent10); border: 1px solid var(--accent20); padding: 1px 6px; border-radius: 4px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
 .wp-add-inline { margin-top: auto; background: none; border: 1px dashed var(--border2); color: var(--text3); border-radius: 6px; padding: 5px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
 .wp-add-inline:hover { border-color: var(--accent); color: var(--accent); }
@@ -1487,15 +1493,6 @@ tr:last-child td { border-bottom: none; }
       My Tasks
       <span class="sb-badge" id="sb-mytasks-count">0</span>
     </button>
-    <button class="sb-item" data-page="approval-queue">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Approval Queue
-      <span class="sb-badge" id="sb-approval-count">0</span>
-    </button>
-    <button class="sb-item" data-page="calendar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-      Calendar
-    </button>
     <button class="sb-item" data-page="weeklyplan">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="14" x2="9" y2="18"/><line x1="15" y1="14" x2="15" y2="18"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
       Weekly Plan
@@ -1513,20 +1510,12 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/></svg>
       Graphic Pipeline
     </button>
-    <button class="sb-item" data-page="content-pipeline">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Readiness
-    </button>
 
     <div class="sb-grp">Accounts</div>
     <button class="sb-item" data-page="clients">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Clients
       <span class="sb-badge" id="sb-clients-count">·</span>
-    </button>
-    <button class="sb-item" data-page="content-overview">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-      Content Plans
     </button>
     <button class="sb-item" data-page="delivery">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 20 6"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
@@ -1541,11 +1530,6 @@ tr:last-child td { border-bottom: none; }
       <svg class="sb-more-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
     <div class="sb-more" id="sb-more">
-      <button class="sb-item" data-page="agents">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 2a3 3 0 0 1 3 3v3H9V5a3 3 0 0 1 3-3z"/><circle cx="9" cy="16" r="1" fill="currentColor"/><circle cx="15" cy="16" r="1" fill="currentColor"/></svg>
-        Agents
-        <span class="sb-badge" id="sb-agents-unread" style="display:none"></span>
-      </button>
       <button class="sb-item" data-page="escalation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Escalation Helper
@@ -1604,7 +1588,7 @@ tr:last-child td { border-bottom: none; }
       </div>
       <div class="today-stats">
         <div class="today-stat"><div class="today-stat-num" id="stat-posts">0</div><div class="today-stat-lbl">Posts Today</div></div>
-        <div class="today-stat"><div class="today-stat-num" id="stat-review">0</div><div class="today-stat-lbl">To Approve</div></div>
+        <div class="today-stat"><div class="today-stat-num" id="stat-review">0</div><div class="today-stat-lbl">With Clients</div></div>
         <div class="today-stat"><div class="today-stat-num" id="stat-shoots">0</div><div class="today-stat-lbl">Shoots This Week</div></div>
       </div>
     </div>
@@ -1631,7 +1615,7 @@ tr:last-child td { border-bottom: none; }
       </div>
     </div>
 
-    <div class="stitle">This Week <a onclick="nav('calendar')" style="margin-left:auto;font-size:10px;color:var(--cyan);cursor:pointer;text-transform:none;letter-spacing:0">View Calendar →</a></div>
+    <div class="stitle">This Week <a onclick="nav('weeklyplan')" style="margin-left:auto;font-size:10px;color:var(--cyan);cursor:pointer;text-transform:none;letter-spacing:0">View Calendar →</a></div>
     <div class="week-strip" id="week-strip"></div>
 
     <div class="stitle" style="margin-top:4px">Seven Pillars <span class="cnt">Complete in order</span></div>
@@ -1673,23 +1657,6 @@ tr:last-child td { border-bottom: none; }
   </section>
 
   <!-- ============ COMMUNITY ============ -->
-  <section class="page" id="page-community">
-    <div class="ph">
-      <div><div class="ph-title">Community</div><div class="ph-sub">Comments &amp; DMs to respond to, across all clients</div></div>
-      <div class="ph-right">
-        <button class="btn btn-primary btn-sm" onclick="openCommunityAdd()">+ Log Item</button>
-      </div>
-    </div>
-    <div class="filter-bar">
-      <span class="filter-bar-label">Show</span>
-      <button class="comm-fchip active" data-cstatus="needs_reply" onclick="setCommFilter('needs_reply')">Needs reply</button>
-      <button class="comm-fchip" data-cstatus="flagged" onclick="setCommFilter('flagged')">Flagged</button>
-      <button class="comm-fchip" data-cstatus="replied" onclick="setCommFilter('replied')">Replied</button>
-      <button class="comm-fchip" data-cstatus="all" onclick="setCommFilter('all')">All</button>
-      <select class="filter-select" id="comm-filter-client" onchange="renderCommunity()" style="margin-left:auto"><option value="all">All clients</option></select>
-    </div>
-    <div id="community-list" style="margin-top:14px"></div>
-  </section>
 
   <!-- ============ MY TASKS ============ -->
   <section class="page" id="page-my-tasks">
@@ -1728,178 +1695,16 @@ tr:last-child td { border-bottom: none; }
   </section>
 
   <!-- ============ MY DIARY ============ -->
-  <section class="page" id="page-diary">
-    <div class="ph">
-      <div><div class="ph-title">My Diary</div><div class="ph-sub">Your work log, notes &amp; handover. Not a task list.</div></div>
-      <div class="ph-right">
-        <button class="btn btn-primary btn-sm" onclick="openDiaryModal()">+ New Entry</button>
-      </div>
-    </div>
-
-    <div class="filter-bar">
-      <span class="filter-bar-label">Filter</span>
-      <span id="diary-author-wrap" style="display:none">
-        <select class="filter-select" id="diary-filter-author" onchange="renderDiary()">
-          <option value="all">All People</option>
-        </select>
-      </span>
-      <select class="filter-select" id="diary-filter-client" onchange="renderDiary()">
-        <option value="all">All Clients</option>
-      </select>
-    </div>
-
-    <div id="diary-list"></div>
-  </section>
 
   <!-- ============ CALENDAR ============ -->
-  <section class="page" id="page-calendar">
-    <div class="ph">
-      <div><div class="ph-title">Unified Calendar</div><div class="ph-sub">All content, shoots, and tasks across every client</div></div>
-      <div class="ph-right">
-        <button class="btn btn-primary btn-sm" onclick="openModal('quick-add')">+ Quick Add</button>
-      </div>
-    </div>
-
-    <!-- FILTER BAR -->
-    <div class="filter-bar">
-      <span class="filter-bar-label">Filter</span>
-      <select class="filter-select" id="cal-filter-assignee">
-        <option value="all">All Assignees</option>
-        <option value="TH">Thulaib</option>
-        <option value="SH">Shiara</option>
-        <option value="US">Ushane</option>
-        <option value="SU">Suhana</option>
-        <option value="RU">Rukshan</option>
-        <option value="TI">Tiana</option>
-        <option value="NV">Nirvana</option>
-      </select>
-      <select class="filter-select" id="cal-filter-client">
-        <option value="all">All Clients</option>
-      </select>
-      <select class="filter-select" id="cal-filter-type">
-        <option value="all">All Types</option>
-        <option value="event">Events</option>
-        <option value="post">Posts</option>
-        <option value="video">Videos</option>
-        <option value="story">Stories</option>
-        <option value="shoot">Shoots</option>
-        <option value="task">Tasks</option>
-      </select>
-      <button class="filter-clear" onclick="clearCalFilters()">Clear</button>
-    </div>
-
-    <!-- LEGEND REMOVED -->
-
-    <!-- VIEW TOGGLE -->
-    <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:16px;width:fit-content">
-      <button id="cal-view-schedule" onclick="switchCalView('schedule')" style="background:var(--accent);color:var(--bg);border-radius:6px;padding:6px 16px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.04em">Schedule</button>
-      <button id="cal-view-month"    onclick="switchCalView('month')"    style="background:transparent;color:var(--text2);border-radius:6px;padding:6px 16px;font-size:11px;font-weight:600;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.04em">Month</button>
-    </div>
-
-    <!-- SCHEDULE VIEW -->
-    <div id="cal-schedule-wrap">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px">
-        <button class="btn btn-ghost btn-sm" onclick="schedNav(-1)">‹ Prev</button>
-        <div id="cal-sched-label" style="flex:1;text-align:center;font-size:13px;font-weight:700;color:var(--text)">·</div>
-        <button class="btn btn-ghost btn-sm" onclick="schedNav(0)">This Week</button>
-        <button class="btn btn-ghost btn-sm" onclick="schedNav(1)">Next ›</button>
-      </div>
-      <div id="cal-sched-grid"></div>
-    </div>
-
-    <!-- MONTH VIEW -->
-    <div id="cal-month-wrap" style="display:none">
-      <div class="cal-month">
-        <div class="cal-month-head">
-          <div class="cal-month-title" id="cal-month-title">·</div>
-          <div class="ph-right">
-            <button class="btn btn-ghost btn-sm" onclick="calNav(-1)">‹ Prev</button>
-            <button class="btn btn-ghost btn-sm" onclick="calNav(0)">Today</button>
-            <button class="btn btn-ghost btn-sm" onclick="calNav(1)">Next ›</button>
-          </div>
-        </div>
-        <div class="cal-grid" id="cal-dows"></div>
-        <div class="cal-grid" id="cal-cells" style="margin-top:4px"></div>
-      </div>
-      <!-- UPCOMING SECTION -->
-      <div class="card" style="padding:16px 20px;margin-top:16px">
-        <div class="stitle" style="margin-bottom:14px">Upcoming, Next 30 Days</div>
-        <div id="cal-upcoming" class="g3-stack"></div>
-      </div>
-    </div>
-  </section>
 
   <!-- ============ CONTENT PIPELINE ============ -->
-  <section class="page" id="page-content-pipeline">
-    <div class="ph">
-      <div><div class="ph-title">Content Readiness</div><div class="ph-sub">Are each client's videos, posts and stories ready for the month?</div></div>
-    </div>
-    <div class="cp-tabs">
-      <button class="cp-tab active" data-view="readiness" onclick="switchPipelineView('readiness')">Readiness</button>
-      <button class="cp-tab" data-view="video" onclick="switchPipelineView('video')">Video</button>
-      <button class="cp-tab" data-view="graphic" onclick="switchPipelineView('graphic')">Graphic</button>
-    </div>
-    <!-- Read-only production views (the SMM's clients only) -->
-    <div id="prod-video" class="prod-wrap" style="display:none"></div>
-    <div id="prod-graphic" class="prod-wrap" style="display:none"></div>
-    <div id="prod-readiness" class="prod-wrap" style="display:none"></div>
-  </section>
 
 
 
   
 
   <!-- ============ APPROVAL QUEUE ============ -->
-  <section class="page" id="page-approval-queue">
-    <div class="ph">
-      <div>
-        <div class="ph-title">Approval Queue</div>
-        <div class="ph-sub" id="aq-summary">Planned posts moving through client sign-off</div>
-      </div>
-      <div class="ph-right">
-        <select class="fi" id="aq-client-filter" style="width:auto;min-width:180px"><option value="all">All Clients</option></select>
-      </div>
-    </div>
-
-    <!-- AWAITING RESPONSE -->
-    <div style="margin-bottom:28px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="width:10px;height:10px;border-radius:50%;background:#60A5FA;flex-shrink:0"></div>
-        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:#60A5FA;text-transform:uppercase;letter-spacing:0.08em">Awaiting Response</div>
-        <div id="aq-cnt-send" style="background:rgba(96,165,250,0.15);color:#60A5FA;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">0</div>
-        <div style="font-size:11px;color:var(--text3);margin-left:2px">sent to client, waiting</div>
-      </div>
-      <div id="aq-list-send" style="display:flex;flex-direction:column;gap:6px">
-        <div class="aq-empty">Nothing waiting, all clear </div>
-      </div>
-    </div>
-
-    <!-- CHANGES NEEDED -->
-    <div style="margin-bottom:28px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="width:10px;height:10px;border-radius:50%;background:var(--yellow);flex-shrink:0"></div>
-        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:0.08em">To Send</div>
-        <div id="aq-cnt-changes" style="background:rgba(251,191,36,0.15);color:var(--yellow);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">0</div>
-        <div style="font-size:11px;color:var(--text3);margin-left:2px">planned, not yet sent to the client</div>
-      </div>
-      <div id="aq-list-changes" style="display:flex;flex-direction:column;gap:6px">
-        <div class="aq-empty">Nothing to send</div>
-      </div>
-    </div>
-
-    <!-- APPROVED -->
-    <div style="margin-bottom:28px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="width:10px;height:10px;border-radius:50%;background:#A3E635;flex-shrink:0"></div>
-        <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:#A3E635;text-transform:uppercase;letter-spacing:0.08em">Approved</div>
-        <div id="aq-cnt-approved" style="background:rgba(163,230,53,0.15);color:#A3E635;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">0</div>
-        <div style="font-size:11px;color:var(--text3);margin-left:2px">client approved, post it on the day</div>
-      </div>
-      <div id="aq-list-approved" style="display:flex;flex-direction:column;gap:6px">
-        <div class="aq-empty">Nothing approved yet</div>
-      </div>
-    </div>
-  </section>
 
   <!-- ============ SHOOT PIPELINE ============ -->
   <section class="page" id="page-shoot-pipeline">
@@ -2177,18 +1982,8 @@ tr:last-child td { border-bottom: none; }
   </section>
 
   <!-- ============ IDEAS ============ -->
-  <section class="page" id="page-ideas">
-    <div class="ph">
-      <div><div class="ph-title">Idea Hub</div><div class="ph-sub">Shared across all BB systems, capture, convert, or dismiss</div></div>
-      <div class="ph-right"><button class="btn btn-primary" onclick="openModal('idea-add')">+ Capture Idea</button></div>
-    </div>
-    <div class="ideas-list" id="ideas-list"><div class="loading-row">No ideas yet. Click Capture Idea.</div></div>
-  </section>
 
   <!-- ══ MISSIONS PAGE ══ -->
-  <section class="page" id="page-content-overview">
-    <div id="smm-co-root"></div>
-  </section>
 
   <section class="page" id="page-delivery">
     <div id="smm-dl-root"></div>
@@ -2198,27 +1993,6 @@ tr:last-child td { border-bottom: none; }
     <div id="smm-recap-root"></div>
   </section>
 
-  <section class="page" id="page-missions">
-    <div id="smm-missions-view-people">
-      <div class="ph">
-        <div><div class="ph-title">Missions</div><div class="ph-sub">Track your projects and roadmaps</div></div>
-      </div>
-      <div id="smm-missions-people-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:4px"></div>
-    </div>
-    <div id="smm-missions-view-detail" style="display:none">
-      <div class="ph">
-        <div style="display:flex;align-items:center;gap:14px">
-          <button class="btn btn-ghost" onclick="smmMissionsBack()" style="padding:6px 12px;font-size:12px">← Back</button>
-          <div>
-            <div class="ph-title" id="smm-missions-detail-name"></div>
-            <div class="ph-sub" id="smm-missions-detail-role"></div>
-          </div>
-        </div>
-        <div class="ph-right"><button class="btn btn-primary" onclick="openSmmMissionModal()">+ New Mission</button></div>
-      </div>
-      <div id="smm-missions-list"></div>
-    </div>
-  </section>
 
   <!-- ═══ WEEKLY PLAN ═══ -->
   <section class="page" id="page-weeklyplan">
@@ -2238,18 +2012,6 @@ tr:last-child td { border-bottom: none; }
     <div id="wpPendingSection"></div>
   </section>
 
-  <section class="page" id="page-agents">
-    <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div><div class="ph-title">Agents</div><div class="ph-sub">Live alerts from all BB agents</div></div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost btn-sm" id="agents-refresh-btn" onclick="loadSmmAgentAlerts()">↻ Refresh</button>
-        <button class="btn btn-ghost btn-sm" onclick="markAllSmmAlertsRead()">Mark all read</button>
-      </div>
-    </div>
-    <div id="smm-agents-list">
-      <div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">Loading...</div>
-    </div>
-  </section>
 
   <!-- AGENT DETAIL DRAWER -->
   <div id="agent-drawer-overlay" onclick="closeAgentDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9990;backdrop-filter:blur(3px);"></div>
@@ -2545,6 +2307,12 @@ const USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '2222', TIANA: '1010' 
 
 // ============ STATE ============
 const S = {
+  /* THREE STATES NOTHING FILLS ANY MORE. content_plans, smm_content and
+     smm_community stopped being loaded on 9 September 2026 with the pages that
+     read them. A handful of helpers that belonged to those pages still name
+     these, so they start as empty arrays rather than undefined and a stray
+     path renders nothing instead of throwing. */
+  content: [], community: [], contentPlans: [],
   clients: [],
   tasks: [],
   content: [],
@@ -2893,6 +2661,7 @@ function smmEnterApp(name, isFreshLogin) {
   const userInfo = USER_ROLES[name];
   if (lbl) lbl.textContent = 'Live · ' + (userInfo ? userInfo.name : name);
   init();
+  if (typeof smmScheduleHarnessRow === 'function') smmScheduleHarnessRow();
 }
 
 /* Restore on boot. A saved seat that is no longer a real seat is thrown away
@@ -2943,11 +2712,8 @@ function updateBadges() {
   const scope = viewScope();
 
   // Approval queue, planned posts sent to client, awaiting sign-off
-  const approvalCount = (S.contentPlans || []).filter(p => p.status === 'sent').length;
   const approvalEl = document.getElementById('sb-approval-count');
   if (approvalEl) {
-    approvalEl.textContent = approvalCount;
-    approvalEl.classList.toggle('has-items', approvalCount > 0);
   }
 
   // My tasks, open tasks only
@@ -2997,7 +2763,7 @@ async function init() {
   }
 
   // 3, Load remaining data in parallel
-  await Promise.all([loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity(), loadContentPlans(), loadProduction()]);
+  await Promise.all([loadTasks(), loadShoots(), loadEvents(), loadWeekPlan(), loadProduction()]);
 
   // 4, Refresh all sidebar badges
   updateBadges();
@@ -3008,7 +2774,7 @@ async function init() {
   // 6, Refresh data periodically (bandwidth-safe: skip when tab is hidden)
   setInterval(async () => {
     if (document.hidden) return;
-    await Promise.all([loadClients(), loadContent(), loadTasks(), loadShoots(), loadEvents(), loadCommunity(), loadContentPlans(), loadProduction()]);
+    await Promise.all([loadClients(), loadTasks(), loadShoots(), loadEvents(), loadWeekPlan(), loadProduction()]);
     updateBadges();
     // Re-render current page to reflect fresh data (preserve scroll position)
     if (S.currentPage) {
@@ -3066,6 +2832,11 @@ function closeSidebarMobile() {
 }
 
 function nav(page, data) {
+  /* A ROUTE TO A PAGE THAT NO LONGER EXISTS GOES HOME. Seven screens were
+     removed on 9 September 2026 (four fed by a table nobody had written to
+     since August, three with no route to them at all). Any stale link that
+     still names one of them lands on Today rather than on a blank. */
+  if (!document.getElementById('page-' + page)) page = 'today';
   S.currentPage = page;
   document.querySelectorAll('.sb-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -3077,22 +2848,17 @@ function nav(page, data) {
 
   if (MORE_PAGES.indexOf(page) !== -1) toggleMore(true);
   if (page === 'today') renderToday();
-  if (page === 'community') renderCommunity();
   if (page === 'calendar') { wireCalFilters(); populateCalFilterDropdowns(); switchCalView(S.calView || 'schedule'); }
-  if (page === 'content-pipeline') { renderContent(); applyPipeView(); }
   if (page === 'shoot-pipeline') { renderShoots(); renderUpcomingShoots(); }
-  if (page === 'approval-queue') renderApprovalQueue();
   if (page === 'clients') renderClients();
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
-  if (page === 'content-overview') renderSmmContentOverview();
   if (page === 'delivery') renderSmmDelivery();
   if (page === 'recap') renderRecap();
   if (page === 'video-hub') renderVideoHub();
   if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
   if (page === 'weeklyplan') wpLoadWeek();
-  if (page === 'agents') loadSmmAgentAlerts();
 }
 
 function populateCalFilterDropdowns() {
@@ -3130,7 +2896,8 @@ function renderToday() {
     const ds = toDateStr(d);
     const isToday = d.toDateString() === now.toDateString();
     const dayTasks = S.tasks.filter(t => !t.done && t.due === ds);
-    const dayContent = (S.contentPlans || []).filter(c => (c.scheduled_date||'').substring(0,10) === ds);
+    /* the week strip reads the plan the team actually keeps, never content_plans */
+    const dayContent = (S.weekPlan || []).filter(r => r.status !== 'done' && smmPlanDate(r) === ds).map(r => ({ title: (r.client_name || 'General') + (r.notes ? ' · ' + r.notes : '') }));
     const dayEvents = (S.events || []).filter(e => e.date === ds);
     const allItems = [
       ...dayEvents.map(e => ({ label: e.title, color: 'var(--orange)' })),
@@ -3149,7 +2916,7 @@ function renderToday() {
       ${extra > 0 ? `<div style="font-size:9px;color:var(--text3);font-weight:600;margin-top:2px">+${extra} more</div>` : ''}
       ${allItems.length === 0 ? `<div style="font-size:10px;color:var(--text3);font-weight:300">·</div>` : ''}
     `;
-    el.addEventListener('click', () => { S.calDate = new Date(d); nav('calendar'); });
+    el.addEventListener('click', () => { nav('weeklyplan'); });
     strip.appendChild(el);
   }
 
@@ -3197,9 +2964,9 @@ function renderToday() {
   // Stats, read the real content calendar (content_plans), not the near-empty pipeline
   const todayStr = toDateStr(now);
   const statPosts = document.getElementById('stat-posts');
-  if (statPosts) statPosts.textContent = (S.contentPlans || []).filter(p => (p.scheduled_date || '').substring(0,10) === todayStr && !p.posted).length;
+  if (statPosts) statPosts.textContent = (S.weekPlan || []).filter(r => r.status !== 'done' && smmPlanDate(r) === todayStr).length;
   const statReview = document.getElementById('stat-review');
-  if (statReview) statReview.textContent = (S.contentPlans || []).filter(p => p.status === 'sent').length;
+  if (statReview) statReview.textContent = smmSittingWithClients().length;
   const weekEnd = new Date(start); weekEnd.setDate(start.getDate() + 6);
   const statShoots = document.getElementById('stat-shoots'); if (statShoots) statShoots.textContent = S.shoots.filter(s => {
     if (!s.shoot_date) return false;
@@ -3242,22 +3009,23 @@ function renderTodayActions() {
   const d10 = s => (s || '').substring(0, 10);
   const clientName = id => { const c = S.clients.find(x => x.id == id); return c ? c.name : ''; };
   const dueTasks    = (S.tasks || []).filter(t => !t.done && d10(t.due) === today);
-  const dueContent  = (S.contentPlans || []).filter(p => d10(p.scheduled_date) === today && !p.posted);
-  const pendApprove = (S.contentPlans || []).filter(p => p.status === 'sent');
-  const comm        = communityNeedsReply();
+  const dueContent  = (S.weekPlan || []).filter(r => r.status !== 'done' && smmPlanDate(r) === today);
+  const sitting     = smmSittingWithClients();
   function panel(title, count, rows, page) {
     const cz = count === 0 ? ' zero' : '';
     const body = rows.length ? '<div class="ta-list">' + rows.join('') + '</div>' : '<div class="ta-empty">All clear</div>';
     return '<div class="ta-card"><div class="ta-head"><span class="ta-title">' + title + '</span><span class="ta-count' + cz + '">' + count + '</span></div>' + body + '<button class="ta-more" onclick="nav(\'' + page + '\')">Open →</button></div>';
   }
   const taskRows = dueTasks.slice(0, 4).map(t => '<div class="ta-row" onclick="nav(\'my-tasks\')"><span class="ta-main">' + escHtml(t.title || 'Task') + '</span>' + (t.client_id ? '<span class="ta-sub">' + escHtml(clientName(t.client_id)) + '</span>' : '') + '</div>');
-  const contentRows = dueContent.slice(0, 4).map(c => '<div class="ta-row" onclick="nav(\'calendar\')"><span class="ta-main">' + escHtml(c.title || 'Post') + '</span><span class="ta-sub">' + escHtml(clientName(c.client_id)) + '</span></div>');
-  const apprRows = pendApprove.slice(0, 4).map(c => '<div class="ta-row" onclick="nav(\'approval-queue\')"><span class="ta-main">' + escHtml(c.title || 'Post') + '</span><span class="ta-sub">' + escHtml(clientName(c.client_id)) + '</span></div>');
-  const commRows = comm.slice(0, 4).map(it => '<div class="ta-row" onclick="nav(\'community\')"><span class="ta-main">' + escHtml(it.author || 'Someone') + ': ' + escHtml(it.message || '') + '</span><span class="ta-sub">' + escHtml(clientName(it.client_id) || it.client_name || '') + '</span></div>');
+  const contentRows = dueContent.slice(0, 4).map(r => '<div class="ta-row" onclick="nav(\'weeklyplan\')"><span class="ta-main">' + escHtml(r.notes || 'Post') + '</span><span class="ta-sub">' + escHtml(r.client_name || '') + '</span></div>');
+  /* WHAT IS SITTING WITH HER CLIENTS. The one thing this page never showed.
+     30 videos were waiting on clients on 9 September and the person who owns
+     the relationship had no surface that said so. */
+  const sitRows = sitting.slice(0, 4).map(x => '<div class="ta-row" onclick="nav(\'' + (x.kind === 'video' ? 'video-hub' : 'graphic-hub') + '\')"><span class="ta-main">' + escHtml(x.client) + ' · ' + escHtml(x.title) + '</span><span class="ta-sub">' + x.days + 'd</span></div>');
   host.innerHTML =
     panel('Due Today', dueTasks.length, taskRows, 'my-tasks') +
-    panel('Content Due', dueContent.length, contentRows, 'calendar') +
-    panel('Pending Approval', pendApprove.length, apprRows, 'approval-queue');
+    panel('Posts Today', dueContent.length, contentRows, 'weeklyplan') +
+    panel('With Clients', sitting.length, sitRows, 'video-hub');
 }
 
 function updateEod() {
@@ -3429,62 +3197,10 @@ function commTimeAgo(ts) {
   if (d < 86400) return Math.floor(d/3600) + 'h ago';
   return Math.floor(d/86400) + 'd ago';
 }
-async function loadCommunity() {
-  if (!sb) return;
-  try {
-    let q = sb.from('smm_community').select('*').order('created_at', { ascending: false });
-    const scope = viewScope();
-    if (scope) {
-      const ids = S.clients.map(c => c.id);
-      if (ids.length) q = q.in('client_id', ids); else { S.community = []; updateCommunityCount(); return; }
-    }
-    const { data, error } = await q;
-    if (error) throw error;
-    S.community = data || [];
-  } catch (e) { console.error(e); S.community = S.community || []; }
-  updateCommunityCount();
-}
-function communityNeedsReply() { return (S.community || []).filter(x => (x.status || 'needs_reply') === 'needs_reply'); }
-function updateCommunityCount() {
-  const n = communityNeedsReply().length;
-  const b = document.getElementById('sb-community-count');
-  if (b) { b.textContent = n; b.classList.toggle('has-items', n > 0); }
-}
 function setCommFilter(f) {
   S.commFilter = f;
   document.querySelectorAll('.comm-fchip').forEach(c => c.classList.toggle('active', c.dataset.cstatus === f));
   renderCommunity();
-}
-function renderCommunity() {
-  const host = document.getElementById('community-list');
-  if (!host) return;
-  const cf = document.getElementById('comm-filter-client');
-  if (cf && cf.options.length <= 1) {
-    cf.innerHTML = '<option value="all">All clients</option>' + S.clients.map(c => '<option value="' + c.id + '">' + escHtml(c.name) + '</option>').join('');
-  }
-  const fClient = (cf || {}).value || 'all';
-  const filt = S.commFilter || 'needs_reply';
-  const items = (S.community || []).filter(it => {
-    if (filt !== 'all' && (it.status || 'needs_reply') !== filt) return false;
-    if (fClient !== 'all' && String(it.client_id) !== String(fClient)) return false;
-    return true;
-  });
-  if (!items.length) {
-    const msg = filt === 'needs_reply' ? 'Inbox zero. No comments or DMs waiting for a reply.' : 'Nothing here.';
-    host.innerHTML = '<div style="text-align:center;color:var(--text3);padding:48px 20px;font-size:14px">' + msg + '<br><span style="font-size:12px">Tap <strong style="color:var(--accent)">+ Log Item</strong> when a comment or DM comes in.</span></div>';
-    return;
-  }
-  const groups = {};
-  items.forEach(it => { const k = it.client_id || 'none'; (groups[k] = groups[k] || []).push(it); });
-  let html = '';
-  Object.keys(groups).forEach(k => {
-    const cl = S.clients.find(c => String(c.id) === String(k));
-    const name = cl ? cl.name : (groups[k][0].client_name || 'Unassigned');
-    html += '<div class="comm-client-grp"><div class="comm-client-hd">' + escHtml(name) + '<span class="comm-count">' + groups[k].length + '</span></div>';
-    groups[k].forEach(it => { html += communityCard(it); });
-    html += '</div>';
-  });
-  host.innerHTML = html;
 }
 function communityCard(it) {
   const type = (it.type || 'comment');
@@ -3615,7 +3331,7 @@ var S_myClientIds = [];
 async function setViewMode(m){
   try{ localStorage.setItem('smm-view-'+(S.currentUser||''), m==='mine'?'mine':'all'); }catch(e){}
   await loadClients();
-  await Promise.all([loadTasks(),loadContent(),loadShoots(),loadContentPlans()]);
+  await Promise.all([loadTasks(),loadShoots(),loadWeekPlan()]);
   BBD_ROWS=[]; BBD_PERIODS=[];
   nav(S.currentPage||'today');
 }
@@ -3670,21 +3386,6 @@ async function loadTasks() {
   } catch (e) { console.error(e); }
 }
 
-async function loadContent() {
-  if (!sb) return;
-  try {
-    let query = sb.from('smm_content').select('*').order('created_at', { ascending: false });
-    const scope = viewScope();
-    if (scope) {
-      const ids = S.clients.map(c => c.id);
-      if (ids.length) query = query.in('client_id', ids);
-      else { S.content = []; return; }
-    }
-    const { data, error } = await query;
-    if (error) throw error;
-    S.content = data || [];
-  } catch (e) { console.error(e); }
-}
 
 async function loadShoots() {
   if (!sb) return;
@@ -4278,26 +3979,6 @@ const CONTENT_STAGE_IDS = {
   'client-approval': 'cc-client-approval', 'drive': 'cc-drive', 'posted': 'cc-posted'
 };
 
-function renderContent() {
-  const _cols = Array.from(document.querySelectorAll('#content-board .kanban-cards')).map(c => c.scrollTop);
-  CONTENT_STAGES.forEach(s => {
-    const zone = document.querySelector(`[data-drop="${s}"]`);
-    if (!zone) return;
-    zone.innerHTML = '';
-    const items = S.content.filter(c => {
-      if (c.status !== s) return false;
-      if (S.filterType !== 'all' && c.content_type !== S.filterType) return false;
-      if (S.filterClient !== 'all' && String(c.client_id) !== String(S.filterClient)) return false;
-      return true;
-    });
-    const countEl = document.getElementById(CONTENT_STAGE_IDS[s]);
-    if (countEl) countEl.textContent = items.length;
-    items.forEach(i => zone.appendChild(buildContentCard(i)));
-  });
-  requestAnimationFrame(() => {
-    document.querySelectorAll('#content-board .kanban-cards').forEach((c, i) => { if (_cols[i]) c.scrollTop = _cols[i]; });
-  });
-}
 
 function buildContentCard(item) {
   const card = document.createElement('div');
@@ -4387,45 +4068,6 @@ async function updateContentStatus(id, status) {
 
 
 // ============ CONTENT PLANS ============
-async function loadContentPlans() {
-  if (!sb) return;
-  try {
-    const scope = viewScope();
-    /* Every column EXCEPT image_url. The images are base64 in the row, 39 kB
-       each, and this read was 200 kB on every boot and every refresh. The
-       thumbnails arrive in a second, background read below and the page
-       re-renders once they land: same pattern as the Graphic System's
-       1d64713 fix. Nothing the renderers read is missing, image_url is
-       simply late instead of heavy. */
-    /* every real column on content_plans except image_url; a guessed list
-       once included a column that did not exist and the board loaded EMPTY */
-    const COLS = 'id,client_id,month,year,type,title,scheduled_date,posted,created_at,created_by,month_str,status,platform,description,assigned_to,due_date,client_name,updated_at';
-    let query = sb.from('content_plans').select(COLS).order('scheduled_date', { ascending: true });
-    if (scope) {
-      const ids = S.clients.map(c => c.id);
-      if (ids.length) query = query.in('client_id', ids);
-      else { S.contentPlans = []; return; }
-    }
-    const { data, error } = await query;
-    if (error) throw error;
-    /* keep any thumbnails already fetched so a refresh never blanks them */
-    const had = {}; (S.contentPlans || []).forEach(p => { if (p.image_url) had[p.id] = p.image_url; });
-    (data || []).forEach(p => { if (had[p.id]) p.image_url = had[p.id]; });
-    setTimeout(async () => {
-      try {
-        let q2 = sb.from('content_plans').select('id,image_url').not('image_url', 'is', null);
-        if (scope) { const ids = S.clients.map(c => c.id); if (ids.length) q2 = q2.in('client_id', ids); }
-        const r2 = await q2;
-        if (r2.error || !r2.data) return;
-        const map = {}; r2.data.forEach(x => { map[x.id] = x.image_url; });
-        let changed = false;
-        (S.contentPlans || []).forEach(p => { if (map[p.id] && p.image_url !== map[p.id]) { p.image_url = map[p.id]; changed = true; } });
-        if (changed && S.currentPage && typeof nav === 'function') { window._navPreserveScroll = true; try { nav(S.currentPage); } finally { window._navPreserveScroll = false; } }
-      } catch (e) {}
-    }, 0);
-    S.contentPlans = data || [];
-  } catch (e) { console.error('Content plans load failed:', e); S.contentPlans = []; }
-}
 
 var S_cpView = 'cal';
 
@@ -4821,122 +4463,6 @@ function renderSmmShootWeekly(){
 }
 
 // ══ SMM CONTENT OVERVIEW ══════════════════════════
-async function renderSmmContentOverview(){
-  const root=document.getElementById('smm-co-root');
-  if(!root)return;
-  root.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px">Loading...</div>';
-
-  // Load fresh data
-  let clients=[];
-  let plans=[];
-  try{
-    const [cr,pr]=await Promise.all([
-      sb.from('clients').select('id,name,package,plan_ready').order('name'),
-      sb.from('content_plans').select('id,client_id,month,year,type,title,scheduled_date,posted,created_at,created_by,month_str,status,platform,description,assigned_to,due_date,client_name,updated_at')
-    ]);
-    clients=cr.data||[];
-    plans=pr.data||[];
-  }catch(e){clients=S.clients||[];}
-
-  const now=new Date();
-  if(!window.SMM_CO_MONTH)window.SMM_CO_MONTH=now.getMonth()+1;
-  if(!window.SMM_CO_YEAR)window.SMM_CO_YEAR=now.getFullYear();
-
-  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const monthLabel=MONTHS[window.SMM_CO_MONTH-1]+' '+window.SMM_CO_YEAR;
-
-  const rows=clients.sort((a,b)=>a.name.localeCompare(b.name)).map(function(c){
-    const cp=plans.filter(function(p){
-      return String(p.client_id)===String(c.id)&&
-             parseInt(p.month)===parseInt(window.SMM_CO_MONTH)&&
-             parseInt(p.year)===parseInt(window.SMM_CO_YEAR);
-    });
-    const posts=cp.filter(p=>p.type==='post');
-    const videos=cp.filter(p=>p.type==='video');
-    const postsUp=posts.filter(p=>p.posted).length;
-    const videosUp=videos.filter(p=>p.posted).length;
-    const hasPlan=cp.length>0;
-    const isReady=c.plan_ready===true||c.plan_ready==='true';
-    const allPosted=hasPlan&&cp.every(p=>p.posted);
-    return {c,posts,videos,postsUp,videosUp,hasPlan,isReady,allPosted};
-  });
-
-  const ready=rows.filter(r=>r.isReady&&!r.allPosted).length;
-  const done=rows.filter(r=>r.allPosted).length;
-  const waiting=rows.filter(r=>!r.isReady&&!r.allPosted).length;
-
-  var html='';
-  // Header
-  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'
-    +'<div><div style="font-size:22px;font-weight:800;color:#fff">Content Plans</div>'
-    +'<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">'+monthLabel+'</div></div>'
-    +'<div style="display:flex;gap:8px">'
-      +'<select style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer" onchange="window.SMM_CO_MONTH=parseInt(this.value);renderSmmContentOverview()">'
-        +MONTHS.map((m,i)=>'<option value="'+(i+1)+'" '+(window.SMM_CO_MONTH===i+1?'selected':'')+'>'+m+'</option>').join('')
-      +'</select>'
-      +'<select style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer" onchange="window.SMM_CO_YEAR=parseInt(this.value);renderSmmContentOverview()">'
-        +[2025,2026,2027].map(y=>'<option value="'+y+'" '+(window.SMM_CO_YEAR===y?'selected':'')+'>'+y+'</option>').join('')
-      +'</select>'
-    +'</div>'
-  +'</div>';
-
-  // Summary pills
-  html+='<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">'
-    +'<div style="background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:12px 20px;text-align:center;min-width:90px">'
-      +'<div style="font-size:24px;font-weight:800;color:#00E5FF">'+ready+'</div>'
-      +'<div style="font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Ready to Fill</div>'
-    +'</div>'
-    +'<div style="background:rgba(0,255,133,0.1);border:1px solid rgba(0,255,133,0.3);border-radius:10px;padding:12px 20px;text-align:center;min-width:90px">'
-      +'<div style="font-size:24px;font-weight:800;color:#00FF85">'+done+'</div>'
-      +'<div style="font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">All Posted</div>'
-    +'</div>'
-    +'<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 20px;text-align:center;min-width:90px">'
-      +'<div style="font-size:24px;font-weight:800;color:rgba(255,255,255,0.4)">'+waiting+'</div>'
-      +'<div style="font-size:9px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Waiting</div>'
-    +'</div>'
-  +'</div>';
-
-  // Client list
-  // Sort: ready first, then waiting, then done
-  rows.sort((a,b)=>{
-    if(a.isReady&&!a.allPosted&&!(b.isReady&&!b.allPosted))return -1;
-    if(b.isReady&&!b.allPosted&&!(a.isReady&&!a.allPosted))return 1;
-    if(a.allPosted&&!b.allPosted)return 1;
-    if(!a.allPosted&&b.allPosted)return -1;
-    return a.c.name.localeCompare(b.c.name);
-  });
-
-  html+='<div style="display:flex;flex-direction:column;gap:8px">';
-  rows.forEach(function(r){
-    var dotColor,label,bg,border;
-    if(r.allPosted){dotColor='#00FF85';label='All Posted';bg='rgba(0,255,133,0.04)';border='rgba(0,255,133,0.15)';}
-    else if(r.isReady){dotColor='#00E5FF';label='Ready, Fill Now';bg='rgba(0,229,255,0.06)';border='rgba(0,229,255,0.25)';}
-    else{dotColor='rgba(255,255,255,0.2)';label='Waiting for Approval';bg='rgba(255,255,255,0.02)';border='rgba(255,255,255,0.06)';}
-
-    var total=r.posts.length+r.videos.length;
-    var posted=r.postsUp+r.videosUp;
-    var pct=total>0?Math.round(posted/total*100):0;
-
-    html+='<div style="background:'+bg+';border:1px solid '+border+';border-radius:10px;padding:14px 18px;cursor:pointer;display:flex;align-items:center;gap:14px" onclick="smmOpenClientContentPlan('+r.c.id+')">'
-      +'<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0;box-shadow:0 0 6px '+dotColor+'88"></div>'
-      +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px">'+escHtml(r.c.name)+'</div>'
-        +'<div style="font-size:10px;color:rgba(255,255,255,0.4)">'+label+'</div>'
-      +'</div>'
-      +(total>0?'<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">'
-        +'<div style="text-align:right"><div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:3px">Posts: '+r.postsUp+'/'+r.posts.length+' &nbsp; Videos: '+r.videosUp+'/'+r.videos.length+'</div>'
-          +'<div style="width:100px;height:4px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">'
-            +'<div style="height:100%;width:'+pct+'%;background:'+dotColor+';border-radius:3px"></div>'
-          +'</div>'
-        +'</div>'
-      +'</div>':'')
-      +'<div style="font-size:12px;color:rgba(255,255,255,0.3)">→</div>'
-    +'</div>';
-  });
-  html+='</div>';
-
-  root.innerHTML=html;
-}
 
 // ============ DELIVERY BOARD (shared bb_delivery table) ============
 // Same rows the standalone Delivery Tracker (bb-delivery) writes, so all three
@@ -6226,64 +5752,6 @@ function clearCalFilters() {
   });
   renderCalendar();
 }
-function renderCalendar() {
-  if (!S.calDate) S.calDate = new Date();
-  var year = S.calDate.getFullYear();
-  var month = S.calDate.getMonth();
-  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var titleEl = document.getElementById('cal-month-title');
-  if (titleEl) titleEl.textContent = MONTHS[month] + ' ' + year;
-  var dowEl = document.getElementById('cal-dows');
-  if (dowEl) dowEl.innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(function(d) { return '<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:6px 0">' + d + '</div>'; }).join('');
-  var cellsEl = document.getElementById('cal-cells');
-  if (!cellsEl) return;
-  var fClient = (document.getElementById('cal-filter-client') || {}).value || 'all';
-  var fType = (document.getElementById('cal-filter-type') || {}).value || 'all';
-  var byDate = {};
-  function addItem(ds, item) { if (!byDate[ds]) byDate[ds] = []; byDate[ds].push(item); }
-  (S.events || []).forEach(function(e) {
-    if (!e.date) return;
-    if (fType !== 'all' && fType !== 'event') return;
-    addItem(e.date.substring(0, 10), { label: e.title || 'Event', color: '#FBBF24' });
-  });
-  (S.shoots || []).forEach(function(s) {
-    if (!s.shoot_date) return;
-    if (fType !== 'all' && fType !== 'shoot') return;
-    if (fClient !== 'all' && String(s.client_id) !== String(fClient)) return;
-    var cl = S.clients.find(function(c) { return c.id == s.client_id; });
-    addItem(s.shoot_date.substring(0, 10), { label: (cl ? cl.name + ', ' : '') + (s.title || 'Shoot'), color: '#FF2D78' });
-  });
-  (S.content || []).forEach(function(c) {
-    if (!c.scheduled_date) return;
-    if (fType !== 'all' && fType !== 'content' && fType !== (c.content_type||'').toLowerCase()) return;
-    if (fClient !== 'all' && String(c.client_id) !== String(fClient)) return;
-    var cl = S.clients.find(function(x) { return x.id == c.client_id; });
-    addItem(c.scheduled_date.substring(0, 10), { label: (cl ? cl.name + ', ' : '') + (c.title || 'Post'), color: '#00E5FF' });
-  });
-  (S.tasks || []).forEach(function(t) {
-    if (!t.due_date) return;
-    if (fType !== 'all' && fType !== 'task') return;
-    if (fClient !== 'all' && String(t.client_id) !== String(fClient)) return;
-    addItem(t.due_date.substring(0, 10), { label: t.title || 'Task', color: '#A855F7' });
-  });
-  var firstDay = new Date(year, month, 1).getDay();
-  var daysInMonth = new Date(year, month + 1, 0).getDate();
-  var today = toDateStr(new Date());
-  var html = '';
-  for (var i = 0; i < firstDay; i++) { html += '<div style="min-height:70px;border-radius:8px;background:rgba(255,255,255,0.01);padding:6px 8px"></div>'; }
-  for (var d = 1; d <= daysInMonth; d++) {
-    var ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-    var isToday = ds === today;
-    var items = byDate[ds] || [];
-    var itemHtml = items.slice(0, 3).map(function(it) { return '<div style="font-size:10px;background:' + it.color + '22;color:' + it.color + ';padding:1px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + escHtml(it.label) + '</div>'; }).join('');
-    var moreHtml = items.length > 3 ? '<div style="font-size:9px;color:var(--text3);margin-top:2px">+' + (items.length - 3) + ' more</div>' : '';
-    var bg = isToday ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.03)';
-    var bc = isToday ? 'var(--accent)' : 'var(--border)';
-    html += '<div onclick="openDayDetail(\'' + ds + '\')" style="min-height:70px;border-radius:8px;background:' + bg + ';border:1px solid ' + bc + ';padding:6px 8px;cursor:pointer"><div style="font-size:12px;font-weight:' + (isToday ? '800' : '600') + ';color:' + (isToday ? 'var(--accent)' : 'var(--text2)') + '">' + d + '</div>' + itemHtml + moreHtml + '</div>';
-  }
-  cellsEl.innerHTML = html;
-  renderUpcoming();
-}
 function renderUpcoming() {
   var el = document.getElementById('cal-upcoming');
   if (!el) return;
@@ -6506,23 +5974,6 @@ async function submitContentAdd() {
 
 // One-tap quick add: just a title (client + type optional). Status defaults to
 // brief, so recording a content item takes seconds, not a 6-field form.
-async function quickAddContent() {
-  var el = document.getElementById('cq-title');
-  var title = ((el || {}).value || '').trim();
-  if (!title) { toast('Type a title first', 'error'); if (el) el.focus(); return; }
-  var clientId = (document.getElementById('cq-client') || {}).value || null;
-  var ctype = (document.getElementById('cq-type') || {}).value || 'post';
-  var payload = { title: title, client_id: clientId || null, content_type: ctype, status: 'brief' };
-  try {
-    var r = await sb.from('smm_content').insert([payload]).select();
-    if (r.error) throw r.error;
-    if (r.data && r.data[0]) S.content.push(r.data[0]);
-    el.value = ''; var cc = document.getElementById('cq-client'); if (cc) cc.value = '';
-    toast('Added, ' + title, 'success');
-    renderContent(); updateBadges();
-    el.focus();
-  } catch(err) { toast('Failed: ' + (err.message || err), 'error'); }
-}
 // One-tap advance to the next stage (no drag).
 function advanceContent(id) {
   var item = (S.content || []).find(function(c) { return c.id == id; });
@@ -6551,6 +6002,32 @@ const GRAPHIC_PROD_STAGES = [
 // FULL ACCESS 2026-08-22: these pages mirror the video and design teams'
 // pipelines the way the Command Centre does, so they are not narrowed to the
 // signed-in seat's clients or by the Everyone / Just mine filter.
+/* ── THE PLAN THE TEAM ACTUALLY KEEPS ─────────────────────────────────────
+   Today used to read content_plans, which nobody had written to since
+   21 August. The week lives in smm_weekly_plan (48 rows in the last fortnight),
+   so Today reads that. Personal surface: the seat's own rows. */
+function smmMondayStr(d){ const x=new Date(d); const day=x.getDay(); x.setDate(x.getDate()-day+(day===0?-6:1)); x.setHours(0,0,0,0); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function smmPlanDate(r){ const m=new Date(r.week_start+'T00:00:00'); m.setDate(m.getDate()+((r.day_of_week||1)-1)); return m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')+'-'+String(m.getDate()).padStart(2,'0'); }
+async function loadWeekPlan(){
+  try{
+    const role=(typeof USER_ROLES==='object'&&USER_ROLES[S.currentUser])||{};
+    let q=sb.from('smm_weekly_plan').select('id,week_start,day_of_week,client_name,notes,status,task_type,created_by').eq('week_start', smmMondayStr(new Date()));
+    if(role.smm) q=q.eq('created_by', role.name);
+    const r=await q; S.weekPlan=r.data||[];
+  }catch(e){ S.weekPlan=[]; }
+}
+/* Videos and graphics that have sat with one of HER clients for over a week.
+   Reads the production mirrors already loaded, scoped to the personal client
+   list, so the other seat's clients never appear. Masters see everyone. */
+function smmSittingWithClients(){
+  const mine=(typeof S_myClientIds!=='undefined'&&S_myClientIds.length)?S_myClientIds:null;
+  const cutoff=Date.now()-7*864e5; const out=[];
+  const name=id=>(typeof anyClientName==='function'&&anyClientName(id))||('Client '+id);
+  const churned=new Set((S.clients||[]).filter(c=>c.status==='ended'||c.status==='churned').map(c=>c.id));
+  (S.videoProd||[]).forEach(v=>{ if(v.is_archived) return; if(['client_review','client_changes'].indexOf(v.current_stage)<0) return; if(mine&&mine.indexOf(v.client_id)<0) return; if(churned.has(v.client_id)) return; const t=new Date(v.updated_at||0).getTime(); if(t>cutoff) return; out.push({kind:'video',client:name(v.client_id),title:v.title||'Untitled',days:Math.floor((Date.now()-t)/864e5)}); });
+  (S.graphicProd||[]).forEach(g=>{ if(g.is_archived) return; if(['sent_to_client','client_changes'].indexOf(g.current_stage)<0) return; if(mine&&mine.indexOf(g.client_id)<0) return; if(churned.has(g.client_id)) return; const t=new Date(g.updated_at||0).getTime(); if(t>cutoff) return; out.push({kind:'graphic',client:name(g.client_id),title:g.title||'Untitled',days:Math.floor((Date.now()-t)/864e5)}); });
+  return out.sort((a,b)=>b.days-a.days);
+}
 async function loadProduction() {
   if (!sb) return;
   try {
@@ -6839,36 +6316,6 @@ function clearMyTasksFilters() {
 
 // ============ APPROVAL QUEUE ============
 // Approval queue runs on the Posting Plan (content_plans.status): planned -> sent -> approved -> posted
-function renderApprovalQueue() {
-  var fClient = (document.getElementById('aq-client-filter') || {}).value || 'all';
-  var plans = (S.contentPlans || []).filter(function(p) {
-    if (fClient !== 'all' && String(p.client_id) !== String(fClient)) return false;
-    return !p.posted;
-  });
-  var draftItems    = plans.filter(function(p) { return !p.status || p.status === 'planned'; });
-  var sentItems     = plans.filter(function(p) { return p.status === 'sent'; });
-  var approvedItems = plans.filter(function(p) { return p.status === 'approved'; });
-  function setCnt(id, n) { var el = document.getElementById(id); if (el) el.textContent = n; }
-  setCnt('aq-cnt-send', sentItems.length); setCnt('aq-cnt-changes', draftItems.length); setCnt('aq-cnt-approved', approvedItems.length);
-  function renderCard(item, color, actions) {
-    var cl = S.clients.find(function(c) { return c.id == item.client_id; });
-    var btns = actions.map(function(a) {
-      return '<button class="btn ' + (a.primary ? 'btn-primary' : 'btn-ghost') + ' btn-sm" style="font-size:11px;white-space:nowrap;flex-shrink:0" onclick="setCPlanStatus(' + item.id + ',\'' + a.status + '\')">' + a.label + '</button>';
-    }).join('');
-    var thumb = item.image_url ? '<img src="' + item.image_url + '" style="width:38px;height:38px;object-fit:cover;border-radius:7px;border:1px solid var(--border);flex-shrink:0">' : '';
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid ' + color + ';border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px">' + thumb + '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(item.title || 'Untitled') + '</div><div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + '<span style="font-size:11px;color:var(--text3);text-transform:uppercase">' + (item.type || 'post') + '</span>' + (item.scheduled_date ? '<span style="font-size:11px;color:var(--text3)">' + item.scheduled_date.substring(0,10) + '</span>' : '') + '</div></div><div style="display:flex;gap:6px;flex-shrink:0">' + btns + '</div></div>';
-  }
-  function setList(listId, items, color, actions) {
-    var el = document.getElementById(listId);
-    if (!el) return;
-    el.innerHTML = items.length ? items.map(function(it) { return renderCard(it, color, actions); }).join('') : '<div style="color:var(--text3);font-size:13px;padding:10px 0">Nothing here</div>';
-  }
-  setList('aq-list-changes', draftItems, 'var(--yellow)', [{status:'sent', label:'Send to Client', primary:true}]);
-  setList('aq-list-send', sentItems, '#60A5FA', [{status:'approved', label:'Approved', primary:true},{status:'planned', label:'Changes'}]);
-  setList('aq-list-approved', approvedItems, '#A3E635', [{status:'posted', label:'Mark Posted', primary:true}]);
-  var fEl = document.getElementById('aq-client-filter');
-  if (fEl) fEl.onchange = renderApprovalQueue;
-}
 
 async function setCPlanStatus(id, status) {
   var item = (S.contentPlans || []).find(function(p) { return p.id === id; });
@@ -6890,25 +6337,6 @@ async function setCPlanStatus(id, status) {
 }
 
 // ============ IDEAS ============
-async function renderIdeas() {
-  var el = document.getElementById('ideas-list');
-  if (!el) return;
-  var scope = viewScope();
-  if (!S.ideas || !S.ideas.length) {
-    try {
-      var q = sb.from('shared_ideas').select('*').order('created_at', { ascending: false });
-      if (scope) q = q.eq('captured_by', scope);
-      var r = await q;
-      S.ideas = r.data || [];
-    } catch(e) { S.ideas = []; }
-  }
-  if (!S.ideas.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;font-size:14px">No ideas yet. Click Capture Idea to add one.</div>'; return; }
-  el.innerHTML = S.ideas.map(function(idea) {
-    var cl = S.clients.find(function(c) { return c.id == idea.client_id; });
-    var date = idea.created_at ? new Date(idea.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px"><div style="font-size:13px;color:#fff;font-weight:500;line-height:1.6">' + escHtml(idea.text || idea.title || '') + '</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '<span style="font-size:11px;color:var(--text3)">General</span>') + (date ? '<span style="font-size:11px;color:var(--text3)">' + date + '</span>' : '') + '</div></div>';
-  }).join('');
-}
 async function submitIdeaAdd() {
   var text = ((document.getElementById('ia-text') || {}).value || '').trim();
   var clientId = (document.getElementById('ia-client') || {}).value;
@@ -6927,29 +6355,6 @@ async function submitIdeaAdd() {
 }
 
 // ============ DIARY ============
-async function renderDiary() {
-  var el = document.getElementById('diary-list');
-  if (!el) return;
-  var scope = viewScope();
-  var fClient = (document.getElementById('diary-filter-client') || {}).value || 'all';
-  if (!S.diary || !S.diary.length) {
-    try {
-      var r = await sb.from('smm_diary').select('*').order('entry_date', { ascending: false });
-      S.diary = r.data || [];
-    } catch(e) { S.diary = []; }
-  }
-  var entries = (S.diary || []).filter(function(e) {
-    if (scope && e.author !== scope) return false;
-    if (fClient !== 'all' && String(e.client_id) !== String(fClient)) return false;
-    return true;
-  });
-  if (!entries.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;font-size:14px">No diary entries yet. Click Add Entry to start your daily log.</div>'; return; }
-  el.innerHTML = entries.map(function(entry) {
-    var cl = S.clients.find(function(c) { return c.id == entry.client_id; });
-    var date = entry.entry_date ? new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) : '';
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:var(--accent)">' + date + '</div>' + (cl ? '<span style="font-size:11px;color:var(--text2);background:rgba(0,229,255,0.1);padding:2px 8px;border-radius:20px">' + escHtml(cl.name) + '</span>' : '') + '</div><div style="font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap">' + escHtml(entry.body || entry.content || '') + '</div></div>';
-  }).join('');
-}
 function openDiaryModal() {
   var dateEl = document.getElementById('d-date'); if (dateEl) dateEl.value = toDateStr(new Date());
   var bodyEl = document.getElementById('d-body'); if (bodyEl) bodyEl.value = '';
@@ -7134,9 +6539,16 @@ function wpGoToday(){
   wpWeekStart = wpGetMonday(new Date());
   wpLoadWeek();
 }
+/* A DATE STRING FROM LOCAL PARTS, NEVER toISOString(). Monday 00:00 in
+   Colombo is Sunday 18:30 in UTC, so toISOString().slice(0,10) labelled every
+   one of 237 weeks with the Sunday before. The forge learnings already carried
+   this landmine from the gym mold. Fixed 9 September 2026 with the rows
+   shifted and a database rule that a week_start must be a Monday. */
+function wpDateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+let wpCarry = [];
 async function wpLoadWeek(){
   if(!wpWeekStart) wpWeekStart = wpGetMonday(new Date());
-  const ws = wpWeekStart.toISOString().slice(0,10);
+  const ws = wpDateStr(wpWeekStart);
   const label = document.getElementById('wpWeekLabel');
   const sun = new Date(wpWeekStart); sun.setDate(sun.getDate()+6);
   if(label) label.textContent = wpFmtDate(wpWeekStart) + ' to ' + wpFmtDate(sun) + ', ' + wpWeekStart.getFullYear();
@@ -7150,14 +6562,41 @@ async function wpLoadWeek(){
     });
     wpTasks = resp.ok ? await resp.json() : [];
   } catch(e){ wpTasks = []; }
+  /* LAST WEEK IS NOT FINISHED. The Video System shows this; the SMM only had a
+     button most people never found. What was planned and not done vanished on
+     Monday. It is shown now, and each row can be moved, done or left. */
+  try {
+    const prev = new Date(wpWeekStart); prev.setDate(prev.getDate()-7);
+    const r2 = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?week_start=eq.' + wpDateStr(prev) + '&status=neq.done' + ownerFilter + '&order=day_of_week.asc', {
+      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY }
+    });
+    wpCarry = r2.ok ? await r2.json() : [];
+  } catch(e){ wpCarry = []; }
   wpRender();
 }
+function wpCarryHtml(){
+  if(!wpCarry.length) return '';
+  const rows = wpCarry.slice(0,8).map(t => '<div class="wp-carry-row"><span class="wp-carry-what">' + (t.client_name ? '<span class="wp-task-chip">'+escHtml(t.client_name)+'</span> ' : '') + escHtml(t.notes||'') + '</span>'
+    + '<span class="wp-carry-acts"><button class="btn btn-ghost btn-sm" onclick="wpCarryMove(' + t.id + ')">Move here</button><button class="btn btn-ghost btn-sm" onclick="wpCarryDone(' + t.id + ')">Done</button></span></div>').join('');
+  return '<div class="wp-carry"><div class="wp-carry-head"><span class="wp-carry-title">Last week is not finished</span><span class="wp-carry-count">' + wpCarry.length + '</span></div>'
+    + '<div class="wp-carry-sub">Planned last week and never marked done. Move it into this week, mark it done, or leave it. Only Done counts.</div>'
+    + rows + (wpCarry.length > 8 ? '<div class="wp-carry-sub">and ' + (wpCarry.length-8) + ' more</div>' : '')
+    + '<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="wpCarryOver()">Move all ' + wpCarry.length + ' into this week</button></div></div>';
+}
+async function wpCarryPatch(id, body){
+  const headers = { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json' };
+  try{ const r = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + id, { method:'PATCH', headers, body: JSON.stringify(Object.assign({ updated_at: new Date().toISOString() }, body)) }); if(!r.ok) throw new Error(r.status); wpLoadWeek(); }
+  catch(e){ toast('Could not update that row', 'error'); }
+}
+function wpCarryMove(id){ wpCarryPatch(id, { week_start: wpDateStr(wpWeekStart) }); }
+function wpCarryDone(id){ wpCarryPatch(id, { status: 'done' }); }
 function wpRender(){
   const board = document.getElementById('wpBoard');
   if(!board) return;
   const today = new Date(); today.setHours(0,0,0,0);
   const pad = n => String(n).padStart(2,'0');
-  board.innerHTML = WP_DAYS.map((name,i)=>{
+  const carryHtml = wpCarryHtml();
+  board.innerHTML = carryHtml + WP_DAYS.map((name,i)=>{
     const dayNum = i+1;
     const dayDate = new Date(wpWeekStart); dayDate.setDate(dayDate.getDate()+i);
     const ds = dayDate.getFullYear()+'-'+pad(dayDate.getMonth()+1)+'-'+pad(dayDate.getDate());
@@ -7231,8 +6670,8 @@ async function wpToggleDone(id){
 async function wpCarryOver(){
   if(!wpWeekStart) return;
   const prev = new Date(wpWeekStart); prev.setDate(prev.getDate()-7);
-  const pws = prev.toISOString().slice(0,10);
-  const ws = wpWeekStart.toISOString().slice(0,10);
+  const pws = wpDateStr(prev);
+  const ws = wpDateStr(wpWeekStart);
   const roleInfo = USER_ROLES[S.currentUser] || {};
   const ownerFilter = roleInfo.smm ? ('&created_by=eq.' + encodeURIComponent(roleInfo.name)) : '';
   const headers = { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json' };
@@ -7285,7 +6724,7 @@ async function wpSaveTask(){
   if(!task){ toast('Type what needs doing','error'); return; }
   const clientName = document.getElementById('wpClient').value || null;
   const data = {
-    week_start: wpWeekStart.toISOString().slice(0,10),
+    week_start: wpDateStr(wpWeekStart),
     day_of_week: parseInt(document.getElementById('wpDay').value),
     client_name: clientName,
     task_type: 'post',
@@ -7326,26 +6765,6 @@ const SMM_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 
 var _smmAlertData = [];
 
-async function loadSmmAgentAlerts() {
-  const el = document.getElementById('smm-agents-list');
-  const btn = document.getElementById('agents-refresh-btn');
-  if (!el) return;
-  el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:32px 0;text-align:center;">Scanning...</div>';
-  if (btn) { btn.textContent = '↻ Scanning...'; btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none'; }
-  try {
-    const resp = await fetch(`${SMM_SB_URL}/rest/v1/agent_alerts?or=(system.eq.smm,system.eq.all)&order=created_at.desc&limit=50&select=*`, {
-      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY }
-    });
-    const alerts = resp.ok ? await resp.json() : [];
-    _smmAlertData = alerts || [];
-    renderSmmAgentCards(alerts);
-    updateSmmAgentsBadge(alerts.filter(function(a) { return !a.read_at; }).length);
-  } catch (e) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:24px 0;text-align:center;">Could not load alerts.</div>';
-  } finally {
-    if (btn) { btn.textContent = '↻ Refresh'; btn.style.opacity = ''; btn.style.pointerEvents = ''; }
-  }
-}
 
 function renderSmmAgentCards(alerts) {
   const el = document.getElementById('smm-agents-list');
@@ -7506,7 +6925,6 @@ async function markAllSmmAlertsRead() {
 }
 
 function updateSmmAgentsBadge(count) {
-  const b = document.getElementById('sb-agents-unread');
   if (b) { b.textContent = count; b.style.display = count > 0 ? '' : 'none'; }
 }
 </script>
@@ -7741,7 +7159,7 @@ function updateSmmAgentsBadge(count) {
     },
     {
       keys: ['quick add','add new','new content','new shoot','new task','create','+ button'],
-      ans: '<strong>Quick Add:</strong>\n\nThe <strong>"+"</strong> button in the top navigation bar opens Quick Add.\n\nYou can instantly create:\n• A new <strong>Content</strong> card\n• A new <strong>Shoot</strong>\n• A new <strong>Idea</strong>\n\nFill in the title, pick the client, and hit Add. The item drops straight into the right section.\n\nUse Quick Add when you\'re on a call and need to capture something fast, don\'t let it slip.'
+      ans: '<strong>Quick Add:</strong>\n\nThe <strong>"+"</strong> button in the top navigation bar opens Quick Add.\n\nYou can instantly create:\n• A new <strong>Shoot</strong>\n• A new <strong>Idea</strong>\n\nFill in the title, pick the client, and hit Add. The item drops straight into the right section.\n\nUse Quick Add when you\'re on a call and need to capture something fast, don\'t let it slip.'
     },
     {
       keys: ['login','pin','password','sign in','credentials','forgot pin','my pin'],
@@ -8533,205 +7951,7 @@ function updateSmmAgentsBadge(count) {
 </script>
 
 
-<script>
-// ============================================================
-// BB SMM AGENTS, AI Background Agents v1.0
-// Appended to end of file, DO NOT EDIT EXISTING HTML
-// 5 Agents: Content Gap | Approval Stuck | Overdue Tasks | Shoot Stall | Missed Post
-// Alerts fire to both SMM + CEO via WhatsApp (bb-alert Edge Function)
-// ============================================================
-(function() {
-  'use strict';
-
-  function isAlertTime() {
-    var now = new Date();
-    var slt = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    var day = slt.getUTCDay();
-    var hour = slt.getUTCHours();
-    var min = slt.getUTCMinutes();
-    if (day === 0) return false;
-    return (hour === 9 && min < 15) || (hour === 18 && min < 15);
-  }
-
-  var SUPABASE_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
-  var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dmlpd25xZ3BoeWtsY29panlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjE5OTEsImV4cCI6MjA5MTI5Nzk5MX0.I8YiBr-rfLVcc6DE8Z1PxEP2oxXCelv6mxqAY_wY7lc';
-  var ALERT_URL = SUPABASE_URL + '/functions/v1/bb-alert';
-  var POLL_MS = 5 * 60 * 1000;
-  var agentLog = [];
-  var panelOpen = false;
-
-  function todayStr() { return new Date().toISOString().split('T')[0]; }
-  function daysFromNow(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; }
-  function hoursAgo(n) { return new Date(Date.now() - n * 3600000).toISOString(); }
-
-  function sbFetch(table, params) {
-    var url = SUPABASE_URL + '/rest/v1/' + table + (params ? '?' + params : '');
-    // Network-resilient: a transient fetch failure or non-OK response resolves to
-    // null instead of throwing, so the background agents skip this run cleanly rather
-    // than surfacing an unhandled "Failed to fetch" rejection (logged bugs #13/37/38/39).
-    // Every agent guards each step with `if (!Array.isArray(x)) return;`, so null is a
-    // safe no-op for this cycle, no false alerts on a blip.
-    return fetch(url, { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .catch(function() { return null; });
-  }
-
-  function sendAlert(message, page) {
-    ['smm', 'ceo'].forEach(function(role) {
-      fetch(ALERT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY },
-        body: JSON.stringify({ message: message, page: page || 'SMM Workspace', role: role })
-      }).catch(function(e) { console.warn('[BB SMM Agent] Alert failed:', e); });
-    });
-  }
-
-  function logEntry(agentName, status, detail) {
-    agentLog.unshift({ time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), agent: agentName, status: status, detail: detail || '' });
-    if (agentLog.length > 60) agentLog.pop();
-    renderLog()
-    updateSMMDashSection();;
-  }
-
-  // Agent 1: Content Gap
-  var a1Alert = 0;
-  function runContentGapAgent() {
-    var t = todayStr(), t3 = daysFromNow(3);
-    sbFetch('clients', 'select=id,name&client_type=eq.sm').then(function(clients) {
-      if (!Array.isArray(clients) || !clients.length) return;
-      sbFetch('content_plans', 'select=client_id&scheduled_date=gte.' + t + '&scheduled_date=lte.' + t3 + '&posted=eq.false').then(function(upcoming) {
-        if (!Array.isArray(upcoming)) return;
-        var covered = upcoming.map(function(u) { return u.client_id; });
-        var gaps = clients.filter(function(c) { return covered.indexOf(c.id) === -1; });
-        if (gaps.length > 0) {
-          var names = gaps.map(function(c) { return c.name; }).join(', ');
-          logEntry('Content Gap', 'ALERT', gaps.length + ' client(s) no posts in 3 days: ' + names);
-          if (isAlertTime() && Date.now() - a1Alert > 3600000) { sendAlert('Content Gap: ' + names + ' have NO posts in next 3 days.', 'Content Plans'); a1Alert = Date.now(); }
-        } else { logEntry('Content Gap', 'OK', 'All ' + clients.length + ' clients covered'); }
-      });
-    });
-  }
-
-  // Agent 2: Approval Bottleneck
-  var a2Alert = 0;
-  function runApprovalAgent() {
-    sbFetch('smm_content', 'select=id,title,status,updated_at&status=in.(brief,content-plan)&updated_at=lt.' + hoursAgo(24)).then(function(stuck) {
-      if (!Array.isArray(stuck)) return;
-      if (stuck.length > 0) {
-        var titles = stuck.slice(0,3).map(function(s){ return '"' + s.title + '" [' + s.status + ']'; }).join(', ');
-        logEntry('Approval Stuck', 'ALERT', stuck.length + ' item(s) stuck 24h+: ' + titles);
-        if (isAlertTime() && Date.now() - a2Alert > 3600000) { sendAlert('Approval Bottleneck: ' + stuck.length + ' items stuck 24h+, ' + titles, 'Content Pipeline'); a2Alert = Date.now(); }
-      } else { logEntry('Approval Stuck', 'OK', 'No content stuck in pipeline'); }
-    });
-  }
-
-  // Agent 3: Overdue Tasks
-  var a3Alert = 0;
-  function runTasksAgent() {
-    sbFetch('tasks', 'select=id,title,due&done=eq.false&due=lt.' + todayStr() + '&due=not.is.null').then(function(overdue) {
-      if (!Array.isArray(overdue)) return;
-      if (overdue.length > 5) {
-        var sample = overdue.slice(0,3).map(function(t){ return '"' + t.title + '"'; }).join(', ');
-        logEntry('Overdue Tasks', 'ALERT', overdue.length + ' overdue. E.g.: ' + sample);
-        if (isAlertTime() && Date.now() - a3Alert > 3600000) { sendAlert('Task Overload: ' + overdue.length + ' tasks overdue! Check: ' + sample, 'My Tasks'); a3Alert = Date.now(); }
-      } else { logEntry('Overdue Tasks', 'OK', overdue.length + ' overdue (under threshold)'); }
-    });
-  }
-
-  // Agent 4: Shoot Stall
-  var a4Alert = 0;
-  function runShootAgent() {
-    sbFetch('smm_shoots', 'select=id,title,status,updated_at&status=eq.requested&updated_at=lt.' + hoursAgo(48)).then(function(stalled) {
-      if (!Array.isArray(stalled)) return;
-      if (stalled.length > 0) {
-        var titles = stalled.slice(0,3).map(function(s){ return '"' + s.title + '"'; }).join(', ');
-        logEntry('Shoot Stall', 'ALERT', stalled.length + ' shoot(s) stuck "Requested" 48h+: ' + titles);
-        if (isAlertTime() && Date.now() - a4Alert > 3600000) { sendAlert('Shoot Stall: ' + stalled.length + ' shoots still Requested 48h+: ' + titles, 'Shoot Pipeline'); a4Alert = Date.now(); }
-      } else { logEntry('Shoot Stall', 'OK', 'No shoots stalled'); }
-    });
-  }
-
-  // Agent 5: Missed Post
-  var a5Alert = 0;
-  function runMissedPostAgent() {
-    sbFetch('content_plans', 'select=id,title,scheduled_date&scheduled_date=lt.' + todayStr() + '&posted=eq.false').then(function(missed) {
-      if (!Array.isArray(missed)) return;
-      if (missed.length > 0) {
-        var sample = missed.slice(0,3).map(function(p){ return '"' + p.title + '" (' + p.scheduled_date + ')'; }).join(', ');
-        logEntry('Missed Post', 'ALERT', missed.length + ' post(s) past due: ' + sample);
-        if (isAlertTime() && Date.now() - a5Alert > 3600000) { sendAlert('Missed Posts: ' + missed.length + ' past schedule, not posted: ' + sample, 'Content Plans'); a5Alert = Date.now(); }
-      } else { logEntry('Missed Post', 'OK', 'All scheduled posts published'); }
-    });
-  }
-
-  function runAll() { runContentGapAgent(); runApprovalAgent(); runTasksAgent(); runShootAgent(); runMissedPostAgent(); }
-
-  function buildUI() {
-    var style = document.createElement('style');
-    style.textContent = '#bb-smm-fab{position:fixed;bottom:calc(90px + var(--sab));right:20px;width:52px;height:52px;border-radius:50%;background:var(--bg4);color:var(--text2);font-size:22px;border:1px solid var(--border2);cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s}#bb-smm-fab:hover{transform:scale(1.1)}#bb-smm-panel{position:fixed;bottom:calc(155px + var(--sab));right:20px;width:370px;max-height:500px;background:#0f0f1a;border:1px solid var(--border2);border-radius:12px;z-index:9998;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.65);overflow:hidden}#bb-smm-panel.open{display:flex}#bb-smm-ph{background:var(--bg4);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}#bb-smm-ph-title{color:#fff;font-weight:700;font-size:13px;letter-spacing:.8px}#bb-smm-run-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap}#bb-smm-run-btn:hover{background:rgba(255,255,255,.35)}#bb-smm-log{flex:1;overflow-y:auto;padding:10px 10px 6px}.bsa-entry{padding:8px 10px;margin-bottom:6px;border-radius:8px;background:#0d0d1a;border-left:3px solid #334155}.bsa-entry.ok{border-left-color:#22c55e}.bsa-entry.alert{border-left-color:#ef4444;background:#180d0d}.bsa-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}.bsa-name{font-size:12px;font-weight:600;color:#e2e8f0;flex:1}.bsa-badge{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;text-transform:uppercase}.bsa-badge.ok{background:#14532d;color:#4ade80}.bsa-badge.alert{background:#7f1d1d;color:#fca5a5}.bsa-time{font-size:10px;color:#475569}.bsa-detail{font-size:11px;color:#94a3b8;line-height:1.45}#bb-smm-footer{padding:7px 12px;border-top:1px solid #1e293b;font-size:10px;color:#475569;text-align:center}';
-    document.head.appendChild(style);
-    /* The lightning FAB was REMOVED 2026-08-26 (Thulaib: the floating icons
-       block the view). The agents still scan on the same schedule and their
-       results still fill the alert strip at the top of every page and the
-       Agents page in the sidebar, so nothing was switched off, only the
-       button. The panel below is still built, unopened, because runAll()
-       writes into #bb-smm-log and a missing element would throw inside the
-       scan that feeds those alerts. */
-    var fab = null;
-    var panel = document.createElement('div');
-    panel.id = 'bb-smm-panel';
-    panel.innerHTML = '<div id="bb-smm-ph"><span id="bb-smm-ph-title">BB SMM AGENTS</span><button id="bb-smm-run-btn">▶ Run All</button></div><div id="bb-smm-log"><div style="color:#475569;font-size:12px;padding:24px;text-align:center;">Click ▶ Run All to scan now.<br><span style="font-size:10px;color:#334155;">Auto-scans every 5 min</span></div></div><div id="bb-smm-footer">5 agents active • Alerts → Gmail (SMM + CEO)</div>';
-    document.body.appendChild(panel);
-    /* no button to bind to any more, see above */
-    document.getElementById('bb-smm-run-btn').addEventListener('click', function() { runAll(); });
-  }
-
-  function renderLog() {
-    var el = document.getElementById('bb-smm-log');
-    if (!el) return;
-    if (!agentLog.length) { el.innerHTML = '<div style="color:#475569;font-size:12px;padding:24px;text-align:center;">No scans yet.</div>'; return; }
-    el.innerHTML = agentLog.map(function(e) {
-      var c = e.status === 'ALERT' ? 'alert' : 'ok';
-      return '<div class="bsa-entry ' + c + '"><div class="bsa-row"><span class="bsa-name">' + e.agent + '</span><span class="bsa-badge ' + c + '">' + e.status + '</span><span class="bsa-time">' + e.time + '</span></div><div class="bsa-detail">' + e.detail + '</div></div>';
-    }).join('');
-  }
-
-  
-
-  // ── Dashboard Section ──
-  function injectSMMDashSection() {
-    var target = document.getElementById('pageContent') || document.querySelector('.page-content') || document.querySelector('main');
-    if (!target || document.getElementById('bbs-agent-alerts-section')) return;
-    var section = document.createElement('div');
-    section.id = 'bbs-agent-alerts-section';
-    section.innerHTML = '<div id="bbs-alerts-header"><span id="bbs-alerts-title">Agent Alerts</span><button id="bbs-alerts-run-btn">Run All</button></div><div id="bbs-alert-grid"><div style="color:#475569;font-size:12px;grid-column:1/-1;padding:8px 0;">Starting scan...</div></div>';
-    target.insertBefore(section, target.firstChild);
-    document.getElementById('bbs-alerts-run-btn').addEventListener('click', window.BB_SMM_AGENTS ? window.BB_SMM_AGENTS.runAll : function(){});
-  }
-
-  function updateSMMDashSection() {
-    var grid = document.getElementById('bbs-alert-grid');
-    if (!grid) return;
-    var seen = {}, cards = [];
-    agentLog.forEach(function(e) { if (!seen[e.agent]) { seen[e.agent] = true; cards.push(e); } });
-    if (!cards.length) return;
-    grid.innerHTML = cards.map(function(e) {
-      var c = e.status === 'ALERT' ? 'alert' : 'ok';
-      var detail = e.status === 'ALERT' ? e.detail.substring(0,55) + (e.detail.length > 55 ? '\u2026' : '') : '\u2713 All clear';
-      return '<div class="bbs-alert-card ' + c + '"><div class="bbs-alert-card-name">' + e.agent + '</div><div class="bbs-alert-card-detail ' + c + '">' + detail + '</div><div class="bbs-alert-card-time">' + e.time + '</div></div>';
-    }).join('');
-  }
-
-  var bbsStyle = document.createElement('style');
-  bbsStyle.textContent = '#bbs-agent-alerts-section{margin:0 0 20px;padding:16px 18px;background:var(--surface-1,#0d0d1a);border:1px solid var(--border,#1e293b);border-radius:12px;}#bbs-alerts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}#bbs-alerts-title{font-size:13px;font-weight:700;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;}#bbs-alerts-run-btn{background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:700;}#bbs-alerts-run-btn:hover{background:#21b5c8;}#bbs-alert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}.bbs-alert-card{padding:10px 12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);}.bbs-alert-card.alert{border-color:var(--red);background:var(--r10);}.bbs-alert-card.ok{border-color:var(--green);}.bbs-alert-card-name{font-size:11px;font-weight:700;color:#e2e8f0;margin-bottom:4px;}.bbs-alert-card-detail{font-size:10px;color:#94a3b8;line-height:1.4;margin-bottom:4px;}.bbs-alert-card-detail.alert{color:#fca5a5;}.bbs-alert-card-detail.ok{color:#4ade80;}.bbs-alert-card-time{font-size:9px;color:#475569;}';
-  document.head.appendChild(bbsStyle);
-window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runApproval: runApprovalAgent, runTasks: runTasksAgent, runShoots: runShootAgent, runMissedPost: runMissedPostAgent, getLog: function() { return agentLog; } };
-
-  function init() { buildUI(); setTimeout(runAll, 3000); setInterval(runAll, POLL_MS);
-    injectSMMDashSection(); }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } else { init(); }
-})();
-</script>
+<!-- The five in-app agents and their Agent Alerts panel were removed on 9 September 2026. Three read tables the team had stopped using, two compared fields that never agree, and between them they nagged one seat about July posts 26 times in a fortnight. The push channel is the alert layer now: one morning brief per seat, silent when clear. -->
 
 <!-- BB SMM WORKSPACE, DETAIL + NEW AGENTS PATCH -->
 <script>
@@ -9087,7 +8307,6 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
   var ACTIONS = [
     { icon:'', label:'Add Post',       hint:'Quick add', action:function(){ closeBar(); openModal('quick-add'); } },
     { icon:'', label:'Add Task',       hint:'New task',  action:function(){ closeBar(); if(typeof openModal==='function') openModal('task-add'); } },
-    { icon:'', label:'Run Agent Scan', hint:'Scan now',  action:function(){ closeBar(); navTo('agents'); if(typeof loadSmmAgentAlerts==='function') loadSmmAgentAlerts(); } },
     { icon:'', label:'Daily Check-In', hint:'Open',      action:function(){ closeBar(); if(typeof openCheckinPopup==='function') openCheckinPopup(true); } },
   ];
 
@@ -9373,10 +8592,17 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
       var ids = ciScopeIds();
       if (ids && !ids.length) { _ciItems = []; updateFab(); return _ciItems; }
       var scopeQ = ids ? '&client_id=in.(' + ids.join(',') + ')' : '';
-      var r = await fetch(CI_SB_URL + '/rest/v1/content_plans?posted=eq.false&scheduled_date=lte.' + t + scopeQ + '&select=id,title,scheduled_date,client_id,type&order=scheduled_date.asc&limit=60', {
-        headers: H
-      });
-      _ciItems = r.ok ? await r.json() : [];
+      /* POSTS TO CONFIRM come from the weekly plan the team keeps, never from
+         content_plans, which nobody had written to since August. This week's
+         rows for THIS seat, up to today, not yet done. */
+      var role = (typeof USER_ROLES === 'object' && USER_ROLES[S.currentUser]) || {};
+      var mon = smmMondayStr(new Date()); var dow = new Date().getDay(); dow = dow === 0 ? 7 : dow;
+      var pq = CI_SB_URL + '/rest/v1/smm_weekly_plan?week_start=eq.' + mon + '&status=neq.done&day_of_week=lte.' + dow
+             + (role.smm ? '&created_by=eq.' + encodeURIComponent(role.name) : '') + '&select=id,week_start,day_of_week,client_name,notes,task_type&order=day_of_week.asc';
+      var r = await fetch(pq, { headers: H });
+      var plan = r.ok ? await r.json() : [];
+      var byName = {}; (S.clients || []).forEach(function(c){ byName[String(c.name||'').toUpperCase().replace(/\s+/g,'')] = c.id; });
+      _ciItems = plan.map(function(x){ return { id: x.id, title: x.notes || 'Post', type: x.task_type || 'post', scheduled_date: smmPlanDate(x), client_id: byName[String(x.client_name||'').toUpperCase().replace(/\s+/g,'')] || 'unknown' }; });
     } catch(e) { _ciItems = []; }
     updateFab();
     return _ciItems;
@@ -9404,7 +8630,7 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
 
     if (!tasks.length && !items.length) {
       body.innerHTML = '<div style="color:#00FF85;text-align:center;padding:30px;font-size:13px;">'
-        + 'All clear. Nothing assigned to you is due, and every scheduled post is confirmed.</div>';
+        + 'All clear. Nothing assigned to you is due. Nothing planned for today is still open.</div>';
       return;
     }
 
@@ -9494,17 +8720,17 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     row.classList.toggle('done', nowDone);
     if (nowDone) {
       try {
-        await fetch(CI_SB_URL + '/rest/v1/content_plans?id=eq.' + id, {
+        await fetch(CI_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + id, {
           method: 'PATCH',
           headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ posted: true })
+          body: JSON.stringify({ status: 'done' })
         });
         _ciItems = _ciItems.filter(function(x){ return x.id !== id; });
         updateFab();
       } catch(e) {}
     } else {
       try {
-        await fetch(CI_SB_URL + '/rest/v1/content_plans?id=eq.' + id, {
+        await fetch(CI_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + id, {
           method: 'PATCH',
           headers: { 'apikey': CI_KEY, 'Authorization': 'Bearer ' + CI_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify({ posted: false })
@@ -9589,11 +8815,9 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
     {name:'clients',core:true},
     {name:'team_members',core:true},
     {name:'tasks',core:false},
-    {name:'content_plans',core:false},
-    {name:'smm_content',core:false},
     {name:'smm_shoots',core:false},
-    {name:'smm_diary',core:false},
-    {name:'shared_ideas',core:false},
+    {name:'smm_weekly_plan',core:false},
+    {name:'bb_delivery',core:false},
     {name:'events',core:false},
     {name:'graphic_projects',core:false},
     {name:'daily_pillar_state',core:false},
@@ -9606,7 +8830,16 @@ window.BB_SMM_AGENTS = { runAll: runAll, runContentGap: runContentGapAgent, runA
 
   function report(issue){
     try{
-      var key=(issue.category||'')+'|'+(issue.table_name||'')+'|'+(issue.message||'').slice(0,120);
+      /* A PREVIEW IS NOT A FAULT. A developer's localhost logged as a live bug on
+         26 August and a second chat spent time on it. Skip before the POST. */
+      if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+      /* WEATHER IS ONE ROW. A dropped connection used to log once per table and
+         read as a storm. Network faults are keyed on category alone, so an
+         outage is one row per app per ten minutes. Everything else keeps the
+         per-table key, because a locked table IS about that table. */
+      var key=(issue.category==='network')
+        ? 'network'
+        : (issue.category||'')+'|'+(issue.table_name||'')+'|'+(issue.message||'').slice(0,120);
       var now=Date.now();
       if(_seen[key]&&(now-_seen[key])<DEDUPE_MS)return;
       _seen[key]=now;_issues.push(issue);
@@ -9817,7 +9050,6 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
      One offset, on the box that actually touches the bar. */
   .main{padding-top:calc(52px + var(--sat))}
   .page{padding-top:14px}
-  #bbs-agent-alerts-section{margin-top:12px}
 }
 
 /* Fingers, not cursors. Apple's floor is 44pt. L-SMM-012.
@@ -10167,9 +9399,12 @@ async function runSelfTest(){
      `clients` lost that once and hard 401'd the Command Centre. One check per
      table, count printed, because "0 rows" and "0 tables checked" look
      identical in green. */
-  const TABLES=['clients','tasks','team_members','team_login_logs','events','content_plans',
-                'agent_alerts','system_bug_log','smm_content','smm_community','smm_diary',
-                'smm_shoots','smm_weekly_plan','daily_pillar_state','shared_ideas','bb_delivery',
+  /* 9 September 2026: content_plans, agent_alerts, smm_content, smm_community,
+     smm_diary and shared_ideas left this list because the app no longer reads
+     them. A read-posture check on a table nobody reads is a check on nothing. */
+  const TABLES=['clients','tasks','team_members','team_login_logs','events',
+                'system_bug_log',
+                'smm_shoots','smm_weekly_plan','daily_pillar_state','bb_delivery',
                 'graphic_projects','video_projects','video_project_comments','video_project_links'];
   for(const t of TABLES){
    let st='?',n=null;
@@ -10518,6 +9753,8 @@ async function runSelfTest(){
    required to be run at 390px, so a console-only result cannot be read where
    it matters most. */
 function stReport(R,failed){
+ /* A silent run writes its score to bb_harness_runs and shows nobody anything. */
+ if(window.__ST_SILENT){ window.__ST_SILENT=false; return; }
  const old=document.getElementById('stOv');if(old)old.remove();
  const ov=document.createElement('div');ov.id='stOv';
  ov.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(6,7,10,.94);'
@@ -10540,6 +9777,35 @@ function stReport(R,failed){
 }
 
 window.runSelfTest=runSelfTest;
+
+/* ── THE SCORE IS WRITTEN DOWN, ONCE PER PERSON PER DAY ─────────────────────
+   Bug catcher, 9 September 2026. After sign-in the harness runs once and posts
+   one row to bb_harness_runs, so a red check on a phone in Colombo is seen by
+   the hub within the hour, and a day with no rows is itself a signal.
+   THE WALK IS VISIBLE. The harness navigates every page and restores the one
+   you were on, which is fine on a desk and a flicker on a phone. So on a wide
+   screen it runs twenty seconds after sign-in; on a phone it waits until the
+   app is put in the background and runs then, out of sight. Never shown, never
+   blocking, nothing else written. */
+function smmHarnessRowToday(){ try{ return localStorage.getItem('smm-harness-'+(S.currentUser||'')+'-'+new Date().toISOString().slice(0,10)); }catch(e){ return '1'; } }
+async function smmWriteHarnessRow(){
+  if(smmHarnessRowToday()) return;
+  try{ localStorage.setItem('smm-harness-'+(S.currentUser||'')+'-'+new Date().toISOString().slice(0,10),'1'); }catch(e){}
+  var r=null;
+  try{ window.__ST_SILENT=true; r=await runSelfTest(); }catch(e){ window.__ST_SILENT=false; return; }
+  if(!r||!r.results) return;
+  var failed=r.results.filter(function(x){return !x.pass;}).map(function(x){return x.name;});
+  try{
+    await fetch(SUPABASE_URL+'/rest/v1/bb_harness_runs',{method:'POST',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({app:'smm-workspace',checks:r.total,failed:failed.length,failed_names:failed,width:window.innerWidth,user_name:S.currentUser||null,url:location.href.slice(0,200)})});
+  }catch(e){}
+}
+function smmScheduleHarnessRow(){
+  if(smmHarnessRowToday()) return;
+  if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+  if(window.innerWidth>=900){ setTimeout(smmWriteHarnessRow, 20000); return; }
+  document.addEventListener('visibilitychange', function onHide(){ if(document.visibilityState==='hidden'){ document.removeEventListener('visibilitychange', onHide); smmWriteHarnessRow(); } });
+}
 if(location.search.indexOf('selftest')>-1){
  window.addEventListener('load',function(){setTimeout(function(){runSelfTest();},4500);});
 }
@@ -10881,6 +10147,9 @@ var BBSET=(function(){
     html+=card('Phone alerts', row('Status',alertsLine)+row('Quiet hours','9pm to 7am, held until 7am')+'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'+alertsBtns+btn('Run diagnostics','BBSET.diag()',false)+'</div><pre id="bbset-diag" style="display:none;white-space:pre-wrap;font-size:11px;line-height:1.5;margin:10px 0 0;padding:10px;border-radius:8px;background:var(--bg,#0c0d10);color:var(--text,#fff)"></pre>'+(st.lastError?'<div style="margin-top:8px;font-size:11px;color:#f87171">'+st.lastError+'</div>':''));
     html+=card('Installed as an app', row('This device', standalone()?'Yes':'No, running in the browser')+(!standalone()?'<div style="margin-top:8px;font-size:12px;color:var(--text3,#9aa3ad)">'+(isIOS()?'Share, then Add to Home Screen. Alerts only work from the installed app.':'Use your browser menu, then Add to Home screen.')+'</div>':''));
     html+=card('Account', row('Signed in as', st.user||'Not signed in')+(logoutFn()?'<div style="margin-top:12px">'+btn('Sign out','BBSET.signout()',false)+'</div>':''));
+    /* Report a problem. Bug catcher, 9 September 2026. One box, one button,
+       one row in system_bug_log with category user_report. No attachments. */
+    html+=card('Report a problem', '<div style="font-size:12px;color:var(--text3,#9aa3ad);margin-bottom:8px">Say what you saw and where. It reaches the hub within the hour.</div><textarea id="bbset-report" rows="3" placeholder="What went wrong?" style="width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--border,#2a2d35);background:var(--bg,#0c0d10);color:var(--text,#fff)"></textarea><div style="display:flex;gap:8px;margin-top:10px;align-items:center">'+btn('Send','BBSET.report()',true)+'<span id="bbset-report-msg" style="font-size:12px;color:var(--text3,#9aa3ad)"></span></div>');
     html+=card('App', row('Build', document.lastModified||'')+'<div style="margin-top:12px">'+btn('Reload latest version','BBSET.reload()',false)+'</div>');
     sheet.innerHTML=html;
   }
@@ -10901,6 +10170,18 @@ var BBSET=(function(){
   async function test(){ try{ var r=await BBPUSH.test(); alert(r&&r.sent?'Test sent. Check your phone.':'Nothing sent: '+(r&&r.error||'no phone registered')); }catch(e){ alert('Test failed: '+(e&&e.message||e)); } }
   async function diag(){ var el=document.getElementById('bbset-diag'); if(!el) return; el.style.display='block'; el.textContent='Checking, one line per step'; try{ var L=await BBPUSH.diagnose(function(lines){ el.textContent=lines.join('\n')+'\n…'; }); el.textContent=L.join('\n'); }catch(e){ el.textContent='Diagnostics failed: '+(e&&e.message||e); } }
   function signout(){ var f=logoutFn(); close(); if(f) f(); }
+  async function report(){
+    var ta=document.getElementById('bbset-report'), msg=document.getElementById('bbset-report-msg');
+    var text=(ta&&ta.value||'').trim(); if(!text){ if(msg) msg.textContent='Type what you saw first.'; return; }
+    if(msg) msg.textContent='Sending';
+    try{
+      var r=await fetch(SUPABASE_URL+'/rest/v1/system_bug_log',{method:'POST',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify({app:'smm-workspace',severity:'info',category:'user_report',message:text.slice(0,600),url:location.href.slice(0,200),user_name:(typeof S!=='undefined'&&S&&S.currentUser)||null,user_agent:navigator.userAgent.slice(0,200)})});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      var d=await r.json(); var id=(d&&d[0]&&d[0].id)||'';
+      if(ta) ta.value=''; if(msg) msg.textContent='Sent'+(id?' as report '+id:'')+'. Thank you.';
+    }catch(e){ if(msg) msg.textContent='Could not send: '+(e&&e.message||e); }
+  }
   async function reload(){
     try{ if('serviceWorker' in navigator){ var rs=await navigator.serviceWorker.getRegistrations(); for(var i=0;i<rs.length;i++) await rs[i].unregister(); } if(window.caches){ var ks=await caches.keys(); for(var j=0;j<ks.length;j++) await caches.delete(ks[j]); } }catch(e){}
     location.reload();
@@ -10924,7 +10205,7 @@ var BBSET=(function(){
   }
   var tries=0; function boot(){ if(!inject() && tries++<60) setTimeout(boot,2000); }
   window.addEventListener('load',function(){ setTimeout(boot,1500); });
-  return { open:open, close:close, enable:enable, test:test, signout:signout, reload:reload, inject:inject, diag:diag };
+  return { open:open, close:close, enable:enable, test:test, signout:signout, reload:reload, inject:inject, diag:diag, report:report };
 })();
 </script>
 <!-- @@BB_SETTINGS_END@@ -->
