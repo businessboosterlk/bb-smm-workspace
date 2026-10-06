@@ -635,3 +635,99 @@ harness check "SMM shows only SMM people" asserted a number nobody had agreed
 and failed every run; it now asserts the one list the app reads.
 **Lesson: a check that fails every day is a check nobody reads. Assert what the
 app does, not what the roster should be.**
+
+### L-SMM-040 · one shoot stage had two names across three apps
+**Found:** 2026-10-06. **Status:** FIXED.
+The Command Centre and the Video System store `Shoot Date Set` for the Get
+Shoot Date stage and `Date Confirmed` for the date locked stage. SMM wrote
+`Shoot Date Set` for the LOCKED stage and had no column for `Date Confirmed`,
+so the four shoots the other apps had confirmed sat in Videos Confirmed. The
+SMM edit sheet was worse: its options carried labels while the code expected
+keys, so every save wrote `Videos Confirmed` over the real stage. Now
+`stageToKey` reads every value the three apps write, `SHOOT_STAGE_MAP` writes
+the same value the other two write and the column reads Date Confirmed.
+Probe on 6 Oct: 4 in Date Confirmed, 2 in Final Script, 37 in Shot, 0 lost.
+**Lesson: before a stage list ships, grep the same table in every app that
+writes it. A board that falls back to its first column hides the mismatch.**
+
+### L-SMM-041 · the Clients page drew a plan it never read
+**Found:** 2026-10-06. **Status:** FIXED.
+`S.contentPlans` stopped being loaded on 9 September. The Next post column kept
+reading it, so every client said Nothing planned in red whatever the plan held.
+The page now reads upcoming unposted `content_plans` rows before it draws and
+says Plan not loaded when the read fails. `content_plans` is back on the read
+posture list because the app reads it again. On 6 Oct the table had no
+upcoming rows at all (last written 21 August) so the column is still red for
+all 24 clients, now because it is true of that table. Whether the column
+should read `smm_weekly_plan` instead is Thulaib's call.
+
+### L-SMM-042 · S.user was never set
+**Found:** 2026-10-06. **Status:** FIXED.
+Four Video Hub writes stamped `S.user ? S.user.name : 'SMM'`. Nothing ever
+assigned `S.user`, so every link, comment, project and stage move was filed as
+SMM. They read `S.currentUser` now, the seat that signed in.
+
+### L-SMM-043 · a stage move logged history before the move landed
+**Found:** 2026-10-06. **Status:** FIXED.
+`vhMoveProject` closed the first open `video_stage_history` row and opened a new
+one BEFORE updating the project. A refused update still left a move in the
+history and any second open row stayed open for ever. The project is updated
+first; history is written only after that succeeds and EVERY open row for the
+video is closed by id with its own `duration_seconds`. A single filtered PATCH
+was not used because the Video System's time in stage reports skip a closed
+row with no duration.
+
+### L-SMM-044 · supabase-js returns errors, it does not throw
+**Found:** 2026-10-06. **Status:** FIXED.
+Six writes awaited supabase-js or `fetch` and never looked at the result: a shoot
+drag, the login log and four hard deletes (tasks, weekly plan, content plan,
+inbox). A refused delete still said Task deleted. Each one now reads `error`
+(or `res.ok` for `fetch`) and keeps the row with a toast when it failed. The
+login log only warns, so sign in is never held up by an audit row.
+**Lesson: `try` around a supabase-js call catches nothing the server refused.
+Read `.error` on every write.**
+
+### L-SMM-045 · an optimistic redraw that refetched
+**Found:** 2026-10-06. **Status:** FIXED.
+`bbdTog` drew the tick and then called `renderSmmDelivery`, which refetches the
+board. The refetch could land before the PATCH and draw the old value. The
+board now redraws after the write resolves and a failed tick toasts.
+**Lesson: an optimistic redraw must not call a function that reads the
+database.**
+
+### L-SMM-046 · a read with no stated cap
+**Found:** 2026-10-06. **Status:** FIXED.
+`loadTasks` had no limit. Supabase stops at 1,000 rows without saying so and
+the table grows about 100 rows a month (738 on 6 Oct). The read now says
+`.limit(1000)` newest first and My Tasks shows Showing the newest 1000 tasks
+when the cap is hit in the Everyone view.
+
+### L-SMM-047 · a row count by star over base64
+**Found:** 2026-10-06. **Status:** FIXED.
+The harness read posture check counted every table with `select=*`.
+`graphic_projects` holds over 32 MB of base64 images and returned HTTP 500 on a
+cold hit, which failed the check on the first run of the night. It counts by
+`id` with a head count now.
+
+### L-SMM-048 · a moving library tag with no integrity hash
+**Found:** 2026-10-06. **Status:** FIXED.
+`supabase-js@2` on jsDelivr is a generated file that changes with every
+release. It is pinned to `2.117.2/dist/umd/supabase.js` with a sha384 integrity
+hash. To upgrade: change the version, recompute the hash from that exact URL
+with `openssl dgst -sha384 -binary | openssl base64 -A` and run the harness.
+
+### L-SMM-049 · a bulk PATCH with no id filter
+**Found:** 2026-10-06. **Status:** FIXED.
+`markAllSmmAlertsRead` PATCHed `agent_alerts?read_at=is.null`, which would have
+marked every unread alert in the estate read. Nothing called it. Removed.
+
+### L-SMM-050 · a grid item without min-width:0
+**Found:** 2026-10-06. **Status:** FIXED.
+The Today cards sit in a `1fr` grid. A grid item defaults to `min-width:auto`,
+so one long nowrap title stretched the card to 540px and Today scrolled
+sideways: 164px for Tiana and 79px for Nirvana at 390px. `.ta-card`, `.ta-row`
+and `.ta-main` carry `min-width:0` now; overflowX is 0 for both seats.
+The harness runner never saw it. Its page walk called `showPage`, which SMM
+does not have, so every page measure errored and the summary still printed
+with faults 0.
+**Lesson: a page walk that errors must count as a failure, never as clean.**

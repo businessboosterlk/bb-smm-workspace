@@ -49,7 +49,8 @@ window.__ST_LOG=[];
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+<!-- Pinned and hashed (fault SMM-10, 6 Oct 2026): @2 was a moving, generated file with no integrity check. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <style>
 /* ============================================================
    BB SMM WORKSPACE V4, MATCHES COMMAND CENTRE LAYOUT
@@ -583,15 +584,17 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
 }
 /* Today action grid, the 4 things that need you now */
 .today-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
-.ta-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 15px 16px; display: flex; flex-direction: column; min-height: 118px; }
+.ta-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 15px 16px; display: flex; flex-direction: column; min-height: 118px; min-width: 0; }
+/* min-width:0 (fault SMM-12, 6 Oct 2026): a grid item defaults to min-width:auto, so one
+   long nowrap title stretched the card to 540px and Today scrolled sideways at 390px. */
 .ta-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .ta-title { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: 0.01em; }
 .ta-count { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent10); border: 1px solid var(--accent20); border-radius: 20px; padding: 1px 9px; margin-left: auto; }
 .ta-count.zero { color: var(--text3); background: var(--bg3); border-color: var(--border); }
 .ta-list { display: flex; flex-direction: column; gap: 7px; flex: 1; }
-.ta-row { font-size: 13px; color: var(--text); line-height: 1.35; display: flex; gap: 7px; align-items: baseline; cursor: pointer; }
+.ta-row { font-size: 13px; color: var(--text); line-height: 1.35; display: flex; gap: 7px; align-items: baseline; cursor: pointer; min-width: 0; }
 .ta-row:hover .ta-main { color: var(--accent); }
-.ta-row .ta-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-row .ta-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .ta-row .ta-sub { color: var(--text3); font-size: 11px; flex-shrink: 0; margin-left: auto; }
 .ta-empty { font-size: 13px; color: var(--text3); padding: 8px 0; }
 .ta-more { margin-top: 10px; font-size: 11px; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; text-align: left; font-family: inherit; }
@@ -1748,7 +1751,7 @@ tr:last-child td { border-bottom: none; }
         <div class="kanban-cards" data-sdrop="get-shoot-date"></div>
       </div>
       <div class="kanban-col" style="border-top:2px solid #FF2D78">
-        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#FF2D78;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#FF2D78">Shoot Date Set</div><div class="kanban-col-cnt" id="sc-shoot-date-set">0</div></div>
+        <div class="kanban-col-hdr"><span style="width:8px;height:8px;border-radius:50%;background:#FF2D78;flex-shrink:0;display:inline-block"></span><div class="kanban-col-title" style="color:#FF2D78">Date Confirmed</div><div class="kanban-col-cnt" id="sc-shoot-date-set">0</div></div>
         <div class="kanban-cards" data-sdrop="shoot-date-set"></div>
       </div>
       <div class="kanban-col" style="border-top:2px solid #00FF85">
@@ -2093,14 +2096,16 @@ tr:last-child td { border-bottom: none; }
     <div class="fg"><label class="fl">Shoot Name</label><input class="fi" id="sa-title" placeholder="e.g. Monthly reel shoot"></div>
     <div class="fg"><label class="fl">Client</label><select class="fi" id="sa-client"></select></div>
     <div class="fg"><label class="fl">Shoot Date</label><input class="fi" type="date" id="sa-date"></div>
+    <!-- Values are stage KEYS (fault SMM-1, 6 Oct 2026): openShootCard sets a key and
+         submitShootAdd maps a key, so label values matched nothing and every save wrote Videos Confirmed. -->
     <div class="fg"><label class="fl">Stage</label><select class="fi" id="sa-status">
-      <option value="Videos Confirmed">Videos Confirmed</option>
-      <option value="Script Made">Script Made</option>
-      <option value="Script Changes">Script Changes</option>
-      <option value="Final Script">Final Script</option>
-      <option value="Get Shoot Date">Get Shoot Date</option>
-      <option value="Shoot Date Set">Shoot Date Set</option>
-      <option value="Shot">Shot</option>
+      <option value="videos-confirmed">Videos Confirmed</option>
+      <option value="script-made">Script Made</option>
+      <option value="script-changes">Script Changes</option>
+      <option value="final-script">Final Script</option>
+      <option value="get-shoot-date">Get Shoot Date</option>
+      <option value="shoot-date-set">Date Confirmed</option>
+      <option value="shot">Shot</option>
     </select></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="sa-notes" rows="3" placeholder="Location, team, brief"></textarea></div>
     <input type="hidden" id="sa-edit-id" value="">
@@ -2652,7 +2657,11 @@ function smmEnterApp(name, isFreshLogin) {
           logged_in_at: new Date().toISOString(),
           app: 'smm-workspace'
         }]);
-      }).then(function(){}).catch(function(){});
+      /* A FAILED LOGIN LOG IS REPORTED (fault SMM-6, 6 Oct 2026). supabase-js returns
+         errors instead of throwing, so the empty then() swallowed every failure.
+         It only warns: sign-in itself is never held up by the audit row. */
+      }).then(function(r){ if (r && r.error) console.warn('SMM login log not written', r.error); })
+        .catch(function(e){ console.warn('SMM login log not written', e); });
   }
 
   const sbd = document.getElementById('sb-date');
@@ -2850,7 +2859,9 @@ function nav(page, data) {
   if (page === 'today') renderToday();
   if (page === 'calendar') { wireCalFilters(); populateCalFilterDropdowns(); switchCalView(S.calView || 'schedule'); }
   if (page === 'shoot-pipeline') { renderShoots(); renderUpcomingShoots(); }
-  if (page === 'clients') renderClients();
+  /* Load the posting plan BEFORE drawing (fault SMM-2, 6 Oct 2026): S.contentPlans
+     was never read, so every client said Nothing planned in red. */
+  if (page === 'clients') loadClientPlans().then(renderClients);
   if (page === 'client-profile' && data) openClientProfile(data);
   if (page === 'sops') renderSOPs();
   if (page === 'delivery') renderSmmDelivery();
@@ -3252,7 +3263,8 @@ async function communityFlag(id) {
 async function communityDelete(id) {
   if (!confirm('Remove this item from the inbox?')) return;
   try {
-    await sb.from('smm_community').delete().eq('id', id);
+    const dr = await sb.from('smm_community').delete().eq('id', id);
+    if (dr.error) throw dr.error; // a failed delete keeps the row (fault SMM-13, 6 Oct 2026)
     S.community = (S.community || []).filter(x => x.id !== id);
     updateCommunityCount(); renderCommunity();
     if (S.currentPage === 'today') renderToday();
@@ -3373,7 +3385,10 @@ async function loadClients() {
 async function loadTasks() {
   if (!sb) return;
   try {
-    let query = sb.from('tasks').select('*').order('created_at', { ascending: false });
+    /* EXPLICIT CAP (fault SMM-8, 6 Oct 2026). The table grows about 100 rows a
+       month and Supabase silently stops at 1,000. Newest first, cap stated, and
+       S.tasksCapped tells My Tasks to say so. */
+    let query = sb.from('tasks').select('*').order('created_at', { ascending: false }).limit(1000);
     /* PERSONAL. My Tasks is yours even when the boards show everyone, so this
        reads S_myClientIds and never S.clients. */
     const scope = currentSmmScope();
@@ -3385,6 +3400,7 @@ async function loadTasks() {
     const { data, error } = await query;
     if (error) throw error;
     S.tasks = data || [];
+    S.tasksCapped = S.tasks.length === 1000;
   } catch (e) { console.error(e); }
 }
 
@@ -3467,6 +3483,23 @@ function calcClientHealth(client) {
   return { auto: 'green', reason: 'On track' };
 }
 
+/* THE NEXT POST COLUMN NEEDS THE POSTING PLAN (fault SMM-2, 6 Oct 2026).
+   S.contentPlans stopped being loaded on 9 September while Quick Add kept
+   writing to content_plans, so the column read an empty list and told every
+   client Nothing planned in red. Read the upcoming unposted rows, keep any row
+   Quick Add pushed this session and say when the read failed. */
+async function loadClientPlans() {
+  if (!sb) return;
+  try {
+    const todayStr = new Date().toISOString().slice(0,10);
+    const { data, error } = await sb.from('content_plans').select('id,client_id,scheduled_date,type,posted')
+      .eq('posted', false).gte('scheduled_date', todayStr).order('scheduled_date', { ascending: true });
+    if (error) throw error;
+    const ids = {}; (data || []).forEach(p => { ids[p.id] = 1; });
+    S.contentPlans = (data || []).concat((S.contentPlans || []).filter(p => !ids[p.id]));
+    S.clientPlansOk = true;
+  } catch (e) { console.warn('Clients page: posting plan read failed', e); S.clientPlansOk = false; }
+}
 function renderClients() {
   const tbody = document.getElementById('clients-tbody');
   if (!S.clients.length) {
@@ -3505,7 +3538,7 @@ function renderClients() {
     const todayStr = new Date().toISOString().slice(0,10);
     const upcoming = (S.contentPlans || []).filter(p => p.client_id == c.id && !p.posted && p.scheduled_date && p.scheduled_date.substring(0,10) >= todayStr).sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date));
     const np = upcoming[0];
-    const npTxt = np ? `<span style="color:var(--cyan);font-weight:600">${new Date(np.scheduled_date+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span> <span style="color:var(--text3);font-size:10px;text-transform:uppercase">${np.type||'post'}</span>` : '<span style="color:var(--red);font-size:11px">Nothing planned</span>';
+    const npTxt = np ? `<span style="color:var(--cyan);font-weight:600">${new Date(np.scheduled_date+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span> <span style="color:var(--text3);font-size:10px;text-transform:uppercase">${escHtml(np.type||'post')}</span>` : (S.clientPlansOk === false ? '<span style="color:var(--text3);font-size:11px">Plan not loaded</span>' : '<span style="color:var(--red);font-size:11px">Nothing planned</span>'); // SMM-2, 6 Oct 2026
     return `<tr onclick="nav('client-profile', ${c.id})">
       <td><div class="td-name">${escHtml(c.name)}</div></td>
       <td>${typeBadge}</td>
@@ -3694,14 +3727,19 @@ async function toggleTask(id) {
 
 async function deleteTask(id) {
   if (!confirm('Delete this task?')) return;
+  const before = S.tasks;
   S.tasks = S.tasks.filter(t => t.id !== id);
   renderClientTasks(S.currentClientId);
   if (!sb) return;
   try {
-    await sb.from('tasks').delete().eq('id', id);
+    /* CHECK THE RESULT (fault SMM-13, 6 Oct 2026). supabase-js returns the error
+       instead of throwing, so a refused delete still said Task deleted and the
+       row vanished until the next reload. Put it back and say so. */
+    const dr = await sb.from('tasks').delete().eq('id', id);
+    if (dr.error) throw dr.error;
     toast('Task deleted', 'success');
     openClientProfile(S.currentClientId);
-  } catch (e) { console.error(e); toast('Failed', 'error'); }
+  } catch (e) { console.error(e); S.tasks = before; renderClientTasks(S.currentClientId); toast('Could not delete the task: ' + (e.message || 'unknown'), 'error'); }
 }
 
 // Stroke icons, one set, never emoji (bb-anti-ai-tells rule 2).
@@ -4030,7 +4068,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault(); z.style.background = '';
       if (e.dataTransfer.getData('kind') !== 'shoot') return;
       // Map stage key back to full stage name
-      const keyToStage = { 'videos-confirmed': 'Videos Confirmed', 'script-made': 'Script Made', 'script-changes': 'Script Changes', 'final-script': 'Final Script', 'get-shoot-date': 'Get Shoot Date', 'shoot-date-set': 'Shoot Date Set', 'shot': 'Shot' };
+      const keyToStage = { 'videos-confirmed': 'Videos Confirmed', 'script-made': 'Script Made', 'script-changes': 'Script Changes', 'final-script': 'Final Script', 'get-shoot-date': 'Shoot Date Set', 'shoot-date-set': 'Date Confirmed', 'shot': 'Shot' }; // SMM-1, 6 Oct 2026: same values as CC and Video
       const fullStage = keyToStage[z.dataset.sdrop] || z.dataset.sdrop;
       await updateShootStatus(e.dataTransfer.getData('id'), fullStage);
     });
@@ -4393,7 +4431,8 @@ async function submitCPlanModal() {
 async function deleteCPlanItem(id) {
   if (!confirm('Remove this item?')) return;
   try {
-    await sb.from('content_plans').delete().eq('id', id);
+    const dr = await sb.from('content_plans').delete().eq('id', id);
+    if (dr.error) throw dr.error; // a failed delete keeps the row (fault SMM-13, 6 Oct 2026)
     S.contentPlans = (S.contentPlans || []).filter(p => p.id !== id);
     renderContentPlan(); toast('Removed', 'success');
   } catch (e) { toast('Failed', 'error'); }
@@ -4442,7 +4481,7 @@ function renderSmmShootWeekly(){
   var firstDay=new Date(smmShootCalYear,smmShootCalMonth,1).getDay();
   var daysInMonth=new Date(smmShootCalYear,smmShootCalMonth+1,0).getDate();
   var dayNames=['SUN','MON','TUE','WED','THU','FRI','SAT'];
-  var stageColors={'Videos Confirmed':'#00E5FF','Script Made':'#FBBF24','Script Changes':'#FF6B2B','Final Script':'#A855F7','Shoot Date Set':'#FF2D78','Shot':'#00FF85'};
+  var stageColors={'Videos Confirmed':'#00E5FF','Script Made':'#FBBF24','Script Changes':'#FF6B2B','Final Script':'#A855F7','Shoot Date Set':'#FF2D78','Date Confirmed':'#FF2D78','Shot':'#00FF85'}; // SMM-1, 6 Oct 2026: Date Confirmed is the stage CC and Video write
   function pad(n){return String(n).padStart(2,'0');}
   function dateKey(d){return smmShootCalYear+'-'+pad(smmShootCalMonth+1)+'-'+pad(d);}
   var html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">'+dayNames.map(function(d){return '<div style="text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);padding:6px 0">'+d+'</div>';}).join('')+'</div>';
@@ -5097,17 +5136,22 @@ async function renderSmmDelivery(){
   root.innerHTML=html;
 }
 
+/* WRITE, THEN REDRAW (fault SMM-7, 6 Oct 2026). renderSmmDelivery refetches the
+   board and the old optimistic redraw ran it before the PATCH landed, so the
+   screen could read back the old value. Now the redraw waits for the write. On
+   failure the tick goes back and a toast says so. */
 async function bbdTog(id,k){
   var r=BBD_ROWS.filter(function(x){return String(x.id)===String(id);})[0]; if(!r) return;
-  r.vals=r.vals||{}; r.vals[k]=!r.vals[k];
-  renderSmmDelivery();                                  // optimistic
+  var nv=Object.assign({},r.vals||{}); nv[k]=!nv[k];
   try{
-    var res=await sb.from('bb_delivery').update({vals:r.vals,updated_at:new Date().toISOString()}).eq('id',id);
+    var res=await sb.from('bb_delivery').update({vals:nv,updated_at:new Date().toISOString()}).eq('id',id);
     if(res.error) throw res.error;
+    r.vals=nv;
   }catch(e){
-    console.error('bbdTog',e); r.vals[k]=!r.vals[k]; renderSmmDelivery();
+    console.error('bbdTog',e);
     if(typeof toast==='function') toast('Could not save that tick','error');
   }
+  renderSmmDelivery();
 }
 
 function smmOpenClientContentPlan(id){
@@ -5277,21 +5321,28 @@ async function vhMoveProject(pid, newStage) {
   p.current_stage = newStage;
 
   try {
-    // Close open stage history
-    var openHist = await sb.from('video_stage_history').select('*').eq('video_project_id', pid).is('exited_at', null);
-    if (openHist.data && openHist.data.length) {
-      var o = openHist.data[0];
-      var ex = new Date();
-      var en = new Date(o.entered_at);
-      await sb.from('video_stage_history').update({ exited_at: ex.toISOString(), duration_seconds: Math.floor((ex - en) / 1000) }).eq('id', o.id);
-    }
-    // Insert new stage entry
-    await sb.from('video_stage_history').insert({ video_project_id: pid, stage: newStage, moved_by: S.user ? S.user.name : 'SMM' });
-    // Update project
+    /* STAGE FIRST, HISTORY AFTER (fault SMM-5, 6 Oct 2026). History used to be
+       written before the stage update, so a failed move still logged a move,
+       and only the first open history row was closed, so a duplicate open row
+       stayed open for ever. Now: update the project, stop if that failed, then
+       close EVERY open row for this video and open the new one. Each open row
+       is closed by id with its own duration, because the Video System's time
+       in stage reports skip a closed row with no duration_seconds. */
     var upd = { current_stage: newStage, updated_at: new Date().toISOString() };
     if (newStage === 'posted') upd.completed_at = new Date().toISOString();
     var res = await sb.from('video_projects').update(upd).eq('id', pid);
     if (res.error) throw res.error;
+    var openHist = await sb.from('video_stage_history').select('id,entered_at').eq('video_project_id', pid).is('exited_at', null);
+    if (openHist.error) console.warn('vhMoveProject: open history read failed', openHist.error);
+    var ex = new Date();
+    for (var hi = 0; hi < ((openHist.data) || []).length; hi++) {
+      var o = openHist.data[hi];
+      var cl = await sb.from('video_stage_history').update({ exited_at: ex.toISOString(), duration_seconds: Math.max(0, Math.floor((ex - new Date(o.entered_at)) / 1000)) }).eq('id', o.id).is('exited_at', null);
+      if (cl.error) console.warn('vhMoveProject: could not close history row ' + o.id, cl.error);
+    }
+    // Insert new stage entry; moved_by is the signed-in seat (fault SMM-4, 6 Oct 2026)
+    var ins = await sb.from('video_stage_history').insert({ video_project_id: pid, stage: newStage, moved_by: S.currentUser || 'SMM' });
+    if (ins.error) console.warn('vhMoveProject: history insert failed', ins.error);
     toast('Moved to ' + (VH_STAGES.find(function(s) { return s.key === newStage; }) || {}).label, 'success');
     renderVideoHub();
   } catch(err) {
@@ -5503,7 +5554,7 @@ async function vhAddLink(pid, tag) {
   try {
     var res = await sb.from('video_project_links').insert({
       video_project_id: pid, url: url.trim(), label: label.trim() || null,
-      tag: tag, added_by: S.user ? S.user.name : 'SMM'
+      tag: tag, added_by: S.currentUser || 'SMM' // S.user was never set (fault SMM-4, 6 Oct 2026)
     });
     if (res.error) throw res.error;
     toast('Link added', 'success');
@@ -5600,7 +5651,7 @@ async function vhPostComment(pid) {
   try {
     var res = await sb.from('video_project_comments').insert({
       video_project_id: pid, body: body || '', image_url: img,
-      author: S.user ? S.user.name : 'SMM'
+      author: S.currentUser || 'SMM' // S.user was never set (fault SMM-4, 6 Oct 2026)
     });
     if (res.error) throw res.error;
     vhClearPendingImg('vh-cmt-' + pid);
@@ -5689,7 +5740,7 @@ document.getElementById('vh-project-form').addEventListener('submit', async func
       if (res.error) throw res.error;
       toast('Project updated', 'success');
     } else {
-      d.created_by = S.user ? S.user.name : 'SMM';
+      d.created_by = S.currentUser || 'SMM'; // S.user was never set (fault SMM-4, 6 Oct 2026)
       var ins = await sb.from('video_projects').insert(d).select().single();
       if (ins.error) throw ins.error;
       await sb.from('video_stage_history').insert({ video_project_id: ins.data.id, stage: d.current_stage, moved_by: d.created_by });
@@ -5832,12 +5883,34 @@ function openDayDetail(dateStr) {
 }
 
 // ============ SHOOT PIPELINE ============
+/* ONE SHOOT VOCABULARY (fault SMM-1, 6 Oct 2026). The Command Centre and the
+   Video System store 'Shoot Date Set' for the Get Shoot Date stage and
+   'Date Confirmed' for the date locked stage. SMM used to write 'Shoot Date Set'
+   for the locked stage and had no column for 'Date Confirmed', so those shoots
+   fell into Videos Confirmed. SHOOT_STAGE_MAP is now what SMM WRITES (the same
+   value the other two write), SHOOT_STAGE_LABEL is what SMM SHOWS, and
+   stageToKey reads every value any of the three apps writes. */
 var SHOOT_STAGE_MAP = {
   'videos-confirmed':'Videos Confirmed','script-made':'Script Made','script-changes':'Script Changes',
-  'final-script':'Final Script','get-shoot-date':'Get Shoot Date','shoot-date-set':'Shoot Date Set','shot':'Shot'
+  'final-script':'Final Script','get-shoot-date':'Shoot Date Set','shoot-date-set':'Date Confirmed','shot':'Shot'
+};
+var SHOOT_STAGE_LABEL = {
+  'videos-confirmed':'Videos Confirmed','script-made':'Script Made','script-changes':'Script Changes',
+  'final-script':'Final Script','get-shoot-date':'Get Shoot Date','shoot-date-set':'Date Confirmed','shot':'Shot'
+};
+var SHOOT_STAGE_READ = {
+  'videos confirmed':'videos-confirmed','videos_confirmed':'videos-confirmed',
+  'script made':'script-made','script_made':'script-made',
+  'script changes':'script-changes','script_changes':'script-changes',
+  'final script':'final-script','final_script':'final-script',
+  'get shoot date':'get-shoot-date','get_shoot_date':'get-shoot-date','shoot date set':'get-shoot-date',
+  'date confirmed':'shoot-date-set','date_confirmed':'shoot-date-set',
+  'shot':'shot'
 };
 function stageToKey(s) {
-  return (s || 'videos-confirmed').toLowerCase().replace(/\s+/g, '-');
+  var v = String(s || 'videos-confirmed').trim().toLowerCase();
+  if (SHOOT_STAGE_MAP[v]) return v;
+  return SHOOT_STAGE_READ[v] || v.replace(/\s+/g, '-');
 }
 function renderShoots() {
   var board = document.getElementById('shoot-board');
@@ -5874,14 +5947,18 @@ function renderShoots() {
     zone.ondragleave = function() { zone.style.background = ''; };
     zone.ondrop = async function(e) {
       e.preventDefault(); zone.style.background = '';
+      var data = null;
+      try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (_) { return; } // not a shoot card
+      if (!data || data.type !== 'shoot') return;
       try {
-        var data = JSON.parse(e.dataTransfer.getData('text/plain'));
-        if (data.type !== 'shoot') return;
         var newKey = zone.dataset.sdrop;
         var newLabel = SHOOT_STAGE_MAP[newKey] || newKey;
         var r = await sb.from('smm_shoots').update({ stage: newLabel }).eq('id', data.id);
-        if (!r.error) { var idx = S.shoots.findIndex(function(s) { return s.id == data.id; }); if (idx !== -1) S.shoots[idx].stage = newLabel; renderShoots(); toast('Moved to ' + newLabel, 'success'); }
-      } catch(err) {}
+        if (!r.error) { var idx = S.shoots.findIndex(function(s) { return s.id == data.id; }); if (idx !== -1) S.shoots[idx].stage = newLabel; renderShoots(); toast('Moved to ' + (SHOOT_STAGE_LABEL[newKey] || newLabel), 'success'); }
+        /* A FAILED MOVE SAYS SO (fault SMM-6, 6 Oct 2026). It used to do nothing at all.
+           Redraw from S.shoots, which still holds the old stage, so the card sits where the database says. */
+        else { renderShoots(); toast('Could not move the shoot: ' + (r.error.message || 'unknown'), 'error'); }
+      } catch(err) { renderShoots(); toast('Could not move the shoot', 'error'); }
     };
   });
   requestAnimationFrame(function() {
@@ -6311,6 +6388,7 @@ function renderMyTasks() {
     return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px' + (isDone ? ';opacity:0.55' : '') + '"><div onclick="toggleTask(' + t.id + ')" style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (isDone ? '#4ADE80' : 'var(--border)') + ';background:' + (isDone ? '#4ADE80' : 'transparent') + ';cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">' + checkInner + '</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff' + (isDone ? ';text-decoration:line-through' : '') + '">' + escHtml(t.title || 'Untitled') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center">' + (cl ? '<span style="font-size:11px;color:var(--accent);font-weight:600">' + escHtml(cl.name) + '</span>' : '') + (t.priority ? '<span style="font-size:10px;background:' + pc + '22;color:' + pc + ';padding:2px 7px;border-radius:20px;font-weight:700;text-transform:uppercase">' + t.priority + '</span>' : '') + (t.category ? '<span style="font-size:10px;color:var(--text3)">' + escHtml(t.category) + '</span>' : '') + (t.due ? '<span style="font-size:11px;color:var(--text3)">Due: ' + t.due.substring(0,10) + '</span>' : '') + '</div></div><div style="display:flex;align-items:center;gap:2px;flex-shrink:0"><button title="Edit this task" onclick="openTaskEdit(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;line-height:0">' + TASK_ICON_EDIT + '</button><button title="Copy this task to other clients" onclick="openTaskCopy(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;line-height:0">' + TASK_ICON_COPY + '</button><button title="Delete this task" onclick="deleteTask(' + t.id + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;line-height:1">×</button></div></div>';
   }
   var html = active.length ? '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">' + active.map(renderTaskRow).join('') + '</div>' : '';
+  if (S.tasksCapped && !viewScope()) html = '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Showing the newest 1000 tasks</div>' + html; // SMM-8, 6 Oct 2026
   if (done.length) html += '<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Completed (' + done.length + ')</div><div style="display:flex;flex-direction:column;gap:6px">' + done.slice(0, 10).map(renderTaskRow).join('') + '</div></div>';
   el.innerHTML = html;
 }
@@ -6761,10 +6839,16 @@ async function wpSaveTask(){
 async function wpDeleteTask(){
   if(!wpEditId) return;
   if(!confirm('Delete this task?')) return;
-  await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + wpEditId, {
-    method: 'DELETE',
-    headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Prefer': 'return=minimal' }
-  });
+  /* CHECK THE RESULT (fault SMM-13, 6 Oct 2026). fetch does not throw on a 4xx or
+     5xx, so a refused delete still said Task deleted. Keep the sheet open and the row on the week. */
+  var dres = null;
+  try {
+    dres = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + wpEditId, {
+      method: 'DELETE',
+      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Prefer': 'return=minimal' }
+    });
+  } catch (e) { dres = null; }
+  if (!dres || !dres.ok) { toast('Could not delete the task' + (dres ? ' (HTTP ' + dres.status + ')' : ''), 'error'); return; }
   toast('Task deleted');
   closeModal('wp-task');
   wpLoadWeek();
@@ -6922,18 +7006,10 @@ async function markSmmAlertRead(id) {
   } catch (e) {}
 }
 
-async function markAllSmmAlertsRead() {
-  try {
-    await fetch(`${SMM_SB_URL}/rest/v1/agent_alerts?read_at=is.null`, {
-      method: 'PATCH',
-      headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ read_at: new Date().toISOString() })
-    });
-    document.querySelectorAll('[id^="smm-alert-"]').forEach(c => c.style.borderLeftColor = 'var(--border)');
-    document.querySelectorAll('[id^="smm-alert-"] span[style*="NEW"]').forEach(b => b.remove());
-    updateSmmAgentsBadge(0);
-  } catch (e) {}
-}
+/* markAllSmmAlertsRead REMOVED (fault SMM-11, 6 Oct 2026). It PATCHed
+   agent_alerts?read_at=is.null with no id filter, so one tap would have marked
+   every unread alert in the estate read, other systems' included. Nothing
+   called it. Mark alerts one at a time with markSmmAlertRead. */
 
 function updateSmmAgentsBadge(count) {
   if (b) { b.textContent = count; b.style.display = count > 0 ? '' : 'none'; }
@@ -7134,7 +7210,7 @@ function updateSmmAgentsBadge(count) {
     },
     {
       keys: ['shoot','shoots','shoot stages','shoot pipeline','video shoot','filming','script','shoot date'],
-      ans: '<strong>Shoot Pipeline, 7 Stages:</strong>\n\n1. <strong>Videos Confirmed</strong>: Videos agreed with client\n2. <strong>Script Made</strong>: Script written by SMM\n3. <strong>Script Changes</strong>: Client wants script edits\n4. <strong>Final Script</strong>: Script approved by client \n5. <strong>Get Shoot Date</strong>: Coordinating a date with client\n6. <strong>Shoot Date Set</strong>: Date locked in \n7. <strong>Shot</strong>: Shoot completed! \n\nFilter by client on the Shoots page using the dropdown. Click any shoot card to update its stage.'
+      ans: '<strong>Shoot Pipeline, 7 Stages:</strong>\n\n1. <strong>Videos Confirmed</strong>: Videos agreed with client\n2. <strong>Script Made</strong>: Script written by SMM\n3. <strong>Script Changes</strong>: Client wants script edits\n4. <strong>Final Script</strong>: Script approved by client \n5. <strong>Get Shoot Date</strong>: Coordinating a date with client\n6. <strong>Date Confirmed</strong>: Date locked in \n7. <strong>Shot</strong>: Shoot completed! \n\nFilter by client on the Shoots page using the dropdown. Click any shoot card to update its stage.'
     },
     {
       keys: ['pages','navigation','menu','sidebar','sections','navigate','where is'],
@@ -7750,12 +7826,13 @@ function updateSmmAgentsBadge(count) {
       if (s.stage === 'Shot') return;
       if (!s.shoot_date) {
         // Has no date but is in active stages
-        var activeStages = ['Videos Confirmed', 'Script Made', 'Script Changes', 'Final Script', 'Get Shoot Date'];
-        if (activeStages.indexOf(s.stage) !== -1) _shootIssueCount++;
+        /* Read through stageToKey (fault SMM-1, 6 Oct 2026): CC and Video write other words for these stages. */
+        var activeStages = ['videos-confirmed', 'script-made', 'script-changes', 'final-script', 'get-shoot-date'];
+        if (activeStages.indexOf(stageToKey(s.stage)) !== -1) _shootIssueCount++;
         return;
       }
       if (s.shoot_date >= today && s.shoot_date <= week7Str) {
-        var scriptReady = s.stage === 'Script Made' || s.stage === 'Script Changes' || s.stage === 'Final Script' || s.stage === 'Shoot Date Set' || s.stage === 'Shot';
+        var scriptReady = ['script-made', 'script-changes', 'final-script', 'get-shoot-date', 'shoot-date-set', 'shot'].indexOf(stageToKey(s.stage)) !== -1; // SMM-1, 6 Oct 2026
         if (!scriptReady) _shootIssueCount++;
       }
     });
@@ -9416,11 +9493,15 @@ async function runSelfTest(){
   const TABLES=['clients','tasks','team_members','team_login_logs','events',
                 'system_bug_log',
                 'smm_shoots','smm_weekly_plan','daily_pillar_state','bb_delivery',
-                'graphic_projects','video_projects','video_project_comments','video_project_links'];
+                'graphic_projects','video_projects','video_project_comments','video_project_links',
+                'content_plans'];  /* back on 6 Oct 2026: the Clients page reads it again (SMM-2) */
   for(const t of TABLES){
    let st='?',n=null;
    try{
-    const r=await sb.from(t).select('*',{count:'exact',head:true});
+    /* COUNT BY ID, NEVER BY STAR (fault SMM-9, 6 Oct 2026). select=* on graphic_projects
+       walks over 32 MB of base64 images and returned HTTP 500 on a cold hit.
+       head:true already sends a HEAD with Prefer count=exact. */
+    const r=await sb.from(t).select('id',{count:'exact',head:true});
     if(r.error){st=String(r.error.code||r.error.message||'error');}
     else{st='ok';n=r.count;}
    }catch(e){st=String(e&&e.message||e);}
