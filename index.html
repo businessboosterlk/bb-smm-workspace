@@ -3341,7 +3341,9 @@ async function loadClients() {
   if (!sb) return;
   try { await window._smmAuthReady; } catch(e) {}
   try {
-    let query = sb.from('clients').select('*').order('name');
+    /* A churned client is history, not a choice. Six of them filled every dropdown and the
+       Clients page until 6 Oct 2026. Internal and active stay. */
+    let query = sb.from('clients').select('*').neq('status', 'churned').order('name');
     const scope = viewScope();
     if (scope) query = query.eq('assigned_smm', scope);
     const { data, error } = await query;
@@ -3412,7 +3414,7 @@ async function loadEvents() {
 }
 
 function populateClientDropdowns() {
-  const opts = S.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const opts = S.clients.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
   ['qa-client', 'ca-client', 'sa-client'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = opts; });
   const ia = document.getElementById('ia-client');
   if (ia) ia.innerHTML = '<option value="">No specific client</option>' + opts;
@@ -3620,8 +3622,8 @@ function renderTaskRow(t) {
       <div class="task-title ${t.done ? 'done' : ''}">${escHtml(t.title)}</div>
       <div class="task-tags">
         ${dueStr ? `<span class="tag ${overdue ? 'tag-overdue' : 'tag-date'}">${overdue ? 'OVERDUE · ' : ''}${dueStr}</span>` : ''}
-        ${t.priority ? `<span class="tag ${priorityClass}">${t.priority}</span>` : ''}
-        ${t.category ? `<span class="tag tag-cat">${t.category}</span>` : ''}
+        ${t.priority ? `<span class="tag ${priorityClass}">${escHtml(t.priority)}</span>` : ''}
+        ${t.category ? `<span class="tag tag-cat">${escHtml(t.category)}</span>` : ''}
       </div>
       ${t.created_at ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;font-weight:300">· ${new Date(t.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
     </div>
@@ -3645,7 +3647,7 @@ function renderClientShoots(id) {
           <div style="font-weight:700">${escHtml(s.title)}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:3px">${d} ${s.notes ? '· ' + escHtml(s.notes) : ''}</div>
         </div>
-        <span class="pill ${statusClass}">${s.status}</span>
+        <span class="pill ${statusClass}">${escHtml(s.status)}</span>
       </div>
     </div>`;
   }).join('');
@@ -3829,7 +3831,8 @@ async function submitTaskAdd() {
     priority: document.getElementById('t-priority').value,
     category: document.getElementById('t-category').value,
     notes: document.getElementById('t-notes').value.trim(),
-    done: false
+    done: false,
+    created_by: S.currentUser || null   /* 147 of 171 tasks since August had no author, 6 Oct 2026 */
   };
   if (!data.title) { toast('Title required', 'error'); return; }
   if (!sb) { toast('Not connected', 'error'); return; }
@@ -4118,7 +4121,7 @@ function renderContentPlanCal() {
       var color = p.type === 'post' ? 'var(--cyan)' : 'var(--pink)';
       var bg = p.type === 'post' ? 'rgba(6,182,212,0.12)' : 'rgba(236,72,153,0.12)';
       var typeLbl = p.type === 'post' ? 'POST' : 'VIDEO';
-      html += '<div onclick="openCPlanModal(\'' + p.type + '\',' + p.id + ')" style="margin-bottom:3px;border-radius:5px;background:' + (p.posted ? 'var(--bg4)' : bg) + ';cursor:pointer;overflow:hidden;border:1px solid ' + (p.posted ? 'var(--border)' : 'transparent') + '" title="' + escHtml(p.title||'Untitled') + '">';
+      html += '<div onclick="openCPlanModal(\'' + escHtml(p.type) + '\',' + Number(p.id) + ')" style="margin-bottom:3px;border-radius:5px;background:' + (p.posted ? 'var(--bg4)' : bg) + ';cursor:pointer;overflow:hidden;border:1px solid ' + (p.posted ? 'var(--border)' : 'transparent') + '" title="' + escHtml(p.title||'Untitled') + '">';
       if (p.image_url) {
         html += '<img src="' + p.image_url + '" style="width:100%;height:44px;object-fit:cover;display:block;' + (p.posted ? 'opacity:0.45;filter:grayscale(0.6)' : '') + '" onerror="this.style.display=\'none\'">';
       }
@@ -4175,7 +4178,7 @@ function renderCPlanRow(p, num, type) {
       ${p.posted ? '<svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7.5L10 1" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
     </div>
     <div style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:800;color:${p.posted ? 'var(--text3)' : color};min-width:22px">${String(num).padStart(2, '0')}</div>
-    ${p.image_url ? `<img src="${p.image_url}" style="width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;cursor:pointer;${p.posted ? 'opacity:0.5' : ''}" onclick="openCPlanModal('${type}', ${p.id})">` : ''}
+    ${p.image_url ? `<img src="${escHtml(p.image_url)}" style="width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0;cursor:pointer;${p.posted ? 'opacity:0.5' : ''}" onclick="openCPlanModal('${type}', ${p.id})">` : ''}
     <div style="flex:1;font-size:12px;font-weight:${p.posted ? 400 : 600};color:${p.posted ? 'var(--text3)' : 'var(--text)'};${p.posted ? 'text-decoration:line-through' : ''};cursor:pointer" onclick="openCPlanModal('${type}', ${p.id})">${escHtml(p.title || 'Untitled')}</div>
     <div style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:${p.posted ? 'var(--bg4)' : bg};color:${p.posted ? 'var(--text3)' : color};white-space:nowrap;flex-shrink:0">${dateStr}</div>
     ${typeof ptBoxesHtml === 'function' ? ptBoxesHtml('content_plans', p.id, p.client_id, p.month, p.year) : ''}
@@ -4539,10 +4542,13 @@ function recapMonthList(){
 }
 function recapBounds(key){
   var y=+key.split('-')[0], m=+key.split('-')[1];
-  var from=new Date(Date.UTC(y,m-1,1));
-  var to=new Date(Date.UTC(y,m,1));
+  /* Colombo's month, never UTC's. A video finished at 03:00 on the 1st belongs to the new
+     month here and to the old month in UTC; 15 videos sat in the wrong month on 6 Oct 2026. */
+  var pad=function(n){return (n<10?'0':'')+n;};
+  var from=new Date(y+'-'+pad(m)+'-01T00:00:00+05:30');
+  var to=new Date((m===12?y+1:y)+'-'+pad(m===12?1:m+1)+'-01T00:00:00+05:30');
   return {from:from.toISOString(), to:to.toISOString(),
-          label:from.toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'})};
+          label:new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'})};
 }
 function recapDays(a,b){ return (new Date(b)-new Date(a))/86400000; }
 function recapMedian(arr){
@@ -5000,7 +5006,11 @@ async function renderSmmDelivery(){
       var pr=await sb.from('bb_delivery').select('period');
       if(pr.error) throw pr.error;
       var seen={}; (pr.data||[]).forEach(function(x){seen[x.period]=1;});
-      BBD_PERIODS=Object.keys(seen).sort().reverse();
+      /* Periods are words like 'August 2026'. Sorted as text, July beat August and the
+         board opened on the wrong month. Sort by the month they name. */
+      var MN={january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+      var pkey=function(p){var m=String(p||'').toLowerCase().split(/\s+/);return (parseInt(m[1])||0)*100+(MN[m[0]]||0);};
+      BBD_PERIODS=Object.keys(seen).sort(function(a,b){return pkey(b)-pkey(a);});
       if(!BBD_PERIOD||BBD_PERIODS.indexOf(BBD_PERIOD)<0) BBD_PERIOD=BBD_PERIODS[0]||'';
     }
     var r=await sb.from('bb_delivery').select('*').eq('period',BBD_PERIOD).order('pos',{ascending:true});
@@ -5156,9 +5166,10 @@ async function renderVideoHub() {
     var r = await sb.from('video_projects').select('*').eq('is_archived', false).order('created_at', { ascending: false });
     if (r.error) throw r.error;
     VH_projects = r.data || [];
-    var tr = await sb.from('team_members').select('id,name,role');
+    /* The editor picker needs active video people, not the whole company. L-SMM-004. */
+    var tr = await sb.from('team_members').select('id,name,role').eq('active', true).in('role', ['editor','video_editor','video_head']);
     VH_teamMembers = tr.data || [];
-    try { var shr = await sb.from('video_stage_history').select('*').order('entered_at',{ascending:true}); VH_stageHistory = shr.data || []; } catch(_) { VH_stageHistory = []; }
+    try { var shr = await sb.from('video_stage_history').select('*').order('entered_at',{ascending:false}).limit(1000); VH_stageHistory = (shr.data || []).reverse(); } catch(_) { VH_stageHistory = []; }
 
     var byStage = {};
     VH_projects.forEach(function(p) { var s = p.current_stage || 'editing'; if (!byStage[s]) byStage[s] = []; byStage[s].push(p); });
@@ -8096,7 +8107,7 @@ function updateSmmAgentsBadge(count) {
         items: gaps.map(function (c) {
           var planned = planCounts[c.id] || 0;
           var target  = c.monthly_posts || 0;
-          return '<strong>' + c.name + '</strong> \u2014 ' + planned + '/' + target + ' posts planned' + (c.assigned_smm ? ' \u2014 SMM: ' + c.assigned_smm : '');
+          return '<strong>' + escHtml(c.name) + '</strong>, ' + planned + '/' + target + ' posts planned' + (c.assigned_smm ? ', SMM: ' + escHtml(c.assigned_smm) : '');
         })
       };
       setCard('content-gap', gaps.length, gaps.length ? 'amber' : 'green');
@@ -8379,7 +8390,7 @@ function updateSmmAgentsBadge(count) {
         cls.slice(0,6).forEach(function(c){
           var idx = _items.length;
           _items.push({ action: function(){ closeBar(); if(typeof openClientProfile==='function') openClientProfile(c.id); } });
-          html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-label">'+c.name+'</div><div class="cmd-hint">Client profile</div></div>';
+          html += '<div class="smm-cmd-item" data-idx="'+idx+'" onclick="__smmCmdSelect('+idx+')"><div class="cmd-label">'+escHtml(c.name)+'</div><div class="cmd-hint">Client profile</div></div>';
         });
       }
     }
@@ -9680,19 +9691,14 @@ async function runSelfTest(){
     if(!rows.length){ok('Delivery: every row points at a real client',false,
                         'NO bb_delivery ROWS FOUND, check proved nothing');return;}
     const norm=x=>String(x||'').toLowerCase().replace(/\s+/g,'');
-    const known=new Set((S.clients||[]).map(c=>norm(c.name)));
-    /* AN EMPTY CLIENT LIST MAKES EVERY ROW AN ORPHAN. Run signed out, S.clients
-       is [] and this printed "21 unmatched", which is not a finding, it is the
-       check describing its own blindness in the language of a fault. A second
-       chat spent time on that number on 7 September. The narrowed-view guard
-       below already existed; nothing guarded the empty case. L-SMM-024. */
+    /* The board is a ledger of past months, so a churned client belongs on it. The check
+       reads the whole clients table itself, every status, instead of S.clients, which
+       since 6 Oct 2026 hides churned clients and before that was empty when signed out
+       (L-SMM-024: 21 false orphans on 7 Sep) or partial when the view was narrowed. */
+    const cr=await sb.from('clients').select('name');
+    const known=new Set((cr.data||[]).map(c=>norm(c.name)));
     if(!known.size){ok('Delivery: every row points at a real client',false,
-       'THE CLIENT LIST IS EMPTY, so all '+rows.length+' rows would read as orphans. Sign in before believing any number from this check.');return;}
-    /* only meaningful against the full client list, so skip when the view is
-       narrowed rather than reporting false orphans */
-    if((typeof viewScope==='function')&&viewScope()){
-     ok('Delivery: every row points at a real client',true,
-        'skipped: the view is narrowed to one seat, so the client list is partial');return;}
+       'THE CLIENT TABLE READ EMPTY, so all '+rows.length+' rows would read as orphans. Check proved nothing.');return;}
     const orphans=[...new Set(rows.filter(x=>!known.has(norm(x.client))).map(x=>x.client))];
     ok('Delivery: every row points at a real client',orphans.length===0,
        orphans.length?(orphans.length+' unmatched: '+orphans.slice(0,4).join(', ')):(rows.length+' rows all matched'));
@@ -9706,12 +9712,16 @@ async function runSelfTest(){
      would show rather than asserting a number nobody has agreed yet. */
   await (async function(){
    try{
-    const r=await sb.from('team_members').select('id,name,role');
+    /* Rewritten 6 Oct 2026. The old check read the whole roster and asserted that only SMM
+       people existed in it, a number nobody had agreed, so it failed ten times a week and
+       taught people to ignore the harness. The app reads one list of people: the Video Hub
+       editor picker. That is what is asserted now. */
+    const r=await sb.from('team_members').select('id,name,role').eq('active',true).in('role',['editor','video_editor','video_head']);
     const all=r.data||[];
-    if(!all.length){ok('Team: SMM shows only SMM people',false,'NO team_members ROWS, check proved nothing');return;}
-    const isSmm=m=>/smm|social/i.test(String(m.role||''));
-    const outsiders=all.filter(m=>!isSmm(m));
-    ok('Team: SMM shows only SMM people',outsiders.length===0,
+    if(!all.length){ok('Team: the editor picker lists active video people only',false,'NO rows, check proved nothing');return;}
+    const isVideo=m=>/editor|video/i.test(String(m.role||''));
+    const outsiders=all.filter(m=>!isVideo(m));
+    ok('Team: the editor picker lists active video people only',outsiders.length===0,
        outsiders.length?(all.length+' people readable, '+outsiders.length+' are not SMM by role: '
          +outsiders.slice(0,4).map(m=>m.name+' ('+(m.role||'no role')+')').join(', ')
          +' <- registered as L-SMM-004, filter by MEANING not a name list')
@@ -9794,7 +9804,7 @@ async function smmWriteHarnessRow(){
   var r=null;
   try{ window.__ST_SILENT=true; r=await runSelfTest(); }catch(e){ window.__ST_SILENT=false; return; }
   if(!r||!r.results) return;
-  var failed=r.results.filter(function(x){return !x.pass;}).map(function(x){return x.name;});
+  var failed=r.results.filter(function(x){return !x.pass;}).map(function(x){return x.name+(x.detail?' ['+String(x.detail).slice(0,120)+']':'');});
   try{
     await fetch(SUPABASE_URL+'/rest/v1/bb_harness_runs',{method:'POST',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
       body:JSON.stringify({app:'smm-workspace',checks:r.total,failed:failed.length,failed_names:failed,width:window.innerWidth,user_name:S.currentUser||null,url:location.href.slice(0,200)})});

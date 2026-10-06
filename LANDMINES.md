@@ -583,3 +583,55 @@ additions from the same cast: the harness writes one silent row to
 on the first background on a phone, because the page walk is visible), and the
 Settings sheet has Report a problem, one box, one button, one `user_report`
 row.
+
+### L-SMM-035 · eight stored values reached the page unescaped
+**Found:** 2026-10-06, estate audit. **Status:** FIXED.
+`escHtml` had existed since the first build and was used in most places. Eight
+spots skipped it: a client name in a `<select>`, task priority and category,
+shoot status, a content plan type inside an `onclick`, an image URL inside
+`src`, the client name in the plan summary and in the command palette. Every one
+of those values is typed by a person into a shared table, so one pasted
+`<img onerror>` in a client name would have run in every seat's browser.
+**The block:** escaped all eight. The scan that found them is
+`scratchpad/xss_scan.js` from the 6 Oct audit: list every `${...}` and `'+...+'`
+inside an `innerHTML` or template that is not wrapped in `escHtml`. Run it
+before any commit that touches a render function.
+**Lesson: an escape helper that exists is not an escape helper that is used.
+The grep is the rule.**
+
+### L-SMM-036 · churned clients filled every dropdown
+**Found:** 2026-10-06. **Status:** FIXED.
+`loadClients` read every row. Six churned clients (Puwakaramba, LGL, Seekers
+and three more) sat in the task client picker, the Clients page and the content
+plan client list next to the live ones, so a task could be filed to a client
+BB no longer serves. Excluded `status = 'churned'` at the read. Internal and
+active stay. The Delivery board is a ledger of past months and keeps churned
+names; its harness check now reads the clients table itself, every status,
+instead of the hidden list, or it would have printed four false orphans.
+
+### L-SMM-037 · the recap month was UTC's month
+**Found:** 2026-10-06. **Status:** FIXED.
+`recapBounds` built the month from `Date.UTC`, so the month began at 05:30
+Colombo on the 1st. Anything finished between midnight and 05:30 on the 1st
+counted in the previous month. Boundaries are now built with `+05:30`.
+Same trap as the Command Centre's login dates (L-CC-005).
+
+### L-SMM-038 · delivery periods sorted as words
+**Found:** 2026-10-06. **Status:** FIXED.
+Periods are text like `August 2026`. `.sort().reverse()` put July before
+August, so the board opened on the older month. Sorted by the month the words
+name. The 14 misspelt client names on the same board (`Square One AI` for
+`SQUARE 1 AI`, `Home Depot` for `HOMEDEPOT` and five more) were corrected in the
+table on 6 Oct; rollback in `~/bb-systems/push/rollback/bb_delivery-client-names-2026-10-06-BEFORE.sql`.
+
+### L-SMM-039 · the Video Hub read the whole company and a capped history
+**Found:** 2026-10-06. **Status:** FIXED.
+The editor picker read `team_members` with no active or role filter, so the
+eight false rows and every non-video person were offered as editors. Stage
+history was read ascending with no limit; Supabase returns at most 1,000 rows,
+so once the table passed 1,000 the NEWEST moves were the ones dropped. Now
+active video roles only, and history newest first with the cap stated. The
+harness check "SMM shows only SMM people" asserted a number nobody had agreed
+and failed every run; it now asserts the one list the app reads.
+**Lesson: a check that fails every day is a check nobody reads. Assert what the
+app does, not what the roster should be.**
