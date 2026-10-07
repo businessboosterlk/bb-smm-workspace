@@ -3386,8 +3386,8 @@ async function loadTasks() {
   if (!sb) return;
   try {
     /* EXPLICIT CAP (fault SMM-8, 6 Oct 2026). The table grows about 100 rows a
-       month and Supabase silently stops at 1,000. Newest first, cap stated, and
-       S.tasksCapped tells My Tasks to say so. */
+       month and Supabase silently stops at 1,000. Newest first with the cap
+       stated; S.tasksCapped tells My Tasks to say so. */
     let query = sb.from('tasks').select('*').order('created_at', { ascending: false }).limit(1000);
     /* PERSONAL. My Tasks is yours even when the boards show everyone, so this
        reads S_myClientIds and never S.clients. */
@@ -3492,11 +3492,16 @@ async function loadClientPlans() {
   if (!sb) return;
   try {
     const todayStr = new Date().toISOString().slice(0,10);
-    const { data, error } = await sb.from('content_plans').select('id,client_id,scheduled_date,type,posted')
+    /* FULL ROWS, SESSION ROWS WIN (repair of SMM-2, 7 Oct 2026). The cut-down
+       read swapped out full rows added this session, so the Content Plan tab
+       lost them (no month or year) along with title and status. Read the columns
+       the other readers use (never image_url, the base64 landmine) and keep the
+       row already in session when ids clash. */
+    const { data, error } = await sb.from('content_plans').select('id,client_id,month,year,type,title,scheduled_date,posted,status')
       .eq('posted', false).gte('scheduled_date', todayStr).order('scheduled_date', { ascending: true });
     if (error) throw error;
-    const ids = {}; (data || []).forEach(p => { ids[p.id] = 1; });
-    S.contentPlans = (data || []).concat((S.contentPlans || []).filter(p => !ids[p.id]));
+    const have = {}; (S.contentPlans || []).forEach(p => { have[p.id] = 1; });
+    S.contentPlans = (S.contentPlans || []).concat((data || []).filter(p => !have[p.id]));
     S.clientPlansOk = true;
   } catch (e) { console.warn('Clients page: posting plan read failed', e); S.clientPlansOk = false; }
 }
@@ -4481,7 +4486,7 @@ function renderSmmShootWeekly(){
   var firstDay=new Date(smmShootCalYear,smmShootCalMonth,1).getDay();
   var daysInMonth=new Date(smmShootCalYear,smmShootCalMonth+1,0).getDate();
   var dayNames=['SUN','MON','TUE','WED','THU','FRI','SAT'];
-  var stageColors={'Videos Confirmed':'#00E5FF','Script Made':'#FBBF24','Script Changes':'#FF6B2B','Final Script':'#A855F7','Shoot Date Set':'#FF2D78','Date Confirmed':'#FF2D78','Shot':'#00FF85'}; // SMM-1, 6 Oct 2026: Date Confirmed is the stage CC and Video write
+  var stageColors={'Videos Confirmed':'#00E5FF','Script Made':'#FBBF24','Script Changes':'#FF6B2B','Final Script':'#A855F7','Shoot Date Set':'#00E5FF','Get Shoot Date':'#00E5FF','Date Confirmed':'#FF2D78','Shot':'#00FF85'}; // SMM-1, 6 Oct 2026: Date Confirmed is the stage CC and Video write. Repair 7 Oct 2026: Shoot Date Set means Get Shoot Date, so it takes that column's cyan, not the date locked pink
   function pad(n){return String(n).padStart(2,'0');}
   function dateKey(d){return smmShootCalYear+'-'+pad(smmShootCalMonth+1)+'-'+pad(d);}
   var html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">'+dayNames.map(function(d){return '<div style="text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);padding:6px 0">'+d+'</div>';}).join('')+'</div>';
@@ -5036,11 +5041,13 @@ function bbdViewToggle(){
     +'border-radius:9px;padding:3px;gap:2px">'+btn('all','Everyone')+btn('mine','Just mine')+'</div>';
 }
 
-async function renderSmmDelivery(){
+async function renderSmmDelivery(noFetch){
   var root=document.getElementById('smm-dl-root'); if(!root) return;
   if(!BBD_ROWS.length) root.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:24px">Loading...</div>';
   try{ await window._smmAuthReady; }catch(e){}
-  try{
+  /* noFetch (repair of SMM-7, 7 Oct 2026): bbdTog redraws from BBD_ROWS while a
+     tick is being saved, so a refetch cannot paint the old value over it. */
+  if(!(noFetch===true&&BBD_ROWS.length)) try{
     if(!BBD_PERIODS.length){
       var pr=await sb.from('bb_delivery').select('period');
       if(pr.error) throw pr.error;
@@ -5054,7 +5061,9 @@ async function renderSmmDelivery(){
     }
     var r=await sb.from('bb_delivery').select('*').eq('period',BBD_PERIOD).order('pos',{ascending:true});
     if(r.error) throw r.error;
-    BBD_ROWS=r.data||[];
+    /* A refetch that lands while a tick is saving keeps the rows on screen
+       (repair of SMM-7, 7 Oct 2026): bbdTog builds on those same row objects. */
+    if(!BBD_INFLIGHT||!BBD_ROWS.length) BBD_ROWS=r.data||[];
   }catch(e){
     console.error('delivery load',e);
     root.innerHTML='<div style="color:#ff6b6b;font-size:13px;padding:24px">Could not load the delivery board: '+escHtml(e.message||'unknown')+'</div>';
@@ -5138,20 +5147,33 @@ async function renderSmmDelivery(){
 
 /* WRITE, THEN REDRAW (fault SMM-7, 6 Oct 2026). renderSmmDelivery refetches the
    board and the old optimistic redraw ran it before the PATCH landed, so the
-   screen could read back the old value. Now the redraw waits for the write. On
-   failure the tick goes back and a toast says so. */
+   screen could read back the old value. On failure the tick goes back and a
+   toast says so. */
+/* TICKS BUILD ON EACH OTHER (repair of SMM-7, 7 Oct 2026). Building the PATCH
+   from a copy lost the first of two quick ticks on one row, because both PATCHes
+   carried the old vals. The tick now changes r.vals in place and shows at once.
+   Writes for one row queue, so each PATCH is built after the one before it lands.
+   The board refetches only when no tick is in flight. A failed write undoes only
+   its own key. */
+var BBD_QUEUE={}, BBD_INFLIGHT=0;
 async function bbdTog(id,k){
   var r=BBD_ROWS.filter(function(x){return String(x.id)===String(id);})[0]; if(!r) return;
-  var nv=Object.assign({},r.vals||{}); nv[k]=!nv[k];
-  try{
-    var res=await sb.from('bb_delivery').update({vals:nv,updated_at:new Date().toISOString()}).eq('id',id);
+  r.vals=r.vals||{}; r.vals[k]=!r.vals[k]; var want=r.vals[k];
+  BBD_INFLIGHT++;
+  renderSmmDelivery(true);
+  var job=(BBD_QUEUE[id]||Promise.resolve()).then(async function(){
+    var res=await sb.from('bb_delivery').update({vals:Object.assign({},r.vals),updated_at:new Date().toISOString()}).eq('id',id);
     if(res.error) throw res.error;
-    r.vals=nv;
-  }catch(e){
+  }).catch(function(e){
     console.error('bbdTog',e);
+    if(r.vals[k]===want) r.vals[k]=!want;
     if(typeof toast==='function') toast('Could not save that tick','error');
-  }
-  renderSmmDelivery();
+  });
+  BBD_QUEUE[id]=job;
+  await job;
+  if(BBD_QUEUE[id]===job) delete BBD_QUEUE[id];
+  BBD_INFLIGHT--;
+  renderSmmDelivery(BBD_INFLIGHT>0);
 }
 
 function smmOpenClientContentPlan(id){
@@ -5322,8 +5344,8 @@ async function vhMoveProject(pid, newStage) {
 
   try {
     /* STAGE FIRST, HISTORY AFTER (fault SMM-5, 6 Oct 2026). History used to be
-       written before the stage update, so a failed move still logged a move,
-       and only the first open history row was closed, so a duplicate open row
+       written before the stage update, so a failed move still logged a move.
+       Only the first open history row was closed, so a duplicate open row
        stayed open for ever. Now: update the project, stop if that failed, then
        close EVERY open row for this video and open the new one. Each open row
        is closed by id with its own duration, because the Video System's time
@@ -5888,7 +5910,7 @@ function openDayDetail(dateStr) {
    'Date Confirmed' for the date locked stage. SMM used to write 'Shoot Date Set'
    for the locked stage and had no column for 'Date Confirmed', so those shoots
    fell into Videos Confirmed. SHOOT_STAGE_MAP is now what SMM WRITES (the same
-   value the other two write), SHOOT_STAGE_LABEL is what SMM SHOWS, and
+   value the other two write). SHOOT_STAGE_LABEL is what SMM SHOWS.
    stageToKey reads every value any of the three apps writes. */
 var SHOOT_STAGE_MAP = {
   'videos-confirmed':'Videos Confirmed','script-made':'Script Made','script-changes':'Script Changes',
@@ -5984,6 +6006,12 @@ function resetShootModal() {
   ['sa-title','sa-date','sa-notes'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   var e = function(eid) { return document.getElementById(eid); };
   if (e('sa-edit-id')) e('sa-edit-id').value = '';
+  /* A NEW SHOOT STARTS AT THE FIRST STAGE (repair of SMM-1, 7 Oct 2026). The Stage
+     select kept the stage of the last card opened, so a new shoot could be filed
+     as Shot and drop out of the upcoming lists. The client carried over too, so
+     it goes back to the first option as on a fresh page (there is no blank one). */
+  if (e('sa-status')) e('sa-status').value = 'videos-confirmed';
+  if (e('sa-client')) e('sa-client').selectedIndex = 0;
   if (e('sa-submit-btn')) e('sa-submit-btn').textContent = 'Schedule';
   if (e('sa-delete-btn')) e('sa-delete-btn').style.display = 'none';
 }
@@ -7966,7 +7994,7 @@ function updateSmmAgentsBadge(count) {
       return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
         '<span style="width:7px;height:7px;border-radius:50%;background:#A78BFA;flex-shrink:0"></span>' +
         '<span style="font-size:12px;font-weight:600;color:#fff;flex:1">' + escHtml(s.title) + '</span>' +
-        '<span style="font-size:10px;color:var(--text3);flex-shrink:0">' + clientName(s.client_id) + ' · ' + (s.shoot_date || 'No date') + ' · ' + (s.stage || '·') + '</span>' +
+        '<span style="font-size:10px;color:var(--text3);flex-shrink:0">' + clientName(s.client_id) + ' · ' + (s.shoot_date || 'No date') + ' · ' + (s.stage ? escHtml(SHOOT_STAGE_LABEL[stageToKey(s.stage)] || s.stage) : '·') + '</span>' + // repair of SMM-1, 7 Oct 2026: the SMM label, never the raw stage word
       '</div>';
     }
 

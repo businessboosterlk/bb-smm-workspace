@@ -731,3 +731,57 @@ The harness runner never saw it. Its page walk called `showPage`, which SMM
 does not have, so every page measure errored and the summary still printed
 with faults 0.
 **Lesson: a page walk that errors must count as a failure, never as clean.**
+
+### L-SMM-051 · a refresh read that swapped out full session rows
+**Found:** 2026-10-07 (review of cc10523). **Status:** FIXED.
+`loadClientPlans` read five columns and let the database row win on an id
+clash. A post added this session (bulk add, single add, Quick Add or duplicate)
+was swapped for the cut-down row when Clients opened. It had no month or year,
+so the Content Plan tab dropped it and the day sheet showed Post for the title.
+The read now takes `id,client_id,month,year,type,title,scheduled_date,posted,status`
+(never `image_url`) and the row already in session wins.
+**Lesson: a merge that refreshes a shared list keeps the fuller row. A narrow
+read never replaces a wide one.**
+
+### L-SMM-052 · a write built from a copy of the row
+**Found:** 2026-10-07 (review of cc10523). **Status:** FIXED.
+The L-SMM-045 fix built each delivery PATCH from a copy of `r.vals` and only
+kept it when the write landed. Two ticks on one row inside one round trip both
+carried the old vals and the second PATCH wiped the first tick with no message.
+`bbdTog` now changes `r.vals` in place and draws at once from `BBD_ROWS`.
+Writes for one row queue, so each PATCH is built after the one before it lands.
+The board refetches only when no tick is in flight. A refetch that lands
+mid-write keeps the rows on screen. A failed write undoes only its own key.
+**Lesson: when a row holds many fields, every write builds on the last one.
+Queue writes per row; never build two from the same snapshot.**
+
+### L-SMM-053 · a reset that skipped one field
+**Found:** 2026-10-07 (review of cc10523). **Status:** FIXED.
+Once the Stage select options matched the stored stage keys, `openShootCard`
+could set it. `resetShootModal` never cleared it, so Schedule Shoot after
+opening a Shot card filed the new shoot as Shot and it dropped out of every
+upcoming list. The reset now sets the stage to `videos-confirmed` and the
+client to the first option, as on a fresh page.
+**Lesson: when a fix lets an opener set a field, the reset must clear that same
+field. Check every field the opener writes against the reset.**
+
+### L-SMM-054 · a renamed stage word left in two readers
+**Found:** 2026-10-07 (review of cc10523). **Status:** FIXED.
+SMM now writes `Shoot Date Set` for Get Shoot Date. The shoot calendar still
+coloured that word with the Date Confirmed pink and the agent weekly report
+printed the raw word, so a shoot with no date agreed read as date set. The
+calendar gives `Shoot Date Set` and `Get Shoot Date` the cyan of the board
+column. The report prints `SHOOT_STAGE_LABEL[stageToKey(stage)]` through
+`escHtml`.
+**Lesson: when a stored word changes meaning, grep the word across the file and
+fix every reader, not only the board.**
+
+### L-SMM-055 · code comments are copy too
+**Found:** 2026-10-07 (review of cc10523). **Status:** FIXED.
+Three comments added in cc10523 put a comma before and (the SMM-8, SMM-5 and
+SMM-1 notes). The LANDMINES entries had been checked; the comments in
+`index.html` had not. They are reworded. Run `house_style.py` on the lines the
+diff adds (`git diff -U0 index.html | grep '^+'`) before every commit. A US
+spelling hit inside a CSS property name is not a fault.
+**Lesson: the house style check runs on every line a commit adds, comments
+included.**
