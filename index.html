@@ -1446,6 +1446,38 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 1200px) { .wp-board { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 768px) { .wp-board { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .wp-board { grid-template-columns: 1fr; } }
+
+/* MORNING BRIEF PANEL (7 Oct 2026), ported from the Command Centre console. App font, tabular figures,
+   a big number beside a small unit, sentence case, colour only on status dots. Phone: centred head, two by two figures. */
+.bbb{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.bbb-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:18px 20px 14px;background:linear-gradient(180deg,var(--bg3),var(--bg2))}
+.bbb-hi{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.bbb-sub{font-size:12.5px;color:var(--text2);margin-top:4px}
+.bbb-play{font:inherit;font-size:13px;font-weight:600;color:var(--text);background:var(--bg4);border:1px solid var(--border);border-radius:999px;padding:9px 16px;min-height:40px;cursor:pointer;white-space:nowrap}
+.bbb-hud{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.bbb-tile{padding:14px 20px 16px;border-right:1px solid var(--border);min-width:0}
+.bbb-tile:last-child{border-right:0}
+.bbb-t{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bbb-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.bbb-v{display:flex;align-items:baseline;gap:6px;margin-top:8px;white-space:nowrap;overflow:hidden}
+.bbb-big{font-size:24px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums lining-nums}
+.bbb-unit{font-size:12px;font-weight:500;color:var(--text2);overflow:hidden;text-overflow:ellipsis}
+.bbb-list{padding:4px 20px 8px}
+.bbb-row{display:grid;grid-template-columns:8px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;font:inherit;color:var(--text);background:none;border:0;border-top:1px solid var(--border);padding:11px 0;cursor:pointer}
+.bbb-row:first-child{border-top:0}
+.bbb-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.bbb-line{font-size:14px;line-height:1.35}
+.bbb-detail{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bbb-go{font-size:12px;color:var(--text2)}
+.bbb-row:hover .bbb-go{color:var(--accent)}
+.bbb-empty{font-size:13.5px;color:var(--text2);padding:12px 0}
+@media (max-width:719px){
+  .bbb-head{flex-direction:column;text-align:center}
+  .bbb-play{width:100%}
+  .bbb-hud{grid-template-columns:1fr 1fr}
+  .bbb-tile:nth-child(2){border-right:0}
+  .bbb-tile:nth-child(-n+2){border-bottom:1px solid var(--border)}
+}
 </style>
 </head>
 <body>
@@ -7736,7 +7768,43 @@ function updateSmmAgentsBadge(count) {
     }).join('') + (issues.length > 6 ? '<div style="font-size:11px;color:var(--text3);text-align:center;padding-top:6px">+' + (issues.length - 6) + ' more behind</div>' : '');
   };
 
-  // ── AGENT 1: MORNING BRIEF BOT (renderIntel) ──────────────
+  // ── AGENT 1: MORNING BRIEF (renderIntel), console version 7 Oct 2026 ──────────────
+  /* Thulaib asked for the CC front door "for SMMs also". Ported from the Command Centre console
+     (@@BBCC_BRIEF@@): a greeting, four figures as a big number beside a small unit, one list of what
+     needs her today with a tap target on every line, and Play brief through the browser's own voice.
+     Lines come from two places: what this app already loads (posts, approvals, shoots) and the
+     server brief built at 06:45 Colombo (bb_brief: tasks overdue, videos with a client over two days),
+     which this app could not see before. No uppercase label, no emoji, no new font. */
+  var _bbBrief = { key: null, row: null, loading: false };
+  function colomboDay() { var d = new Date(Date.now() + 5.5 * 3600000); return d.toISOString().slice(0, 10); }
+  function loadServerBrief(seat) {
+    var key = seat + '|' + colomboDay();
+    if (_bbBrief.key === key || _bbBrief.loading || !sb) return;
+    _bbBrief.loading = true;
+    sb.from('bb_brief').select('lines,spoken,counts,built_at').eq('day', colomboDay()).eq('person_name', seat).maybeSingle()
+      .then(function (r) { _bbBrief.key = key; _bbBrief.row = (r && r.data) || null; _bbBrief.loading = false; window.renderIntel(); },
+            function () { _bbBrief.key = key; _bbBrief.loading = false; });
+  }
+  var BRIEF_JOKE = /bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|albert|fred|junior|ralph|kathy|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/i;
+  function briefVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    var vs = speechSynthesis.getVoices().filter(function (v) { return /^en/i.test(v.lang) && !BRIEF_JOKE.test(v.name); });
+    function score(v) { var n = v.name; return (/premium/i.test(n) ? 40 : 0) + (/enhanced|natural|neural/i.test(n) ? 30 : 0) + (/ava|samantha|serena|daniel|karen|moira|google uk english female/i.test(n) ? 10 : 0) + (/en-GB/i.test(v.lang) ? 3 : 0); }
+    vs.sort(function (a, b) { return score(b) - score(a); });
+    return vs[0] || null;
+  }
+  window.bbBriefPlay = function () {
+    if (!('speechSynthesis' in window)) { if (typeof toast === 'function') toast('This browser cannot read aloud'); return; }
+    var btn = document.getElementById('bbb-play');
+    if (speechSynthesis.speaking) { speechSynthesis.cancel(); if (btn) btn.textContent = 'Play brief'; return; }
+    var text = (window._bbBriefScript || '').trim(); if (!text) return;
+    var u = new SpeechSynthesisUtterance(text); var v = briefVoice(); if (v) u.voice = v; u.rate = 0.98;
+    u.onend = u.onerror = function () { if (btn) btn.textContent = 'Play brief'; };
+    if (btn) btn.textContent = 'Stop';
+    speechSynthesis.speak(u);
+  };
+  if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = function () {}; } catch (e) {} }
+
   window.renderIntel = function () {
     var el = document.getElementById('intel-panel');
     if (!el) return;
@@ -7744,78 +7812,63 @@ function updateSmmAgentsBadge(count) {
     var now = new Date();
     var today = toDateStr(now);
     var weekEndStr = toDateStr(new Date(now.getTime() + 7 * 86400000));
+    function mine(x) { return !scope || x.assigned_smm === scope; }
+    var todayPosts = S.content.filter(function (c) { return mine(c) && c.scheduled_date === today && c.status !== 'posted'; });
+    var overdue = S.content.filter(function (c) { return mine(c) && c.scheduled_date && c.scheduled_date < today && c.status !== 'posted'; });
+    var pendingApproval = S.content.filter(function (c) { return mine(c) && (c.status === 'client-approval' || c.status === 'send-client'); });
+    var upcomingShoots = S.shoots.filter(function (s) { return mine(s) && s.shoot_date && s.shoot_date >= today && s.shoot_date <= weekEndStr && s.stage !== 'Shot'; });
+    function clientName(id) { var cl = id ? S.clients.find(function (x) { return x.id == id; }) : null; return cl ? cl.name : 'Unknown'; }
+    function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+    function sample(list, fn, k) { return list.slice(0, k).map(fn).join(' · ') + (list.length > k ? ' and ' + (list.length - k) + ' more' : ''); }
 
-    var todayPosts = S.content.filter(function (c) {
-      if (scope && c.assigned_smm !== scope) return false;
-      return c.scheduled_date === today && c.status !== 'posted';
-    });
-    var overdue = S.content.filter(function (c) {
-      if (scope && c.assigned_smm !== scope) return false;
-      return c.scheduled_date && c.scheduled_date < today && c.status !== 'posted';
-    });
-    var pendingApproval = S.content.filter(function (c) {
-      if (scope && c.assigned_smm !== scope) return false;
-      return c.status === 'client-approval' || c.status === 'send-client';
-    });
-    var upcomingShoots = S.shoots.filter(function (s) {
-      if (scope && s.assigned_smm !== scope) return false;
-      return s.shoot_date && s.shoot_date >= today && s.shoot_date <= weekEndStr && s.stage !== 'Shot';
-    });
+    /* the seat's server brief (only for an SMM seat; a head's server brief is the CEO or COO one) */
+    var seat = scope || null, server = null;
+    if (seat) { loadServerBrief(seat); if (_bbBrief.key === seat + '|' + colomboDay()) server = _bbBrief.row; }
+    var sLines = (server && server.lines) || [];
+    var sStuck = sLines.filter(function (l) { return l.kind === 'stuck'; })[0];
+    var sTasks = sLines.filter(function (l) { return l.kind === 'overdue'; })[0];
+    var sToday = sLines.filter(function (l) { return l.kind === 'today'; })[0];
+    var sShoot = sLines.filter(function (l) { return l.kind === 'shoot'; })[0];
 
-    function clientName(id) {
-      var cl = id ? S.clients.find(function (x) { return x.id == id; }) : null;
-      return cl ? cl.name : 'Unknown';
-    }
+    var lines = [];
+    if (overdue.length) lines.push({ tone: 'bad', page: 'weeklyplan', text: plural(overdue.length, 'post is', 'posts are') + ' past their date and not posted', detail: sample(overdue, function (c) { return clientName(c.client_id) + ', ' + (c.title || 'untitled'); }, 2) });
+    if (sTasks) lines.push({ tone: 'bad', page: 'my-tasks', text: sTasks.text.replace(/^(\d+) of your tasks/, '$1 of your tasks'), detail: '' });
+    if (todayPosts.length) lines.push({ tone: 'ok', page: 'weeklyplan', text: plural(todayPosts.length, 'post goes', 'posts go') + ' live today', detail: sample(todayPosts, function (c) { return clientName(c.client_id) + ', ' + (c.title || 'untitled'); }, 3) });
+    if (sToday) lines.push({ tone: 'warn', page: 'my-tasks', text: sToday.text, detail: '' });
+    if (sStuck) lines.push({ tone: 'warn', page: 'video-hub', text: sStuck.text, detail: 'Chase the client today' });
+    if (pendingApproval.length) lines.push({ tone: 'warn', page: 'weeklyplan', text: plural(pendingApproval.length, 'item is', 'items are') + ' waiting on client approval', detail: sample(pendingApproval, function (c) { return clientName(c.client_id) + ', ' + (c.title || 'untitled'); }, 2) });
+    if (upcomingShoots.length) lines.push({ tone: 'ok', page: 'shoot-pipeline', text: plural(upcomingShoots.length, 'shoot', 'shoots') + ' this week', detail: sample(upcomingShoots, function (s) { return clientName(s.client_id) + (s.shoot_date ? ' on ' + new Date(s.shoot_date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : ''); }, 2) });
 
-    if (!todayPosts.length && !overdue.length && !pendingApproval.length && !upcomingShoots.length) {
-      el.innerHTML = '<div style="background:linear-gradient(135deg,rgba(0,229,255,0.06),rgba(0,229,255,0.02));border:1px solid rgba(0,229,255,0.15);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px">' +
-        '<span style="font-size:22px"></span>' +
-        '<div><div style="font-size:13px;font-weight:700;color:#fff">You\'re all caught up</div>' +
-        '<div style="font-size:11px;color:var(--text3);margin-top:3px">No urgent items · ' + now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + '</div></div>' +
-      '</div>';
-      return;
-    }
+    /* the app filters shoots by the shoot's own assigned_smm; the server goes through the client's SMM.
+       When the app finds none and the server found some, say the server's line rather than nothing. */
+    if (!upcomingShoots.length && sShoot) lines.push({ tone: 'ok', page: 'shoot-pipeline', text: sShoot.text, detail: '' });
+    var stuckN = (server && server.counts && server.counts.stuck) || 0;
+    var h = now.getHours(), greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    var who = (USER_ROLES[S.currentUser] || {}).name || '';
+    window._bbBriefScript = (greet.replace('Good ', '') === 'morning' ? 'Morning' : greet) + (who ? ' ' + who : '') + '. ' +
+      (lines.length ? lines.map(function (l) { return l.text; }).join('. ') + '.' : 'Nothing needs you right now.');
 
-    var briefLines = [];
-    if (overdue.length) {
-      briefLines.push({ icon: '', color: '#F87171',
-        text: '<strong style="color:#F87171">' + overdue.length + ' overdue item' + (overdue.length > 1 ? 's' : '') + ', needs urgent action</strong>',
-        detail: overdue.slice(0, 2).map(function (c) { return clientName(c.client_id) + ', ' + c.title; }).join(' · ') + (overdue.length > 2 ? ' +' + (overdue.length - 2) + ' more' : '') });
+    var TONE = { bad: 'var(--red)', warn: 'var(--yellow)', ok: 'var(--green)' };
+    function tile(label, n, unit, tone) {
+      return '<div class="bbb-tile"><div class="bbb-t"><span class="bbb-dot" style="background:' + (n ? TONE[tone] : 'var(--text3)') + '"></span>' + label + '</div>' +
+        '<div class="bbb-v"><span class="bbb-big">' + n + '</span><span class="bbb-unit">' + unit + '</span></div></div>';
     }
-    if (todayPosts.length) {
-      briefLines.push({ icon: '', color: '#00E5FF',
-        text: '<strong style="color:#00E5FF">' + todayPosts.length + ' post' + (todayPosts.length > 1 ? 's' : '') + ' to go live today</strong>',
-        detail: todayPosts.slice(0, 3).map(function (c) { return clientName(c.client_id) + ', ' + c.title; }).join(' · ') + (todayPosts.length > 3 ? ' +' + (todayPosts.length - 3) + ' more' : '') });
-    }
-    if (pendingApproval.length) {
-      briefLines.push({ icon: '⏳', color: '#FBBF24',
-        text: '<strong style="color:#FBBF24">' + pendingApproval.length + ' item' + (pendingApproval.length > 1 ? 's' : '') + ' awaiting client approval</strong>',
-        detail: pendingApproval.slice(0, 2).map(function (c) { return clientName(c.client_id) + ', ' + c.title; }).join(' · ') });
-    }
-    if (upcomingShoots.length) {
-      briefLines.push({ icon: '', color: '#A78BFA',
-        text: '<strong style="color:#A78BFA">' + upcomingShoots.length + ' shoot' + (upcomingShoots.length > 1 ? 's' : '') + ' this week</strong>',
-        detail: upcomingShoots.slice(0, 2).map(function (s) { return clientName(s.client_id) + (s.shoot_date ? ' · ' + s.shoot_date : ''); }).join(' · ') });
-    }
-
-    var headerColor = overdue.length ? '#F87171' : (pendingApproval.length ? '#FBBF24' : '#00E5FF');
-    var headerText = overdue.length ? 'Action Needed Today' : 'Morning Brief';
-
     el.innerHTML =
-      '<div style="background:linear-gradient(135deg,rgba(0,229,255,0.07),rgba(0,229,255,0.02));border:1px solid rgba(0,229,255,0.15);border-radius:14px;overflow:hidden">' +
-        '<div style="padding:11px 18px 9px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between">' +
-          '<div style="font-size:11px;font-weight:800;color:' + headerColor + ';letter-spacing:0.06em;text-transform:uppercase">' + headerText + '</div>' +
-          '<div style="font-size:10px;color:var(--text3)">' + now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + '</div>' +
+      '<div class="bbb">' +
+        '<div class="bbb-head"><div><div class="bbb-hi">' + escHtml(greet + (who ? ', ' + who : '')) + '</div>' +
+          '<div class="bbb-sub">' + escHtml(now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })) + (seat ? ' · your clients' : ' · every client') + '</div></div>' +
+          '<button type="button" class="bbb-play" id="bbb-play" onclick="bbBriefPlay()">Play brief</button></div>' +
+        '<div class="bbb-hud">' +
+          tile('Posts today', todayPosts.length, 'to go live', 'ok') +
+          tile('Past their date', overdue.length, overdue.length === 1 ? 'post' : 'posts', 'bad') +
+          tile('With clients', pendingApproval.length, 'to approve', 'warn') +
+          tile('Videos waiting', stuckN, 'over 2 days', 'warn') +
         '</div>' +
-        '<div style="padding:10px 18px 14px;display:flex;flex-direction:column;gap:9px">' +
-          briefLines.map(function (line) {
-            return '<div style="display:flex;align-items:flex-start;gap:10px">' +
-              '<span style="font-size:14px;flex-shrink:0;margin-top:1px">' + line.icon + '</span>' +
-              '<div><div style="font-size:12px;line-height:1.4">' + line.text + '</div>' +
-              (line.detail ? '<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.5">' + escHtml(line.detail) + '</div>' : '') +
-              '</div></div>';
-          }).join('') +
-        '</div>' +
+        '<div class="bbb-list">' + (lines.length ? lines.map(function (l) {
+          return '<button type="button" class="bbb-row" onclick="nav(\'' + l.page + '\')"><span class="bbb-dot" style="background:' + TONE[l.tone] + '"></span>' +
+            '<span class="bbb-txt"><span class="bbb-line">' + escHtml(l.text) + '</span>' + (l.detail ? '<span class="bbb-detail">' + escHtml(l.detail) + '</span>' : '') + '</span>' +
+            '<span class="bbb-go">Open</span></button>';
+        }).join('') : '<div class="bbb-empty">Nothing needs you right now.</div>') + '</div>' +
       '</div>';
   };
 
