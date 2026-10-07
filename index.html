@@ -10041,11 +10041,11 @@ async function ptLoad(cid, month, year) {
       sb.from('graphic_projects')
         .select('id,title,client_id,type,current_stage,target_month,target_year')
         .eq('client_id', cid).eq('target_month', month).eq('target_year', year)
-        .eq('current_stage', 'approved').eq('is_archived', false),
+        .eq('current_stage', 'approved').or('is_archived.is.null,is_archived.eq.false'),
       sb.from('video_projects')
         .select('id,title,client_id,type,current_stage,target_month,target_year')
         .eq('client_id', cid).eq('target_month', month).eq('target_year', year)
-        .in('current_stage', ['add_to_drive', 'posted']).eq('is_archived', false),
+        .in('current_stage', ['add_to_drive', 'posted']).or('is_archived.is.null,is_archived.eq.false'),
       sb.from('smm_publish_log')
         .select('*')
         .eq('client_id', cid).eq('target_year', year).eq('target_month', month)
@@ -10101,6 +10101,9 @@ async function ptToggle(srcTable, srcId, clientId, month, year, platform) {
         else PT.log.push(r2.data[0]);
       }
     }
+    /* The month close card and Delivery read the ledger once more on the next
+       render, so the counts and the note rule follow the tick (7 Oct). */
+    if (typeof mcMarkDirty === 'function') mcMarkDirty(clientId, year, month);
     renderContentPlan();
   } catch (e) { console.error('Tick failed:', e); toast('Could not save the tick: ' + (e.message || ''), 'error'); }
 }
@@ -10256,24 +10259,41 @@ var MC_KINDS = [{ k: 'post', label: 'Posts' }, { k: 'story', label: 'Stories' },
 var MC_MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var MC_RULE5 = 'By the 2nd working day of the next month, the client\'s SMM closes each client\'s month in the SMM Workspace: either everything owed is posted or the note says exactly what is still owed and why.';
 var MC_TICKS = 'Marked posted counts the ticks on the Posting Plan. A missing tick means not marked posted. It does not mean nothing went out, so tick each item the day it goes out.';
-var MC = { ledger: {}, close: {}, loading: {}, edit: {}, locked: {}, err: {} };
-var MCD = { mode: 'owed', y: null, m: null, data: {}, loading: {}, q: '', status: 'all' };
-var MC_LEDGER_COLS = 'client_id,client_name,smm_book,year,month,kind,owed,contracted,published,not_logged,in_making,with_us,with_client,made_not_posted';
+var MC = { ledger: {}, close: {}, loading: {}, edit: {}, msg: {}, err: {}, dirty: {} };
+var MCD = { mode: 'owed', y: null, m: null, data: {}, loading: {}, dirty: {}, q: '', status: 'all' };
+var MC_LEDGER_COLS = 'client_id,client_name,smm_book,year,month,kind,owed,contracted,contract_source,published,not_logged,in_making,with_us,with_client,made_not_posted';
+var MC_SHARED = 'Shared with the month before';
 try { if (localStorage.getItem('smm-dl-mode') === 'ticks') MCD.mode = 'ticks'; } catch (e) {}
 
 function mcPeriod(y, m) { return y + '-' + String(m).padStart(2, '0') + '-01'; }
 function mcWho() { return (typeof USER_ROLES === 'object' && S.currentUser && USER_ROLES[S.currentUser] && USER_ROLES[S.currentUser].name) || null; }
+/* Only an SMM seat closes a month. The CEO and COO seats read the card only. */
+function mcIsSmm() { return !!(typeof USER_ROLES === 'object' && S.currentUser && USER_ROLES[S.currentUser] && USER_ROLES[S.currentUser].role === 'SMM'); }
 function mcDate(iso) { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } }
 function mcN(v) { return Number(v) || 0; }
+/* RULES.md section 5: the close is due by the 2nd working day (Monday to Friday) of the next month */
+function mcDueDate(y, m) {
+  var d = new Date(y, m, 1), n = 0;
+  for (var i = 0; i < 10; i++) { var w = d.getDay(); if (w !== 0 && w !== 6 && ++n === 2) return d; d.setDate(d.getDate() + 1); }
+  return d;
+}
+function mcIsDue(y, m) { var t = new Date(); t.setHours(0, 0, 0, 0); return t.getTime() >= mcDueDate(y, m).getTime(); }
+function mcDueText(y, m) { return mcDueDate(y, m).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); }
+/* A tick changed what is marked posted: read the ledger once more on the next render */
+function mcMarkDirty(cid, y, m) { MC.dirty[cid + ':' + y + ':' + m] = true; MCD.dirty[y + ':' + m] = true; }
 
-/* One kind for one client: owed state, owed count, marked posted and where the rest sits */
+/* One kind for one client: owed state, owed count, marked posted and where the rest sits.
+   An owed row with no count is either shared with the month before (TT Mobile,
+   September) or not settled: never a green 0 of 0. */
 function mcKindSum(rows, kind) {
   var list = rows.filter(function(r) { return r.kind === kind; });
   var s = { owed: 'not owed', contracted: 0, published: 0, not_logged: 0, in_making: 0, with_us: 0, with_client: 0, made_not_posted: 0 };
-  if (list.some(function(r) { return r.owed === 'owed'; })) s.owed = 'owed';
-  else if (list.some(function(r) { return r.owed === 'undecided'; })) s.owed = 'undecided';
-  list.forEach(function(r) {
-    if (r.owed !== 'owed') return;
+  var owedRows = list.filter(function(r) { return r.owed === 'owed'; });
+  var counted = owedRows.filter(function(r) { return r.contracted !== null && r.contracted !== undefined; });
+  if (counted.length) s.owed = 'owed';
+  else if (owedRows.some(function(r) { return /shared with the month before/i.test(String(r.contract_source || '')); })) s.owed = 'shared';
+  else if (owedRows.length || list.some(function(r) { return r.owed === 'undecided'; })) s.owed = 'undecided';
+  counted.forEach(function(r) {
     s.contracted += mcN(r.contracted); s.published += mcN(r.published);
     s.not_logged += mcN(r.not_logged); s.in_making += mcN(r.in_making); s.with_us += mcN(r.with_us);
     s.with_client += mcN(r.with_client); s.made_not_posted += mcN(r.made_not_posted);
@@ -10282,7 +10302,6 @@ function mcKindSum(rows, kind) {
   return s;
 }
 function mcOpenCount(rows) { return MC_KINDS.reduce(function(a, k) { return a + mcKindSum(rows, k.k).open; }, 0); }
-function mcAnyOwed(rows) { return rows.some(function(r) { return r.owed === 'owed' || r.owed === 'undecided'; }); }
 function mcRestHtml(s) {
   var parts = [];
   if (s.made_not_posted) parts.push('<b>' + s.made_not_posted + '</b> made, not marked posted');
@@ -10294,8 +10313,24 @@ function mcRestHtml(s) {
 }
 
 /* ── the two writes, kept apart so a test can stub them ─────────────────── */
-async function mcWriteClose(payload) {
-  return await sb.from('bb_month_close').upsert(payload, { onConflict: 'client_id,period' }).select();
+/* A first close inserts. When a row is already there (or another seat made it a
+   moment ago) it updates, and only while unsigned: the database refuses any
+   change to a signed close (bb_month_close_guard, 42501), so an empty answer
+   here means it was signed after this screen loaded. Never an upsert. */
+async function mcWriteClose(payload, exists) {
+  if (!exists) {
+    var ins = await sb.from('bb_month_close').insert(payload).select();
+    if (!ins.error || String(ins.error.code) !== '23505') return ins;
+  }
+  return await sb.from('bb_month_close')
+    .update({ smm_closed_by: payload.smm_closed_by, smm_closed_at: payload.smm_closed_at, smm_note: payload.smm_note, updated_at: payload.updated_at })
+    .eq('client_id', payload.client_id).eq('period', payload.period)
+    .is('coo_signed_at', null).select();
+}
+async function mcReadLedger(cid, y, m) {
+  var r = await sb.from('bb_commitment_ledger').select(MC_LEDGER_COLS).eq('client_id', cid).eq('year', y).eq('month', m);
+  if (r.error) throw r.error;
+  return r.data || [];
 }
 async function mcWriteNote(cid, period, note) {
   /* Only while unsigned: the filter makes a signature that landed after this
@@ -10315,18 +10350,28 @@ function mcPlanYM() {
 async function mcLoadClient(cid, y, m) {
   var key = cid + ':' + y + ':' + m;
   if (!sb || MC.loading[key]) return;
-  MC.loading[key] = true;
+  MC.loading[key] = true; delete MC.dirty[key];
   try {
     var res = await Promise.allSettled([
-      sb.from('bb_commitment_ledger').select(MC_LEDGER_COLS).eq('client_id', cid).eq('year', y).eq('month', m),
+      mcReadLedger(cid, y, m),
       sb.from('bb_month_close').select('*').eq('client_id', cid).eq('period', mcPeriod(y, m)).limit(1)
     ]);
     var a = res[0], b = res[1];
-    if (a.status === 'fulfilled' && !a.value.error) MC.ledger[key] = a.value.data || [];
-    else MC.err[key] = 'Could not read what is owed: ' + ((a.value && a.value.error && a.value.error.message) || (a.reason && a.reason.message) || 'unknown');
+    if (a.status === 'fulfilled') MC.ledger[key] = a.value;
+    else MC.err[key] = 'Could not read what is owed: ' + ((a.reason && a.reason.message) || 'unknown');
     if (b.status === 'fulfilled' && !b.value.error) MC.close[key] = (b.value.data && b.value.data[0]) || null;
     else MC.err[key] = 'Could not read the close: ' + ((b.value && b.value.error && b.value.error.message) || (b.reason && b.reason.message) || 'unknown');
   } catch (e) { MC.err[key] = 'Could not load the month close: ' + (e.message || ''); }
+  MC.loading[key] = false;
+  mcRenderCard();
+}
+/* After a tick: the ledger only, one read, then the card again */
+async function mcRefreshClient(cid, y, m) {
+  var key = cid + ':' + y + ':' + m;
+  if (!sb || MC.loading[key]) return;
+  MC.loading[key] = true; delete MC.dirty[key];
+  try { MC.ledger[key] = await mcReadLedger(cid, y, m); }
+  catch (e) { console.error('Month close refresh failed:', e); }
   MC.loading[key] = false;
   mcRenderCard();
 }
@@ -10350,12 +10395,14 @@ function mcRenderCard() {
     mcLoadClient(cid, ym.y, ym.m);
     return;
   }
+  /* A tick landed since the last read: show what we have, read the ledger once */
+  if (MC.dirty[key] && !MC.loading[key]) mcRefreshClient(cid, ym.y, ym.m);
   var rows = MC.ledger[key], close = MC.close[key];
   var tiles = MC_KINDS.map(function(k) {
     var s = mcKindSum(rows, k.k);
     if (s.owed !== 'owed') {
       return '<div class="mc-kind"><div class="mc-kind-lbl">' + k.label + '</div><div class="mc-kind-num"><small>'
-        + (s.owed === 'undecided' ? 'Owed count not settled yet' : 'Not owed this month') + '</small></div></div>';
+        + (s.owed === 'shared' ? MC_SHARED : s.owed === 'undecided' ? 'Owed count not settled yet' : 'Not owed this month') + '</small></div></div>';
     }
     var rest = mcRestHtml(s);
     return '<div class="mc-kind ' + (s.open ? 'mc-short' : 'mc-ok') + '"><div class="mc-kind-lbl">' + k.label + '</div>'
@@ -10365,40 +10412,46 @@ function mcRenderCard() {
   }).join('');
   var open = mcOpenCount(rows);
   var html = head + '<div class="mc-kinds">' + tiles + '</div><p class="mc-tick-note">' + escHtml(MC_TICKS) + '</p>';
-  var editing = MC.edit[key];
-  if (close && close.smm_closed_at && !editing) {
-    html += '<div class="mc-state mc-closed"><div class="mc-state-line">Closed by ' + escHtml(close.smm_closed_by || '') + ' on ' + mcDate(close.smm_closed_at) + '</div>'
-      + (close.smm_note ? '<div class="mc-state-note">' + escHtml(close.smm_note) + '</div>' : '<div class="mc-state-sub">No note: everything owed was marked posted.</div>')
-      + (close.coo_signed_at
+  var editing = MC.edit[key], smm = mcIsSmm();
+  var signed = !!(close && close.coo_signed_at), closed = !!(close && close.smm_closed_at);
+  var msg = MC.msg[key] ? '<div class="mc-err">' + escHtml(MC.msg[key]) + '</div>' : '';
+  if ((closed || signed) && !(editing && !signed)) {
+    html += '<div class="mc-state mc-closed">'
+      + (closed ? '<div class="mc-state-line">Closed by ' + escHtml(close.smm_closed_by || '') + ' on ' + mcDate(close.smm_closed_at) + '</div>' : '')
+      + (close.smm_note ? '<div class="mc-state-note">' + escHtml(close.smm_note) + '</div>' : (closed ? '<div class="mc-state-sub">No note: everything owed was marked posted.</div>' : ''))
+      + (signed
           ? '<div class="mc-state-sub">Signed by ' + escHtml(close.coo_signed_by || '') + ' on ' + mcDate(close.coo_signed_at) + (close.coo_note ? ': ' + escHtml(close.coo_note) : '') + '</div>'
+            + '<div class="mc-state-sub">A signed close cannot change. Ask for any change in writing.</div>'
           : '<div class="mc-state-sub">Waiting for the COO to sign it in the Command Centre.</div>')
-      + '</div>';
-    if (MC.locked[key]) html += '<div class="mc-err">' + escHtml(close.coo_signed_by || 'The COO') + ' has signed this close, so the note can no longer change. Ask for any change in writing.</div>';
-    html += '<div class="mc-bar"><button type="button" class="mc-btn" onclick="mcStartEdit(\'' + key + '\')">Edit</button></div>';
+      + '</div>' + msg;
+    if (!signed && smm) html += '<div class="mc-bar"><button type="button" class="mc-btn" onclick="mcStartEdit(\'' + key + '\')">Edit</button></div>';
+  } else if (!smm) {
+    html += '<div class="mc-state"><div class="mc-state-line">Not closed yet</div>'
+      + '<div class="mc-state-sub">Due by ' + mcDueText(ym.y, ym.m) + '. The client\'s SMM closes the month from their seat. This seat reads it only.</div></div>' + msg;
   } else {
     var need = open > 0;
     var val = (MC.draft && key in MC.draft) ? MC.draft[key] : (editing ? (close && close.smm_note || '') : '');
-    html += '<label class="mc-lbl" for="mc-note">' + (need ? 'What is still owed and why <em>(required: ' + open + ' owed not marked posted)</em>' : 'Note (optional)') + '</label>'
+    html += (editing ? '' : '<div class="mc-sub" style="margin-bottom:10px">Due by ' + mcDueText(ym.y, ym.m) + '.</div>')
+      + '<label class="mc-lbl" for="mc-note">' + (need ? 'What is still owed and why <em>(required: ' + open + ' owed not marked posted)</em>' : 'Note (optional)') + '</label>'
       + '<textarea id="mc-note" class="mc-note" placeholder="What is still owed and why" oninput="mcDraft(\'' + key + '\',this.value)">' + escHtml(val) + '</textarea>'
-      + '<div class="mc-err" id="mc-err"></div>'
+      + '<div class="mc-err" id="mc-err">' + escHtml(MC.msg[key] || '') + '</div>'
       + '<div class="mc-bar">'
       + (editing
           ? '<button type="button" class="mc-btn mc-btn-primary" id="mc-go" onclick="mcSaveEdit(\'' + key + '\')">Save the note</button>'
             + '<button type="button" class="mc-btn mc-btn-quiet" onclick="mcCancelEdit(\'' + key + '\')">Cancel</button>'
-          : '<button type="button" class="mc-btn mc-btn-primary" id="mc-go" onclick="mcClose(\'' + key + '\')"' + (mcWho() ? '' : ' disabled') + '>Close the month</button>'
-            + (mcWho() ? '' : '<div class="mc-sub">Sign in to close the month.</div>'))
+          : '<button type="button" class="mc-btn mc-btn-primary" id="mc-go" onclick="mcClose(\'' + key + '\')">Close the month</button>')
       + '</div>';
   }
   box.innerHTML = html;
 }
 function mcDraft(key, v) { MC.draft = MC.draft || {}; MC.draft[key] = v; }
-function mcRetry(key) { delete MC.err[key]; delete MC.ledger[key]; delete MC.close[key]; mcRenderCard(); }
+function mcRetry(key) { delete MC.err[key]; delete MC.ledger[key]; delete MC.close[key]; delete MC.msg[key]; mcRenderCard(); }
 function mcStartEdit(key) {
   var c = MC.close[key];
-  if (c && c.coo_signed_at) { MC.locked[key] = true; mcRenderCard(); return; }
-  MC.edit[key] = true; if (MC.draft) delete MC.draft[key]; mcRenderCard();
+  if (!mcIsSmm() || (c && c.coo_signed_at)) { mcRenderCard(); return; }
+  MC.edit[key] = true; delete MC.msg[key]; if (MC.draft) delete MC.draft[key]; mcRenderCard();
 }
-function mcCancelEdit(key) { MC.edit[key] = false; if (MC.draft) delete MC.draft[key]; mcRenderCard(); }
+function mcCancelEdit(key) { MC.edit[key] = false; delete MC.msg[key]; if (MC.draft) delete MC.draft[key]; mcRenderCard(); }
 function mcKeyParts(key) { var p = key.split(':'); return { cid: Number(p[0]), y: Number(p[1]), m: Number(p[2]) }; }
 function mcShowErr(msg) { var e = document.getElementById('mc-err'); if (e) e.textContent = msg; }
 /* Keep the Delivery view's copy of the month in step with a write here */
@@ -10407,48 +10460,83 @@ function mcSyncDelivery(y, m, row) {
   d.closes = (d.closes || []).filter(function(c) { return Number(c.client_id) !== Number(row.client_id); });
   d.closes.push(row);
 }
+/* The note rule is decided on numbers read now, never on what the card showed
+   before the last tick: one ledger read per press. Null means stop. */
+async function mcFreshRows(key, k, busy, idle) {
+  var btn = document.getElementById('mc-go'); if (btn) { btn.disabled = true; btn.textContent = busy; }
+  try { var rows = await mcReadLedger(k.cid, k.y, k.m); MC.ledger[key] = rows; delete MC.dirty[key]; return rows; }
+  catch (e) {
+    console.error('Ledger read failed:', e);
+    if (btn) { btn.disabled = false; btn.textContent = idle; }
+    mcShowErr('Could not read what is owed, so nothing was saved: ' + (e.message || 'unknown') + '. Try again.');
+    return null;
+  }
+}
+/* Signed after this screen loaded: read the row again and show the signature */
+function mcSignedMeanwhile(key) {
+  delete MC.close[key]; delete MC.ledger[key]; MC.edit[key] = false; if (MC.draft) delete MC.draft[key];
+  MC.msg[key] = 'This close was signed in the Command Centre while this screen was open, so it can no longer change. Ask for any change in writing.';
+  toast('This close is signed, so it can no longer change', 'error');
+  mcRenderCard();
+}
 
 async function mcClose(key) {
-  var who = mcWho(); if (!who) { mcShowErr('Sign in to close the month.'); return; }
-  var k = mcKeyParts(key), rows = MC.ledger[key] || [];
+  var who = mcWho();
+  if (!who || !mcIsSmm()) { mcShowErr('Only the client\'s SMM can close the month.'); return; }
+  var k = mcKeyParts(key), existing = MC.close[key];
+  if (existing && existing.coo_signed_at) { mcRenderCard(); return; }
   var note = (document.getElementById('mc-note') && document.getElementById('mc-note').value || '').trim();
-  if (mcOpenCount(rows) > 0 && !note) { mcShowErr('Write what is still owed and why before you close the month.'); return; }
+  delete MC.msg[key];
+  var rows = await mcFreshRows(key, k, 'Checking', 'Close the month'); if (!rows) return;
+  var open = mcOpenCount(rows);
+  if (open > 0 && !note) {
+    mcRenderCard();
+    mcShowErr('Write what is still owed and why before you close the month: ' + open + ' owed not marked posted.');
+    var ta = document.getElementById('mc-note'); if (ta) ta.focus();
+    return;
+  }
   var btn = document.getElementById('mc-go'); if (btn) { btn.disabled = true; btn.textContent = 'Closing'; }
   var now = new Date().toISOString();
   var payload = { client_id: k.cid, period: mcPeriod(k.y, k.m), smm_closed_by: who, smm_closed_at: now, smm_note: note || null, updated_at: now };
   try {
-    var r = await mcWriteClose(payload);
+    var r = await mcWriteClose(payload, !!existing);
     if (!r || r.error) throw (r && r.error) || new Error('no answer');
-    var row = (r.data && r.data[0]) || payload;
+    if (!r.data || !r.data.length) { mcSignedMeanwhile(key); return; }
+    var row = r.data[0];
     MC.close[key] = row; MC.edit[key] = false; if (MC.draft) delete MC.draft[key];
     mcSyncDelivery(k.y, k.m, row);
     toast('Month closed', 'success');
   } catch (e) {
     console.error('Month close failed:', e);
+    MC.msg[key] = 'The database refused the close: ' + (e.message || 'no answer');
     toast('Could not close the month: ' + (e.message || ''), 'error');
   }
   mcRenderCard();
 }
 
 async function mcSaveEdit(key) {
-  var k = mcKeyParts(key), rows = MC.ledger[key] || [];
+  if (!mcIsSmm()) { mcShowErr('Only the client\'s SMM can change the note.'); return; }
+  var k = mcKeyParts(key);
   var note = (document.getElementById('mc-note') && document.getElementById('mc-note').value || '').trim();
-  if (mcOpenCount(rows) > 0 && !note) { mcShowErr('Write what is still owed and why.'); return; }
+  delete MC.msg[key];
+  var rows = await mcFreshRows(key, k, 'Checking', 'Save the note'); if (!rows) return;
+  var open = mcOpenCount(rows);
+  if (open > 0 && !note) {
+    mcRenderCard();
+    mcShowErr('Write what is still owed and why: ' + open + ' owed not marked posted.');
+    return;
+  }
   var btn = document.getElementById('mc-go'); if (btn) { btn.disabled = true; btn.textContent = 'Saving'; }
   try {
     var r = await mcWriteNote(k.cid, mcPeriod(k.y, k.m), note || null);
     if (!r || r.error) throw (r && r.error) || new Error('no answer');
-    if (!r.data || !r.data.length) {
-      /* Signed after this screen loaded: read the row again, show the signature */
-      delete MC.close[key]; delete MC.ledger[key]; MC.edit[key] = false; MC.locked[key] = true;
-      toast('The COO has signed this close, so the note can no longer change', 'error');
-      mcRenderCard(); return;
-    }
+    if (!r.data || !r.data.length) { mcSignedMeanwhile(key); return; }
     MC.close[key] = r.data[0]; MC.edit[key] = false; if (MC.draft) delete MC.draft[key];
     mcSyncDelivery(k.y, k.m, r.data[0]);
     toast('Note saved', 'success');
   } catch (e) {
     console.error('Note save failed:', e);
+    MC.msg[key] = 'The database refused the change: ' + (e.message || 'no answer');
     toast('Could not save the note: ' + (e.message || ''), 'error');
   }
   mcRenderCard();
@@ -10490,7 +10578,7 @@ renderSmmDelivery = function(noFetch) {
 async function mcLoadMonth(y, m) {
   var key = y + ':' + m;
   if (!sb || MCD.loading[key]) return;
-  MCD.loading[key] = true;
+  MCD.loading[key] = true; delete MCD.dirty[key];
   var d = { ledger: [], closes: [], err: '' };
   try {
     var res = await Promise.allSettled([
@@ -10504,6 +10592,19 @@ async function mcLoadMonth(y, m) {
   } catch (e) { d.err = 'Could not load the month: ' + (e.message || ''); }
   MCD.loading[key] = false;
   MCD.data[key] = d;
+  if (S.currentPage === 'delivery' && MCD.mode === 'owed') mcRenderOwed();
+}
+/* After a tick: the month's ledger only, one read, the closes kept as they are */
+async function mcRefreshMonth(y, m) {
+  var key = y + ':' + m, d = MCD.data[key];
+  if (!sb || !d || MCD.loading[key]) return;
+  MCD.loading[key] = true; delete MCD.dirty[key];
+  try {
+    var r = await sb.from('bb_commitment_ledger').select(MC_LEDGER_COLS).eq('year', y).eq('month', m).limit(1000);
+    if (r.error) throw r.error;
+    d.ledger = r.data || [];
+  } catch (e) { console.error('Owed vs posted refresh failed:', e); }
+  MCD.loading[key] = false;
   if (S.currentPage === 'delivery' && MCD.mode === 'owed') mcRenderOwed();
 }
 function mcDlMonths() {
@@ -10523,15 +10624,24 @@ function mcOpenPlan(cid, y, m) {
 }
 function mcCell(s, label) {
   var lbl = '<span class="mc-cl">' + label + '</span>';
+  if (s.owed === 'shared') return '<div class="mc-cell mc-none">' + lbl + MC_SHARED + '</div>';
   if (s.owed === 'undecided') return '<div class="mc-cell mc-none">' + lbl + 'Not settled</div>';
   if (s.owed !== 'owed') return '<div class="mc-cell mc-none">' + lbl + 'Not owed</div>';
   return '<div class="mc-cell ' + (s.open ? 'mc-short' : 'mc-ok') + '">' + lbl + '<b>' + s.published + '</b> of ' + s.contracted + '</div>';
 }
-function mcStatus(close, anyOwed) {
-  if (!anyOwed) return { cls: '', label: 'Nothing owed', key: 'none' };
+/* A client with a settled count owes a close. Not settled and shared months
+   are shown for what they are and never counted as closed. A month still in
+   progress reads Open; it turns red only once its close is due (RULES.md 5). */
+function mcStatus(close, c, y, m) {
+  if (!c.hasOwed) {
+    if (c.unsettled) return { cls: '', label: 'Not settled', key: 'unsettled' };
+    if (c.shared) return { cls: '', label: MC_SHARED, key: 'shared' };
+    return { cls: '', label: 'Nothing owed', key: 'none' };
+  }
   if (close && close.coo_signed_at) return { cls: 'mc-p-signed', label: 'Closed and signed', key: 'signed' };
   if (close && close.smm_closed_at) return { cls: 'mc-p-closed', label: 'Closed, not signed', key: 'closed' };
-  return { cls: 'mc-p-open', label: 'Not closed', key: 'open' };
+  if (!mcIsDue(y, m)) return { cls: '', label: 'Open', key: 'open', title: 'Close due by ' + mcDueText(y, m) };
+  return { cls: 'mc-p-open', label: 'Not closed', key: 'open', title: 'Close was due by ' + mcDueText(y, m) };
 }
 
 function mcRenderOwed(keepFocus) {
@@ -10554,6 +10664,8 @@ function mcRenderOwed(keepFocus) {
     mcLoadMonth(MCD.y, MCD.m);
     return;
   }
+  /* A tick landed since the last read: show what we have, read the ledger once */
+  if (MCD.dirty[key] && !MCD.loading[key] && !d.err) mcRefreshMonth(MCD.y, MCD.m);
   if (d.err) {
     el.owed.innerHTML = html + '<div class="mc-err">' + escHtml(d.err) + '</div><div class="mc-bar" style="max-width:320px"><button type="button" class="mc-btn" onclick="mcRetryMonth()">Try again</button></div>';
     return;
@@ -10562,7 +10674,7 @@ function mcRenderOwed(keepFocus) {
   html += '<div class="mc-filter">'
     + '<input class="mc-search" id="mc-q" type="search" placeholder="Find a client" aria-label="Find a client" value="' + escHtml(MCD.q) + '" oninput="mcSetDlFilter(\'q\',this.value)">'
     + '<select class="mc-sel" aria-label="Show" onchange="mcSetDlFilter(\'status\',this.value)">'
-    + [['all', 'Every client that owes'], ['behind', 'Owed not marked posted'], ['open', 'Not closed'], ['closed', 'Closed, not signed'], ['signed', 'Closed and signed'], ['none', 'Nothing owed']]
+    + [['all', 'Every client that owes'], ['behind', 'Owed not marked posted'], ['open', 'Not closed'], ['closed', 'Closed, not signed'], ['signed', 'Closed and signed'], ['unsettled', 'Not settled'], ['shared', MC_SHARED], ['none', 'Nothing owed']]
         .map(function(o) { return '<option value="' + o[0] + '"' + (MCD.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
     + '</select></div>';
 
@@ -10578,8 +10690,11 @@ function mcRenderOwed(keepFocus) {
     var c = byClient[id];
     c.sums = {}; MC_KINDS.forEach(function(k) { c.sums[k.k] = mcKindSum(c.rows, k.k); });
     c.open = MC_KINDS.reduce(function(a, k) { return a + c.sums[k.k].open; }, 0);
-    c.anyOwed = mcAnyOwed(c.rows);
-    c.status = mcStatus(closeBy[c.id], c.anyOwed);
+    c.hasOwed = MC_KINDS.some(function(k) { return c.sums[k.k].owed === 'owed'; });
+    c.unsettled = MC_KINDS.some(function(k) { return c.sums[k.k].owed === 'undecided'; });
+    c.shared = MC_KINDS.some(function(k) { return c.sums[k.k].owed === 'shared'; });
+    c.anyOwed = c.hasOwed || c.unsettled || c.shared;
+    c.status = mcStatus(closeBy[c.id], c, MCD.y, MCD.m);
     return c;
   }).filter(function(c) {
     if (q && String(c.name).toLowerCase().indexOf(q) < 0) return false;
@@ -10599,12 +10714,13 @@ function mcRenderOwed(keepFocus) {
     if (!list.length) return; any = true;
     var tot = {}; MC_KINDS.forEach(function(k) { tot[k.k] = { p: 0, c: 0 }; });
     list.forEach(function(c) { MC_KINDS.forEach(function(k) { var s = c.sums[k.k]; if (s.owed === 'owed') { tot[k.k].p += s.published; tot[k.k].c += s.contracted; } }); });
-    var owing = list.filter(function(c) { return c.anyOwed; });
+    var owing = list.filter(function(c) { return c.hasOwed; });
     var closedN = owing.filter(function(c) { return c.status.key === 'closed' || c.status.key === 'signed'; }).length;
     html += '<div class="mc-group"><div class="mc-group-name">' + escHtml(list[0].book) + '</div>'
       + '<div class="mc-group-sum">' + list.length + ' client' + (list.length === 1 ? '' : 's')
       + (owing.length ? ' &middot; ' + closedN + ' of ' + owing.length + ' closed' : '')
-      + ' &middot; marked posted: ' + MC_KINDS.map(function(k) { return k.label.toLowerCase() + ' ' + tot[k.k].p + ' of ' + tot[k.k].c; }).join(', ')
+      + (function() { var parts = MC_KINDS.filter(function(k) { return tot[k.k].c > 0; }).map(function(k) { return k.label.toLowerCase() + ' ' + tot[k.k].p + ' of ' + tot[k.k].c; });
+          return parts.length ? ' &middot; marked posted: ' + parts.join(', ') : ''; })()
       + '</div></div>';
     html += '<div class="mc-row mc-row-head"><div>Client</div><div>Posts</div><div>Stories</div><div>Videos</div><div>Month close</div><div></div></div>';
     list.forEach(function(c) {
@@ -10614,7 +10730,7 @@ function mcRenderOwed(keepFocus) {
       html += '<div class="mc-row">'
         + '<div class="mc-cname">' + escHtml(c.name) + '</div>'
         + MC_KINDS.map(function(k) { return mcCell(c.sums[k.k], k.label); }).join('')
-        + '<div class="mc-status"><span class="mc-pill ' + c.status.cls + '">' + c.status.label + '</span></div>'
+        + '<div class="mc-status"><span class="mc-pill ' + c.status.cls + '"' + (c.status.title ? ' title="' + escHtml(c.status.title) + '"' : '') + '>' + c.status.label + '</span></div>'
         + '<div class="mc-act">' + (inBook ? '<button type="button" class="mc-open" onclick="mcOpenPlan(' + Number(c.id) + ',' + MCD.y + ',' + MCD.m + ')">Posting Plan</button>' : '') + '</div>'
         + (where.length ? '<div class="mc-where">' + where.join(' &middot; ') + '</div>' : '')
         + '</div>';
