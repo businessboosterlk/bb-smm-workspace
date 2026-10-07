@@ -3734,8 +3734,8 @@ function switchCpTab(tab) {
   document.getElementById('cpt-' + tab).classList.add('active');
   document.querySelectorAll('#page-client-profile .tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('cp-tab-' + tab).classList.add('active');
-  // Posting Plan opens straight to the calendar, the at-a-glance view
-  if (tab === 'content-plan') { renderContentPlan(); setCPlanView(S_cpView || 'cal'); }
+  // Posting Plan opens on the LIST, where the posted ticks are (month close, 7 Oct 2026); the calendar is one tap away
+  if (tab === 'content-plan') { renderContentPlan(); setCPlanView(S_cpView || 'list'); }
 }
 
 // ============ TASKS CRUD ============
@@ -4147,7 +4147,7 @@ async function updateContentStatus(id, status) {
 
 // ============ CONTENT PLANS ============
 
-var S_cpView = 'cal';
+var S_cpView = 'list';  /* was 'cal', which hid the posted ticks (7 Oct 2026) */
 
 function setCPlanView(v) {
   S_cpView = v;
@@ -8990,7 +8990,11 @@ function updateSmmAgentsBadge(count) {
     {name:'events',core:false},
     {name:'graphic_projects',core:false},
     {name:'daily_pillar_state',core:false},
-    {name:'video_projects',core:false}
+    {name:'video_projects',core:false},
+    /* month close, 7 Oct 2026: no id column on the last two; the ledger view is read for this month only, never counted */
+    {name:'smm_publish_log',core:false},
+    {name:'bb_month_close',core:false,col:'client_id'},
+    {name:'bb_commitment_ledger',core:false,col:'client_id',month:true,nocount:true}
   ];
   var _seen={},_issues=[],DEDUPE_MS=10*60*1000;
   function scu(){try{return (typeof S!=='undefined'&&S)?S.currentUser:null;}catch(e){return null;}}
@@ -9052,18 +9056,19 @@ function updateSmmAgentsBadge(count) {
       return {apikey:SB_KEY,auth:'Bearer '+SB_KEY};
     });
   }
-  function headCount(table,H){
-    return fetch(SB_URL+'/rest/v1/'+table+'?select=id&limit=1',{method:'GET',headers:{'apikey':H.apikey,'Authorization':H.auth,'Prefer':'count=exact','Range':'0-0'}}).then(function(r){var cr=r.headers.get('content-range');var total=null;if(cr&&cr.indexOf('/')>-1){var t=cr.split('/')[1];total=(t==='*')?null:parseInt(t,10);}return r.text().then(function(body){return {ok:r.ok,status:r.status,count:total,body:body};});}).catch(function(e){return {ok:false,status:0,count:null,body:String(e&&e.message||e)};});
+  function headCount(table,H,t){
+    t=t||{};var nd=new Date();var hd={'apikey':H.apikey,'Authorization':H.auth,'Range':'0-0'};if(!t.nocount)hd.Prefer='count=exact';
+    return fetch(SB_URL+'/rest/v1/'+table+'?select='+(t.col||'id')+(t.month?('&year=eq.'+nd.getFullYear()+'&month=eq.'+(nd.getMonth()+1)):'')+'&limit=1',{method:'GET',headers:hd}).then(function(r){var cr=r.headers.get('content-range');var total=null;if(cr&&cr.indexOf('/')>-1){var t=cr.split('/')[1];total=(t==='*')?null:parseInt(t,10);}return r.text().then(function(body){return {ok:r.ok,status:r.status,count:total,body:body};});}).catch(function(e){return {ok:false,status:0,count:null,body:String(e&&e.message||e)};});
   }
   function checkHealth(){
     authHeaders().then(function(H){
-      TABLES.forEach(function(t){headCount(t.name,H).then(function(res){
+      TABLES.forEach(function(t){headCount(t.name,H,t).then(function(res){
         if(!res.ok){if(res.status===0){report({severity:'info',category:'network',table_name:t.name,message:'read failed (network/offline)',detail:'Transient connectivity, not a bug.',quiet:true});return;}var cat=res.status===404?'table_missing':(res.status===401||res.status===403?'db_permission':'server_error');report({severity:'error',category:cat,table_name:t.name,message:'read failed (HTTP '+res.status+')',detail:(res.body||'').slice(0,300)});return;}
         if(t.core&&res.count===0){
           // Re-verify before flagging: a single transient 0 (e.g. a blip mid-auth)
           // must not create a permanent empty_core bug row, #36 was exactly such a
           // transient condition (clients reads fine now). Only report if STILL 0.
-          headCount(t.name,H).then(function(res2){
+          headCount(t.name,H,t).then(function(res2){
             if(res2.ok&&res2.count===0){report({severity:'warning',category:'empty_core',table_name:t.name,message:'returned 0 rows, likely a permissions (RLS) block',detail:'Core table should never be empty. Check RLS policy for the anon role.'});}
           });
         }
@@ -9575,14 +9580,20 @@ async function runSelfTest(){
                 'system_bug_log',
                 'smm_shoots','smm_weekly_plan','daily_pillar_state','bb_delivery',
                 'graphic_projects','video_projects','video_project_comments','video_project_links',
-                'content_plans'];  /* back on 6 Oct 2026: the Clients page reads it again (SMM-2) */
+                'content_plans',  /* back on 6 Oct 2026: the Clients page reads it again (SMM-2) */
+                'smm_publish_log','bb_month_close','bb_commitment_ledger'];  /* month close, 7 Oct 2026 */
+  /* bb_month_close and the ledger view have no id column; the ledger is a view over
+     every month, so it is counted for this month only (month close, 7 Oct 2026). */
+  const RT_COL={bb_month_close:'client_id',bb_commitment_ledger:'client_id'};
   for(const t of TABLES){
    let st='?',n=null;
    try{
     /* COUNT BY ID, NEVER BY STAR (fault SMM-9, 6 Oct 2026). select=* on graphic_projects
        walks over 32 MB of base64 images and returned HTTP 500 on a cold hit.
        head:true already sends a HEAD with Prefer count=exact. */
-    const r=await sb.from(t).select('id',{count:'exact',head:true});
+    let rq=sb.from(t).select(RT_COL[t]||'id',{count:'exact',head:true});
+    if(t==='bb_commitment_ledger'){const nd=new Date();rq=rq.eq('year',nd.getFullYear()).eq('month',nd.getMonth()+1);}
+    const r=await rq;
     if(r.error){st=String(r.error.code||r.error.message||'error');}
     else{st='ok';n=r.count;}
    }catch(e){st=String(e&&e.message||e);}
@@ -10030,11 +10041,11 @@ async function ptLoad(cid, month, year) {
       sb.from('graphic_projects')
         .select('id,title,client_id,type,current_stage,target_month,target_year')
         .eq('client_id', cid).eq('target_month', month).eq('target_year', year)
-        .eq('current_stage', 'approved'),
+        .eq('current_stage', 'approved').eq('is_archived', false),
       sb.from('video_projects')
         .select('id,title,client_id,type,current_stage,target_month,target_year')
         .eq('client_id', cid).eq('target_month', month).eq('target_year', year)
-        .in('current_stage', ['add_to_drive', 'posted']),
+        .in('current_stage', ['add_to_drive', 'posted']).eq('is_archived', false),
       sb.from('smm_publish_log')
         .select('*')
         .eq('client_id', cid).eq('target_year', year).eq('target_month', month)
@@ -10138,6 +10149,492 @@ renderContentPlan = function() {
 };
 </script>
 <!-- @@BBSMM_PUBTRACK_END@@ -->
+<!-- @@BBSMM_MONTHCLOSE_BEGIN@@ -->
+<style>
+/* MONTH CLOSE and OWED VS POSTED (7 Oct 2026). Every class starts mc- so nothing
+   here reaches a rule outside this block. */
+.mc-card{margin-top:22px}
+.mc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.mc-title{font-size:15px;font-weight:800;color:var(--text)}
+.mc-sub{font-size:12px;color:var(--text2);line-height:1.5}
+.mc-rule{font-size:12px;color:var(--text2);line-height:1.55;margin:8px 0 14px;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--bg2)}
+.mc-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.mc-kind{min-width:0;padding:12px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--bg3)}
+.mc-kind-lbl{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text2);text-transform:uppercase}
+.mc-kind-num{font-size:20px;font-weight:800;color:var(--text);margin-top:4px}
+.mc-kind-num small{font-size:12px;font-weight:600;color:var(--text2)}
+.mc-kind.mc-ok{border-color:var(--g20)}
+.mc-kind.mc-ok .mc-kind-num{color:var(--green)}
+.mc-kind.mc-short .mc-kind-num{color:var(--yellow)}
+.mc-rest{list-style:none;margin:8px 0 0;padding:0;font-size:12px;color:var(--text2);line-height:1.6}
+.mc-rest b{color:var(--text);font-weight:700}
+.mc-tick-note{font-size:12px;color:var(--text2);line-height:1.55;margin:0 0 14px}
+.mc-state{padding:12px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--bg2);margin-bottom:12px}
+.mc-state.mc-closed{border-color:var(--g20)}
+.mc-state-line{font-size:13px;font-weight:700;color:var(--text)}
+.mc-state-note{font-size:13px;color:var(--text);line-height:1.55;margin-top:6px;white-space:pre-wrap;overflow-wrap:anywhere}
+.mc-state-sub{font-size:12px;color:var(--text2);line-height:1.5;margin-top:6px}
+.mc-lbl{display:block;font-size:12px;font-weight:700;color:var(--text);margin:0 0 6px}
+.mc-lbl em{font-style:normal;color:var(--yellow);font-weight:700}
+.mc-note{width:100%;min-height:88px;resize:vertical;font:inherit;font-size:16px;line-height:1.5;padding:10px 12px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--bg3);color:var(--text);box-sizing:border-box}
+.mc-err{font-size:12px;color:var(--red);margin:6px 0 0;min-height:0}
+.mc-bar{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.mc-btn{width:100%;min-height:44px;border-radius:var(--rs);font:700 14px Inter,system-ui,sans-serif;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text)}
+.mc-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.mc-btn-quiet{background:transparent;border-color:transparent;color:var(--text2)}
+.mc-btn[disabled]{opacity:.5;cursor:default}
+/* SELECT LAW: never the browser's arrow (bb-web-design-system 3.9a) */
+.mc-sel{-webkit-appearance:none;appearance:none;min-height:38px;padding:6px 44px 6px 12px;border-radius:8px;border:1px solid var(--border2);background-color:var(--bg3);color:var(--text);font:600 13px Inter,system-ui,sans-serif;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8d96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 16px center;background-size:14px 14px}
+.mc-sel::-ms-expand{display:none}
+.mc-seg{display:inline-flex;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:3px;gap:2px}
+.mc-seg button{min-height:32px;padding:0 12px;border:none;border-radius:7px;font:700 12px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;background:transparent;color:rgba(255,255,255,0.62)}
+.mc-seg button.on{background:var(--accent);color:#0B0C0F}
+#mc-dl-switch{margin-bottom:16px}
+.mc-dl-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.mc-dl-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.mc-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.mc-search{min-height:38px;padding:6px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font:500 13px Inter,system-ui,sans-serif;min-width:200px}
+.mc-group{margin:22px 0 8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.09)}
+.mc-group-name{font-size:14px;font-weight:800;color:var(--text);letter-spacing:.04em}
+.mc-group-sum{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5}
+.mc-row{display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(3,minmax(0,1fr)) minmax(120px,1fr) 110px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg3);margin-bottom:6px}
+.mc-row-head{background:transparent;border-color:transparent;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text2);text-transform:uppercase;padding-top:0;padding-bottom:0;margin-bottom:4px}
+.mc-cname{font-size:13px;font-weight:700;color:var(--text);min-width:0;overflow-wrap:anywhere}
+.mc-cell{font-size:13px;color:var(--text);min-width:0}
+.mc-cell .mc-cl{display:none;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--text2);text-transform:uppercase}
+.mc-cell.mc-short b{color:var(--yellow)}
+.mc-cell.mc-ok b{color:var(--green)}
+.mc-cell.mc-none{color:var(--text2)}
+.mc-pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--bg4);color:var(--text2)}
+.mc-pill.mc-p-closed{background:var(--y10);color:var(--yellow)}
+.mc-pill.mc-p-signed{background:var(--g10);color:var(--green)}
+.mc-pill.mc-p-open{background:var(--r10);color:var(--red)}
+.mc-open{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg4);color:var(--text);font:700 12px Inter,system-ui,sans-serif;cursor:pointer}
+.mc-where{grid-column:1 / -1;font-size:12px;color:var(--text2);line-height:1.5}
+.mc-empty{color:var(--text2);font-size:13px;padding:24px 0}
+@media (max-width:768px){
+  .mc-kinds{grid-template-columns:1fr}
+  .mc-head{justify-content:center}
+  .mc-head,.mc-rule,.mc-kind,.mc-tick-note,.mc-state,.mc-err,.mc-sub{text-align:center}
+  .mc-rest{display:inline-block;text-align:left}
+  .mc-dl-head,.mc-dl-controls,.mc-filter{flex-direction:column;align-items:stretch;text-align:center}
+  .mc-dl-controls .mc-seg,#mc-dl-switch .mc-seg{display:flex}
+  .mc-dl-controls .mc-seg button,#mc-dl-switch .mc-seg button{flex:1}
+  .mc-dl-controls > div{display:flex!important}
+  .mc-dl-controls > div > button{flex:1}
+  .mc-sel,.mc-search{width:100%;min-width:0}
+  .mc-row{grid-template-columns:repeat(3,minmax(0,1fr));text-align:center}
+  .mc-row-head{display:none}
+  .mc-cname,.mc-status,.mc-act{grid-column:1 / -1}
+  .mc-cell .mc-cl{display:block}
+  .mc-open{width:100%;min-height:44px}
+  .mc-group{text-align:center}
+}
+</style>
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+   MONTH CLOSE and OWED VS POSTED (Thulaib, 7 Oct 2026)
+   A backlog of 90 posts, 228 stories and 138 videos owed to the end of
+   September went unseen. The rules live in ONE place:
+   ~/bb-systems/delivery-ledger/RULES.md. This block quotes rule 5 and
+   never retypes a time limit of its own.
+
+   READS (each once per client and month or once per month, then cached):
+   - bb_commitment_ledger: a view, ALWAYS filtered by year and month (the
+     full view is over 1,000 rows and stops there without saying so).
+   - bb_month_close: the SMM close and the COO signature.
+   WRITES: bb_month_close only, through mcWriteClose and mcWriteNote, so a
+   test can stub the two helpers from the console and read the payload.
+   PUBLISHED counts Posting Plan ticks (smm_publish_log). A missing tick means
+   NOT MARKED POSTED. The screen never says nothing was posted.
+   Hithesh has no seat yet, so his clients show under whatever smm_book the
+   ledger gives them.
+   ════════════════════════════════════════════════════════════════════════ */
+var MC_KINDS = [{ k: 'post', label: 'Posts' }, { k: 'story', label: 'Stories' }, { k: 'video', label: 'Videos' }];
+var MC_MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var MC_RULE5 = 'By the 2nd working day of the next month, the client\'s SMM closes each client\'s month in the SMM Workspace: either everything owed is posted or the note says exactly what is still owed and why.';
+var MC_TICKS = 'Marked posted counts the ticks on the Posting Plan. A missing tick means not marked posted. It does not mean nothing went out, so tick each item the day it goes out.';
+var MC = { ledger: {}, close: {}, loading: {}, edit: {}, locked: {}, err: {} };
+var MCD = { mode: 'owed', y: null, m: null, data: {}, loading: {}, q: '', status: 'all' };
+var MC_LEDGER_COLS = 'client_id,client_name,smm_book,year,month,kind,owed,contracted,published,not_logged,in_making,with_us,with_client,made_not_posted';
+try { if (localStorage.getItem('smm-dl-mode') === 'ticks') MCD.mode = 'ticks'; } catch (e) {}
+
+function mcPeriod(y, m) { return y + '-' + String(m).padStart(2, '0') + '-01'; }
+function mcWho() { return (typeof USER_ROLES === 'object' && S.currentUser && USER_ROLES[S.currentUser] && USER_ROLES[S.currentUser].name) || null; }
+function mcDate(iso) { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } }
+function mcN(v) { return Number(v) || 0; }
+
+/* One kind for one client: owed state, owed count, marked posted and where the rest sits */
+function mcKindSum(rows, kind) {
+  var list = rows.filter(function(r) { return r.kind === kind; });
+  var s = { owed: 'not owed', contracted: 0, published: 0, not_logged: 0, in_making: 0, with_us: 0, with_client: 0, made_not_posted: 0 };
+  if (list.some(function(r) { return r.owed === 'owed'; })) s.owed = 'owed';
+  else if (list.some(function(r) { return r.owed === 'undecided'; })) s.owed = 'undecided';
+  list.forEach(function(r) {
+    if (r.owed !== 'owed') return;
+    s.contracted += mcN(r.contracted); s.published += mcN(r.published);
+    s.not_logged += mcN(r.not_logged); s.in_making += mcN(r.in_making); s.with_us += mcN(r.with_us);
+    s.with_client += mcN(r.with_client); s.made_not_posted += mcN(r.made_not_posted);
+  });
+  s.open = Math.max(0, s.contracted - s.published);
+  return s;
+}
+function mcOpenCount(rows) { return MC_KINDS.reduce(function(a, k) { return a + mcKindSum(rows, k.k).open; }, 0); }
+function mcAnyOwed(rows) { return rows.some(function(r) { return r.owed === 'owed' || r.owed === 'undecided'; }); }
+function mcRestHtml(s) {
+  var parts = [];
+  if (s.made_not_posted) parts.push('<b>' + s.made_not_posted + '</b> made, not marked posted');
+  if (s.with_client) parts.push('<b>' + s.with_client + '</b> with the client');
+  if (s.with_us) parts.push('<b>' + s.with_us + '</b> with us');
+  if (s.in_making) parts.push('<b>' + s.in_making + '</b> in making');
+  if (s.not_logged) parts.push('<b>' + s.not_logged + '</b> not logged');
+  return parts;
+}
+
+/* ── the two writes, kept apart so a test can stub them ─────────────────── */
+async function mcWriteClose(payload) {
+  return await sb.from('bb_month_close').upsert(payload, { onConflict: 'client_id,period' }).select();
+}
+async function mcWriteNote(cid, period, note) {
+  /* Only while unsigned: the filter makes a signature that landed after this
+     screen loaded refuse the edit instead of changing a signed note. */
+  return await sb.from('bb_month_close')
+    .update({ smm_note: note, updated_at: new Date().toISOString() })
+    .eq('client_id', cid).eq('period', period)
+    .not('smm_closed_at', 'is', null).is('coo_signed_at', null).select();
+}
+
+/* ── POSTING PLAN: the month close card ─────────────────────────────────── */
+function mcPlanYM() {
+  var m = parseInt(document.getElementById('cplan-month') && document.getElementById('cplan-month').value || new Date().getMonth() + 1);
+  var y = parseInt(document.getElementById('cplan-year') && document.getElementById('cplan-year').value || new Date().getFullYear());
+  return { y: y, m: m };
+}
+async function mcLoadClient(cid, y, m) {
+  var key = cid + ':' + y + ':' + m;
+  if (!sb || MC.loading[key]) return;
+  MC.loading[key] = true;
+  try {
+    var res = await Promise.allSettled([
+      sb.from('bb_commitment_ledger').select(MC_LEDGER_COLS).eq('client_id', cid).eq('year', y).eq('month', m),
+      sb.from('bb_month_close').select('*').eq('client_id', cid).eq('period', mcPeriod(y, m)).limit(1)
+    ]);
+    var a = res[0], b = res[1];
+    if (a.status === 'fulfilled' && !a.value.error) MC.ledger[key] = a.value.data || [];
+    else MC.err[key] = 'Could not read what is owed: ' + ((a.value && a.value.error && a.value.error.message) || (a.reason && a.reason.message) || 'unknown');
+    if (b.status === 'fulfilled' && !b.value.error) MC.close[key] = (b.value.data && b.value.data[0]) || null;
+    else MC.err[key] = 'Could not read the close: ' + ((b.value && b.value.error && b.value.error.message) || (b.reason && b.reason.message) || 'unknown');
+  } catch (e) { MC.err[key] = 'Could not load the month close: ' + (e.message || ''); }
+  MC.loading[key] = false;
+  mcRenderCard();
+}
+
+function mcRenderCard() {
+  var tab = document.getElementById('cp-tab-content-plan'); if (!tab) return;
+  var box = document.getElementById('mc-card');
+  if (!box) { box = document.createElement('div'); box.id = 'mc-card'; box.className = 'card mc-card'; tab.appendChild(box); }
+  var cid = S.currentClientId; if (!cid) { box.innerHTML = ''; return; }
+  var ym = mcPlanYM(), key = cid + ':' + ym.y + ':' + ym.m;
+  var mName = MC_MON[ym.m - 1] + ' ' + ym.y;
+  var head = '<div class="mc-head"><div class="mc-title">Month close &middot; ' + mName + '</div></div>'
+    + '<div class="mc-rule">' + escHtml(MC_RULE5) + '</div>';
+  if (MC.err[key]) {
+    box.innerHTML = head + '<div class="mc-err">' + escHtml(MC.err[key]) + '</div>'
+      + '<div class="mc-bar"><button type="button" class="mc-btn" onclick="mcRetry(\'' + key + '\')">Try again</button></div>';
+    return;
+  }
+  if (!(key in MC.ledger) || !(key in MC.close)) {
+    box.innerHTML = head + '<div class="mc-sub">Loading what is owed&hellip;</div>';
+    mcLoadClient(cid, ym.y, ym.m);
+    return;
+  }
+  var rows = MC.ledger[key], close = MC.close[key];
+  var tiles = MC_KINDS.map(function(k) {
+    var s = mcKindSum(rows, k.k);
+    if (s.owed !== 'owed') {
+      return '<div class="mc-kind"><div class="mc-kind-lbl">' + k.label + '</div><div class="mc-kind-num"><small>'
+        + (s.owed === 'undecided' ? 'Owed count not settled yet' : 'Not owed this month') + '</small></div></div>';
+    }
+    var rest = mcRestHtml(s);
+    return '<div class="mc-kind ' + (s.open ? 'mc-short' : 'mc-ok') + '"><div class="mc-kind-lbl">' + k.label + '</div>'
+      + '<div class="mc-kind-num">' + s.published + ' <small>of ' + s.contracted + ' marked posted</small></div>'
+      + (s.open && rest.length ? '<ul class="mc-rest">' + rest.map(function(p) { return '<li>' + p + '</li>'; }).join('') + '</ul>' : '')
+      + '</div>';
+  }).join('');
+  var open = mcOpenCount(rows);
+  var html = head + '<div class="mc-kinds">' + tiles + '</div><p class="mc-tick-note">' + escHtml(MC_TICKS) + '</p>';
+  var editing = MC.edit[key];
+  if (close && close.smm_closed_at && !editing) {
+    html += '<div class="mc-state mc-closed"><div class="mc-state-line">Closed by ' + escHtml(close.smm_closed_by || '') + ' on ' + mcDate(close.smm_closed_at) + '</div>'
+      + (close.smm_note ? '<div class="mc-state-note">' + escHtml(close.smm_note) + '</div>' : '<div class="mc-state-sub">No note: everything owed was marked posted.</div>')
+      + (close.coo_signed_at
+          ? '<div class="mc-state-sub">Signed by ' + escHtml(close.coo_signed_by || '') + ' on ' + mcDate(close.coo_signed_at) + (close.coo_note ? ': ' + escHtml(close.coo_note) : '') + '</div>'
+          : '<div class="mc-state-sub">Waiting for the COO to sign it in the Command Centre.</div>')
+      + '</div>';
+    if (MC.locked[key]) html += '<div class="mc-err">' + escHtml(close.coo_signed_by || 'The COO') + ' has signed this close, so the note can no longer change. Ask for any change in writing.</div>';
+    html += '<div class="mc-bar"><button type="button" class="mc-btn" onclick="mcStartEdit(\'' + key + '\')">Edit</button></div>';
+  } else {
+    var need = open > 0;
+    var val = (MC.draft && key in MC.draft) ? MC.draft[key] : (editing ? (close && close.smm_note || '') : '');
+    html += '<label class="mc-lbl" for="mc-note">' + (need ? 'What is still owed and why <em>(required: ' + open + ' owed not marked posted)</em>' : 'Note (optional)') + '</label>'
+      + '<textarea id="mc-note" class="mc-note" placeholder="What is still owed and why" oninput="mcDraft(\'' + key + '\',this.value)">' + escHtml(val) + '</textarea>'
+      + '<div class="mc-err" id="mc-err"></div>'
+      + '<div class="mc-bar">'
+      + (editing
+          ? '<button type="button" class="mc-btn mc-btn-primary" id="mc-go" onclick="mcSaveEdit(\'' + key + '\')">Save the note</button>'
+            + '<button type="button" class="mc-btn mc-btn-quiet" onclick="mcCancelEdit(\'' + key + '\')">Cancel</button>'
+          : '<button type="button" class="mc-btn mc-btn-primary" id="mc-go" onclick="mcClose(\'' + key + '\')"' + (mcWho() ? '' : ' disabled') + '>Close the month</button>'
+            + (mcWho() ? '' : '<div class="mc-sub">Sign in to close the month.</div>'))
+      + '</div>';
+  }
+  box.innerHTML = html;
+}
+function mcDraft(key, v) { MC.draft = MC.draft || {}; MC.draft[key] = v; }
+function mcRetry(key) { delete MC.err[key]; delete MC.ledger[key]; delete MC.close[key]; mcRenderCard(); }
+function mcStartEdit(key) {
+  var c = MC.close[key];
+  if (c && c.coo_signed_at) { MC.locked[key] = true; mcRenderCard(); return; }
+  MC.edit[key] = true; if (MC.draft) delete MC.draft[key]; mcRenderCard();
+}
+function mcCancelEdit(key) { MC.edit[key] = false; if (MC.draft) delete MC.draft[key]; mcRenderCard(); }
+function mcKeyParts(key) { var p = key.split(':'); return { cid: Number(p[0]), y: Number(p[1]), m: Number(p[2]) }; }
+function mcShowErr(msg) { var e = document.getElementById('mc-err'); if (e) e.textContent = msg; }
+/* Keep the Delivery view's copy of the month in step with a write here */
+function mcSyncDelivery(y, m, row) {
+  var d = MCD.data[y + ':' + m]; if (!d || !row) return;
+  d.closes = (d.closes || []).filter(function(c) { return Number(c.client_id) !== Number(row.client_id); });
+  d.closes.push(row);
+}
+
+async function mcClose(key) {
+  var who = mcWho(); if (!who) { mcShowErr('Sign in to close the month.'); return; }
+  var k = mcKeyParts(key), rows = MC.ledger[key] || [];
+  var note = (document.getElementById('mc-note') && document.getElementById('mc-note').value || '').trim();
+  if (mcOpenCount(rows) > 0 && !note) { mcShowErr('Write what is still owed and why before you close the month.'); return; }
+  var btn = document.getElementById('mc-go'); if (btn) { btn.disabled = true; btn.textContent = 'Closing'; }
+  var now = new Date().toISOString();
+  var payload = { client_id: k.cid, period: mcPeriod(k.y, k.m), smm_closed_by: who, smm_closed_at: now, smm_note: note || null, updated_at: now };
+  try {
+    var r = await mcWriteClose(payload);
+    if (!r || r.error) throw (r && r.error) || new Error('no answer');
+    var row = (r.data && r.data[0]) || payload;
+    MC.close[key] = row; MC.edit[key] = false; if (MC.draft) delete MC.draft[key];
+    mcSyncDelivery(k.y, k.m, row);
+    toast('Month closed', 'success');
+  } catch (e) {
+    console.error('Month close failed:', e);
+    toast('Could not close the month: ' + (e.message || ''), 'error');
+  }
+  mcRenderCard();
+}
+
+async function mcSaveEdit(key) {
+  var k = mcKeyParts(key), rows = MC.ledger[key] || [];
+  var note = (document.getElementById('mc-note') && document.getElementById('mc-note').value || '').trim();
+  if (mcOpenCount(rows) > 0 && !note) { mcShowErr('Write what is still owed and why.'); return; }
+  var btn = document.getElementById('mc-go'); if (btn) { btn.disabled = true; btn.textContent = 'Saving'; }
+  try {
+    var r = await mcWriteNote(k.cid, mcPeriod(k.y, k.m), note || null);
+    if (!r || r.error) throw (r && r.error) || new Error('no answer');
+    if (!r.data || !r.data.length) {
+      /* Signed after this screen loaded: read the row again, show the signature */
+      delete MC.close[key]; delete MC.ledger[key]; MC.edit[key] = false; MC.locked[key] = true;
+      toast('The COO has signed this close, so the note can no longer change', 'error');
+      mcRenderCard(); return;
+    }
+    MC.close[key] = r.data[0]; MC.edit[key] = false; if (MC.draft) delete MC.draft[key];
+    mcSyncDelivery(k.y, k.m, r.data[0]);
+    toast('Note saved', 'success');
+  } catch (e) {
+    console.error('Note save failed:', e);
+    toast('Could not save the note: ' + (e.message || ''), 'error');
+  }
+  mcRenderCard();
+}
+
+/* Wrap the Posting Plan renderer once more: everything before, then the card */
+var mcOrigPlanRender = renderContentPlan;
+renderContentPlan = function() { mcOrigPlanRender.apply(this, arguments); try { mcRenderCard(); } catch (e) { console.error('Month close card', e); } };
+
+/* ── DELIVERY: Owed vs posted, with the tick board one tap away ─────────── */
+function mcDlEls() {
+  var page = document.getElementById('page-delivery'), tick = document.getElementById('smm-dl-root');
+  if (!page || !tick) return null;
+  var sw = document.getElementById('mc-dl-switch'), owed = document.getElementById('mc-owed-root');
+  if (!sw) { sw = document.createElement('div'); sw.id = 'mc-dl-switch'; page.insertBefore(sw, tick); }
+  if (!owed) { owed = document.createElement('div'); owed.id = 'mc-owed-root'; page.insertBefore(owed, tick); }
+  return { sw: sw, owed: owed, tick: tick };
+}
+function mcDlSwitchHtml() {
+  return '<div class="mc-seg" role="tablist">'
+    + '<button type="button" class="' + (MCD.mode === 'owed' ? 'on' : '') + '" onclick="mcSetDlMode(\'owed\')">Owed vs posted</button>'
+    + '<button type="button" class="' + (MCD.mode === 'ticks' ? 'on' : '') + '" onclick="mcSetDlMode(\'ticks\')">Tick board</button></div>';
+}
+function mcSetDlMode(mode) {
+  MCD.mode = mode === 'ticks' ? 'ticks' : 'owed';
+  try { localStorage.setItem('smm-dl-mode', MCD.mode); } catch (e) {}
+  renderSmmDelivery();
+}
+var mcOrigDelivery = renderSmmDelivery;
+renderSmmDelivery = function(noFetch) {
+  var el = mcDlEls();
+  if (!el) return mcOrigDelivery(noFetch);
+  el.sw.innerHTML = mcDlSwitchHtml();
+  if (MCD.mode === 'ticks') { el.owed.style.display = 'none'; el.tick.style.display = ''; return mcOrigDelivery(noFetch); }
+  el.tick.style.display = 'none'; el.owed.style.display = '';
+  return mcRenderOwed();
+};
+
+async function mcLoadMonth(y, m) {
+  var key = y + ':' + m;
+  if (!sb || MCD.loading[key]) return;
+  MCD.loading[key] = true;
+  var d = { ledger: [], closes: [], err: '' };
+  try {
+    var res = await Promise.allSettled([
+      sb.from('bb_commitment_ledger').select(MC_LEDGER_COLS).eq('year', y).eq('month', m).limit(1000),
+      sb.from('bb_month_close').select('*').eq('period', mcPeriod(y, m)).limit(500)
+    ]);
+    if (res[0].status === 'fulfilled' && !res[0].value.error) d.ledger = res[0].value.data || [];
+    else d.err = 'Could not read what is owed: ' + ((res[0].value && res[0].value.error && res[0].value.error.message) || 'unknown');
+    if (res[1].status === 'fulfilled' && !res[1].value.error) d.closes = res[1].value.data || [];
+    else d.err = d.err || ('Could not read the closes: ' + ((res[1].value && res[1].value.error && res[1].value.error.message) || 'unknown'));
+  } catch (e) { d.err = 'Could not load the month: ' + (e.message || ''); }
+  MCD.loading[key] = false;
+  MCD.data[key] = d;
+  if (S.currentPage === 'delivery' && MCD.mode === 'owed') mcRenderOwed();
+}
+function mcDlMonths() {
+  var out = [], d = new Date(), y = d.getFullYear(), m = d.getMonth() + 1;
+  for (var i = 0; i < 12; i++) { out.push({ y: y, m: m }); m--; if (m < 1) { m = 12; y--; } }
+  return out;
+}
+function mcSetDlMonth(v) { var p = String(v).split(':'); MCD.y = Number(p[0]); MCD.m = Number(p[1]); mcRenderOwed(); }
+function mcSetDlFilter(field, v) { MCD[field] = v; mcRenderOwed(field === 'q'); }
+function mcRetryMonth() { delete MCD.data[MCD.y + ':' + MCD.m]; mcRenderOwed(); }
+function mcOpenPlan(cid, y, m) {
+  nav('client-profile', cid);
+  if (S.currentClientId != cid) return;
+  var ms = document.getElementById('cplan-month'), ys = document.getElementById('cplan-year');
+  if (ms) ms.value = String(m); if (ys) ys.value = String(y);
+  switchCpTab('content-plan');
+}
+function mcCell(s, label) {
+  var lbl = '<span class="mc-cl">' + label + '</span>';
+  if (s.owed === 'undecided') return '<div class="mc-cell mc-none">' + lbl + 'Not settled</div>';
+  if (s.owed !== 'owed') return '<div class="mc-cell mc-none">' + lbl + 'Not owed</div>';
+  return '<div class="mc-cell ' + (s.open ? 'mc-short' : 'mc-ok') + '">' + lbl + '<b>' + s.published + '</b> of ' + s.contracted + '</div>';
+}
+function mcStatus(close, anyOwed) {
+  if (!anyOwed) return { cls: '', label: 'Nothing owed', key: 'none' };
+  if (close && close.coo_signed_at) return { cls: 'mc-p-signed', label: 'Closed and signed', key: 'signed' };
+  if (close && close.smm_closed_at) return { cls: 'mc-p-closed', label: 'Closed, not signed', key: 'closed' };
+  return { cls: 'mc-p-open', label: 'Not closed', key: 'open' };
+}
+
+function mcRenderOwed(keepFocus) {
+  var el = mcDlEls(); if (!el) return;
+  if (!MCD.y) { var t = new Date(); MCD.y = t.getFullYear(); MCD.m = t.getMonth() + 1; }
+  var key = MCD.y + ':' + MCD.m, d = MCD.data[key];
+  var scope = (typeof viewScope === 'function') ? viewScope() : null;
+  var mName = MC_MON[MCD.m - 1] + ' ' + MCD.y;
+  var months = mcDlMonths();
+  if (!months.some(function(x) { return x.y === MCD.y && x.m === MCD.m; })) months.push({ y: MCD.y, m: MCD.m });
+  var html = '<div class="mc-dl-head"><div><div style="font-size:22px;font-weight:800;color:var(--text)">Owed vs posted</div>'
+    + '<div class="mc-sub">' + mName + (scope ? ' &middot; your clients' : ' &middot; every seat') + '</div></div>'
+    + '<div class="mc-dl-controls">' + (typeof bbdViewToggle === 'function' ? bbdViewToggle() : '')
+    + '<select class="mc-sel" aria-label="Month" onchange="mcSetDlMonth(this.value)">'
+    + months.map(function(x) { return '<option value="' + x.y + ':' + x.m + '"' + (x.y === MCD.y && x.m === MCD.m ? ' selected' : '') + '>' + MC_MON[x.m - 1] + ' ' + x.y + '</option>'; }).join('')
+    + '</select></div></div>'
+    + '<p class="mc-tick-note">' + escHtml(MC_TICKS) + '</p>';
+  if (!d) {
+    el.owed.innerHTML = html + '<div class="mc-empty">Loading&hellip;</div>';
+    mcLoadMonth(MCD.y, MCD.m);
+    return;
+  }
+  if (d.err) {
+    el.owed.innerHTML = html + '<div class="mc-err">' + escHtml(d.err) + '</div><div class="mc-bar" style="max-width:320px"><button type="button" class="mc-btn" onclick="mcRetryMonth()">Try again</button></div>';
+    return;
+  }
+  /* filter bar */
+  html += '<div class="mc-filter">'
+    + '<input class="mc-search" id="mc-q" type="search" placeholder="Find a client" aria-label="Find a client" value="' + escHtml(MCD.q) + '" oninput="mcSetDlFilter(\'q\',this.value)">'
+    + '<select class="mc-sel" aria-label="Show" onchange="mcSetDlFilter(\'status\',this.value)">'
+    + [['all', 'Every client that owes'], ['behind', 'Owed not marked posted'], ['open', 'Not closed'], ['closed', 'Closed, not signed'], ['signed', 'Closed and signed'], ['none', 'Nothing owed']]
+        .map(function(o) { return '<option value="' + o[0] + '"' + (MCD.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
+    + '</select></div>';
+
+  var byClient = {};
+  d.ledger.forEach(function(r) {
+    if (scope && String(r.smm_book || '').toUpperCase() !== scope) return;
+    var c = byClient[r.client_id] || (byClient[r.client_id] = { id: r.client_id, name: r.client_name || ('Client ' + r.client_id), book: r.smm_book || 'No SMM assigned', rows: [] });
+    c.rows.push(r);
+  });
+  var closeBy = {}; (d.closes || []).forEach(function(c) { closeBy[c.client_id] = c; });
+  var q = String(MCD.q || '').trim().toLowerCase();
+  var clients = Object.keys(byClient).map(function(id) {
+    var c = byClient[id];
+    c.sums = {}; MC_KINDS.forEach(function(k) { c.sums[k.k] = mcKindSum(c.rows, k.k); });
+    c.open = MC_KINDS.reduce(function(a, k) { return a + c.sums[k.k].open; }, 0);
+    c.anyOwed = mcAnyOwed(c.rows);
+    c.status = mcStatus(closeBy[c.id], c.anyOwed);
+    return c;
+  }).filter(function(c) {
+    if (q && String(c.name).toLowerCase().indexOf(q) < 0) return false;
+    if (MCD.status === 'all') return c.anyOwed;
+    if (MCD.status === 'behind') return c.anyOwed && c.open > 0;
+    return c.status.key === MCD.status;
+  });
+  var noneCount = Object.keys(byClient).filter(function(id) { return !byClient[id].anyOwed; }).length;
+
+  var known = ['NIRVANA', 'TIANA'], books = [];
+  clients.forEach(function(c) { var b = String(c.book).toUpperCase(); if (known.indexOf(b) < 0 && books.indexOf(b) < 0) books.push(b); });
+  var order = known.concat(books.sort());
+  var any = false;
+  order.forEach(function(book) {
+    var list = clients.filter(function(c) { return String(c.book).toUpperCase() === book; })
+      .sort(function(a, b) { return String(a.name).localeCompare(String(b.name)); });
+    if (!list.length) return; any = true;
+    var tot = {}; MC_KINDS.forEach(function(k) { tot[k.k] = { p: 0, c: 0 }; });
+    list.forEach(function(c) { MC_KINDS.forEach(function(k) { var s = c.sums[k.k]; if (s.owed === 'owed') { tot[k.k].p += s.published; tot[k.k].c += s.contracted; } }); });
+    var owing = list.filter(function(c) { return c.anyOwed; });
+    var closedN = owing.filter(function(c) { return c.status.key === 'closed' || c.status.key === 'signed'; }).length;
+    html += '<div class="mc-group"><div class="mc-group-name">' + escHtml(list[0].book) + '</div>'
+      + '<div class="mc-group-sum">' + list.length + ' client' + (list.length === 1 ? '' : 's')
+      + (owing.length ? ' &middot; ' + closedN + ' of ' + owing.length + ' closed' : '')
+      + ' &middot; marked posted: ' + MC_KINDS.map(function(k) { return k.label.toLowerCase() + ' ' + tot[k.k].p + ' of ' + tot[k.k].c; }).join(', ')
+      + '</div></div>';
+    html += '<div class="mc-row mc-row-head"><div>Client</div><div>Posts</div><div>Stories</div><div>Videos</div><div>Month close</div><div></div></div>';
+    list.forEach(function(c) {
+      var inBook = (S.clients || []).some(function(x) { return x.id == c.id; });
+      var where = [];
+      MC_KINDS.forEach(function(k) { var s = c.sums[k.k]; if (s.owed === 'owed' && s.open) { var p = mcRestHtml(s); if (p.length) where.push(k.label + ': ' + p.join(', ')); } });
+      html += '<div class="mc-row">'
+        + '<div class="mc-cname">' + escHtml(c.name) + '</div>'
+        + MC_KINDS.map(function(k) { return mcCell(c.sums[k.k], k.label); }).join('')
+        + '<div class="mc-status"><span class="mc-pill ' + c.status.cls + '">' + c.status.label + '</span></div>'
+        + '<div class="mc-act">' + (inBook ? '<button type="button" class="mc-open" onclick="mcOpenPlan(' + Number(c.id) + ',' + MCD.y + ',' + MCD.m + ')">Posting Plan</button>' : '') + '</div>'
+        + (where.length ? '<div class="mc-where">' + where.join(' &middot; ') + '</div>' : '')
+        + '</div>';
+    });
+  });
+  if (!any) html += '<div class="mc-empty">No client matches this filter for ' + mName + '.</div>';
+  if (noneCount && MCD.status === 'all') html += '<div class="mc-sub" style="margin-top:12px">' + noneCount + ' client' + (noneCount === 1 ? ' owes' : 's owe') + ' nothing this month. Choose Nothing owed to see ' + (noneCount === 1 ? 'it' : 'them') + '.</div>';
+  el.owed.innerHTML = html;
+  if (keepFocus) { var qi = document.getElementById('mc-q'); if (qi) { qi.focus(); var n = qi.value.length; try { qi.setSelectionRange(n, n); } catch (e) {} } }
+}
+
+/* The Posting Plan month box had no selected option, so every client opened on
+   January and the close card would have shown January. Open on this month. */
+(function() {
+  var d = new Date(), ms = document.getElementById('cplan-month'), ys = document.getElementById('cplan-year');
+  if (ms) ms.value = String(d.getMonth() + 1);
+  if (ys && ys.querySelector('option[value="' + d.getFullYear() + '"]')) ys.value = String(d.getFullYear());
+})();
+</script>
+<!-- @@BBSMM_MONTHCLOSE_END@@ -->
 <!-- @@BB_PUSH_BEGIN@@ -->
 <script>
 /* ════════════════════════════════════════════════════════════════════════════

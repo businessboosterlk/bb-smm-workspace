@@ -785,3 +785,31 @@ diff adds (`git diff -U0 index.html | grep '^+'`) before every commit. A US
 spelling hit inside a CSS property name is not a fault.
 **Lesson: the house style check runs on every line a commit adds, comments
 included.**
+
+### L-SMM-056 · owed work went unseen because nothing compared it with what was posted
+**Found:** 2026-10-07, by Thulaib: 90 posts, 228 stories and 138 videos owed to
+the end of September and nobody saw it. **Status:** FIXED (screens built).
+Three faults let it hide. The Posting Plan opened on the calendar, which does
+not draw the posted ticks. The plan's month box had no selected option, so
+every client opened on January. Nothing put owed next to marked posted. No
+one had to sign a month off. The rules are in ONE file,
+`~/bb-systems/delivery-ledger/RULES.md`, and this app quotes rule 5 from it.
+**The block (`@@BBSMM_MONTHCLOSE_BEGIN@@`):** the Posting Plan opens on the list
+and on this month. A Month close card under it reads `bb_commitment_ledger`
+(one read, filtered by client, year and month) and `bb_month_close`, cached per
+client and month. Closing needs a note when anything owed is not marked posted.
+Edit changes the note only while the COO has not signed: the write itself
+filters `coo_signed_at is null`, so a signature that lands after the screen
+loaded refuses the edit. Delivery opens on Owed vs posted (one ledger read and
+one close read per month); the old tick board is one tap away and unchanged.
+`ptLoad` now skips archived graphic and video rows, as the Command Centre does.
+**Verified 7 Oct, local preview, no live write:** SASTHO (id 20) October read
+posts 0 of 12, stories 0 of 18, videos 0 of 8, all not logged, the same as a
+direct REST read. The Delivery groups summed to 360 owed for Nirvana and 279 for
+Tiana, 12 and 11 clients, with 7 owing nothing, the same as a SQL total of the
+view. The close write was stubbed in the console: the payload carried
+client_id 20, period 2026-10-01, smm_closed_by Tiana, the time and the note.
+An empty note was refused with no write. `bb_month_close` still held 0 rows.
+**Lesson: a number that is never put beside its target is a number nobody
+reads. And a missing tick is not a missing post: the screen says "not marked
+posted" every time, never "not posted".**
