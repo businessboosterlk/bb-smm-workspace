@@ -10846,12 +10846,31 @@ function mcRenderOwed(keepFocus) {
     else blocked.forEach(function(m){ var r = rowFor(m.id); var l = m.name+': '+r.blocker.trim(); var alt = (r.alternative||'').trim(); if (alt) l += '. Alternative: '+alt; lines.push(l); });
     return lines.join('\n');
   }
-  window.tmbCopyMessage = async function(){
-    var txt = messageText(), ok = false;
+  async function copyText(txt, okMsg){
+    var ok = false;
     try { await navigator.clipboard.writeText(txt); ok = true; } catch(e){
       try { var ta = document.createElement('textarea'); ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); } catch(e2){ ok = false; }
     }
-    toast(ok ? 'Message copied. Paste it into the staff chat.' : 'Copy failed. Long-press the preview and copy it by hand.', ok ? 'success' : 'error');
+    toast(ok ? okMsg : 'Copy failed. Try again.', ok ? 'success' : 'error');
+  }
+  window.tmbCopyMessage = async function(){ await copyText(messageText(), 'Team summary copied, for your records.'); };
+  /* Thulaib's ruling, 12 Oct 2026 kickoff: the morning message is INDIVIDUAL,
+     one tailored message per person, never one group message. */
+  function firstName(n){ n = String(n||'').trim(); return n ? n[0].toUpperCase() + n.slice(1).toLowerCase() : ''; }
+  function personalText(m, r){
+    var dot = function(s){ return /[.?!]$/.test(s) ? s : s + '.'; };
+    var L = ['Morning ' + firstName(m.name) + '.'];
+    var y = ((r && r.yesterday_done)||'').trim(); if (y) L.push(dot('Yesterday you finished: ' + y));
+    var t = ((r && r.today_plan)||'').trim(); if (t) L.push(dot('Today: ' + t));
+    var b = ((r && r.blocker)||'').trim();
+    if (b){ var s = dot('You flagged: ' + b); var a = ((r && r.alternative)||'').trim(); if (a) s += ' ' + dot('The fallback: ' + a); L.push(s); }
+    L.push('All good?');
+    return L.join('\n');
+  }
+  window.tmbCopyPersonal = async function(mid){
+    var m = T.members.find(function(x){ return x.id === mid; }); var r = rowFor(mid);
+    if (!m || !r) return;
+    await copyText(personalText(m, r), 'Message for ' + firstName(m.name) + ' copied. Paste it into their chat.');
   };
   function chip(r){
     if (!r) return '<span class="tmb-chip todo">To brief</span>';
@@ -10875,6 +10894,7 @@ function mcRenderOwed(keepFocus) {
         + '<div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(plan?escT(plan):'Social media manager')+'</div></div>'
         + (r && r.on_track === false ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--red,#d64545);flex-shrink:0"></span>' : '')
         + chip(r)
+        + (r ? '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();tmbCopyPersonal(' + m.id + ')" style="min-height:40px;flex-shrink:0">Copy</button>' : '')
         + (r ? '<span style="font-size:11px;color:var(--text2);flex-shrink:0">Edit</span>' : '')
         + '</div>';
     }).join('');
@@ -10904,8 +10924,8 @@ function mcRenderOwed(keepFocus) {
       + '</select></div>'
       + '<div id="tmb-list"></div>'
       + '<div style="padding:14px">'
-      + '<button class="btn btn-primary" style="width:100%;min-height:44px" '+(allDone?'onclick="tmbCopyMessage()"':'disabled')+'>'+(allDone?'Copy the staff chat message':'Copy unlocks when every person is briefed')+'</button>'
-      + (allDone ? '<pre class="tmb-pre">'+escT(messageText())+'</pre>' : '')
+      + '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">Each Copy builds that person\'s own message. Message each one separately.</div>'
+      + '<button class="btn btn-ghost" id="tmb-summary-btn" style="width:100%;min-height:44px;border:1px solid var(--border)" '+(allDone?'onclick="tmbCopyMessage()"':'disabled')+'>'+(allDone?'Copy team summary, for your records':'The team summary unlocks when every person is briefed')+'</button>'
       + '</div></div>';
     paintList();
   };
