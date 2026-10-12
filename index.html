@@ -1532,6 +1532,11 @@ tr:last-child td { border-bottom: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="14" x2="9" y2="18"/><line x1="15" y1="14" x2="15" y2="18"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
       Weekly Plan
     </button>
+    <!-- Team morning brief: the SMM heads alone (Thulaib, 12 Oct 2026). tmbNavSync() turns it on per seat. -->
+    <button class="sb-item" data-page="teambrief" id="sb-teambrief" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Team morning brief
+    </button>
     <div class="sb-grp">Production</div>
     <button class="sb-item" data-page="shoot-pipeline">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/></svg>
@@ -2026,6 +2031,12 @@ tr:last-child td { border-bottom: none; }
 
   <section class="page" id="page-recap">
     <div id="smm-recap-root"></div>
+  </section>
+
+  <!-- ═══ TEAM MORNING BRIEF (Thulaib, 12 Oct 2026) ═══ -->
+  <section class="page" id="page-teambrief">
+    <div class="ph"><div class="ph-title">Team morning brief</div><div class="ph-sub" id="tmb-sub"></div></div>
+    <div id="tmb-root"></div>
   </section>
 
 
@@ -2846,7 +2857,7 @@ const PAGE_TITLES = {
   'approval-queue':'Approval Queue','content-overview':'Content Plans','clients':'Clients','delivery':'Delivery',
   'escalation':'Escalation Helper','sops':'SMM SOPs','graphic-hub':'Graphic Pipeline','video-hub':'Video Pipeline',
   'missions':'Missions','ideas':'Idea Hub','agents':'Agents','client-profile':'Client',
-  'community':'Community'
+  'community':'Community','teambrief':'Team morning brief'
 };
 // Pages tucked under the collapsible "More" group
 const MORE_PAGES = ['agents','escalation','sops'];
@@ -2902,6 +2913,8 @@ function nav(page, data) {
   if (page === 'graphic-hub') renderGraphicHub();
   if (page === 'my-tasks') { renderMyTasks(); wireMyTasksFilters(); }
   if (page === 'weeklyplan') wpLoadWeek();
+  if (page === 'teambrief' && window.tmbRender) window.tmbRender();
+  if (window.tmbNavSync) tmbNavSync(); /* the Team morning brief button follows the seat */
 }
 
 function populateCalFilterDropdowns() {
@@ -10751,6 +10764,191 @@ function mcRenderOwed(keepFocus) {
 })();
 </script>
 <!-- @@BBSMM_MONTHCLOSE_END@@ -->
+<!-- @@BBSMM_TEAMBRIEF_BEGIN@@
+     TEAM MORNING BRIEF (Thulaib, 12 Oct 2026). Every morning each SMM head
+     speaks to each person on their list: what they finished yesterday,
+     questions, blockers and the alternative, today's plan, on track or not.
+     Each check-in lands in morning_briefs (unique on brief_date, head, member;
+     RLS copied from the delivery ledger pattern), then ONE message is built
+     for the staff chat. The head copies and pastes it into WhatsApp; BB never
+     auto-sends. Every class here carries the tmb- prefix so nothing reaches a
+     rule outside this block. -->
+<style>
+.tmb-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;max-width:720px;overflow:hidden}
+.tmb-bar{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tmb-bar input{flex:1;min-width:150px}
+.tmb-row{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.tmb-row:last-child{border-bottom:0}
+.tmb-chip{font-size:11px;padding:3px 9px;border-radius:20px;flex-shrink:0}
+.tmb-chip.todo{background:var(--bg3);border:1px solid var(--border2);color:var(--text2)}
+.tmb-chip.done{background:rgba(60,180,110,.12);border:1px solid rgba(60,180,110,.5);color:#2f9e63}
+.tmb-chip.block{background:rgba(230,160,60,.12);border:1px solid rgba(230,160,60,.5);color:#c98a2e}
+.tmb-pre{margin-top:12px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;font-size:12px;white-space:pre-wrap;font-family:inherit;color:var(--text2)}
+</style>
+<div class="modal-bg" id="modal-tmb">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="tmb-modal-title">Morning check-in</div><button class="modal-close" onclick="closeModal('tmb')">×</button></div>
+    <div class="fg"><label class="fl">What did they finish yesterday</label><textarea class="fi" id="tmb-yesterday" rows="2" style="resize:vertical;min-height:44px"></textarea><div id="tmb-prefill-hint" style="display:none;font-size:11px;color:var(--text2);margin-top:4px">Prefilled from their last recorded plan. Edit it to what really got done.</div></div>
+    <div class="fg"><label class="fl">Questions for you</label><textarea class="fi" id="tmb-questions" rows="2" style="resize:vertical;min-height:44px"></textarea></div>
+    <div class="fg"><label class="fl">Blocker, if any</label><textarea class="fi" id="tmb-blocker" rows="2" style="resize:vertical;min-height:44px"></textarea></div>
+    <div class="fg"><label class="fl">The alternative while blocked</label><textarea class="fi" id="tmb-alternative" rows="2" style="resize:vertical;min-height:44px"></textarea><div style="font-size:11px;color:var(--text2);margin-top:4px">What they work on instead until the blocker clears.</div></div>
+    <div class="fg"><label class="fl">Plan for today</label><textarea class="fi" id="tmb-today" rows="2" style="resize:vertical;min-height:44px"></textarea></div>
+    <div class="fg"><label style="display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer"><input type="checkbox" id="tmb-ontrack" style="width:20px;height:20px"><span style="font-size:13px;color:var(--text)">Everything on track<span style="display:block;font-size:11px;color:var(--text2)">Counts into the done figure in the staff message.</span></span></label></div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" id="tmb-save-btn" style="width:100%;min-height:44px" onclick="tmbSave()">Save brief</button>
+      <button class="btn btn-ghost" style="width:100%;min-height:44px;margin-top:8px" onclick="closeModal('tmb')">Cancel</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  'use strict';
+  var T = { headId: null, seat: null, members: [], rows: [], prev: {}, filter: 'all', search: '', openMember: null };
+  function escT(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function localDay(d){ d = d || new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function dateLabel(){ return new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}).replace(',',''); }
+  window.tmbNavSync = function(){
+    var b = document.getElementById('sb-teambrief');
+    if (b) b.style.display = (typeof currentSmmScope === 'function' && currentSmmScope()) ? '' : 'none';
+  };
+  function rowFor(mid){ for (var i=0;i<T.rows.length;i++) if (T.rows[i].member === mid) return T.rows[i]; return null; }
+  async function loadRoster(){
+    /* One capped read: the seat's own row plus the SMM list. Hithesh has no
+       assigned head yet (bb_pending), so both heads see him until Thulaib says. */
+    var seat = currentSmmScope(); if (!seat) return false;
+    T.seat = seat;
+    var r = await sb.from('team_members').select('id,name,role,is_head,active').eq('active', true).eq('role', 'Social Media Manager');
+    if (r.error || !Array.isArray(r.data)) { toast('Could not read the roster', 'error'); return false; }
+    var me = r.data.find(function(m){ return m.name && m.name.toUpperCase() === seat; });
+    if (!me) { toast('Your roster row was not found', 'error'); return false; }
+    T.headId = me.id;
+    T.members = r.data.filter(function(m){ return !m.is_head && m.id !== me.id; });
+    return true;
+  }
+  async function loadRows(){
+    var today = localDay();
+    var from = new Date(); from.setDate(from.getDate() - 4);
+    var r = await sb.from('morning_briefs').select('*').eq('head', T.headId)
+      .gte('brief_date', localDay(from)).lte('brief_date', today).order('brief_date', { ascending: false });
+    if (r.error) { toast('Could not load the morning briefs', 'error'); return; }
+    T.rows = (r.data || []).filter(function(x){ return x.brief_date === today; });
+    T.prev = {};
+    (r.data || []).forEach(function(x){ if (x.brief_date !== today && !T.prev[x.member]) T.prev[x.member] = x; });
+  }
+  function messageText(){
+    var ms = T.members;
+    var onTrack = ms.filter(function(m){ var r = rowFor(m.id); return r && r.on_track; }).length;
+    var lines = ['SMM TEAM ('+T.seat+'), '+dateLabel(), 'Yesterday: done '+onTrack+' of '+ms.length, 'Today:'];
+    ms.forEach(function(m){ var r = rowFor(m.id); lines.push(m.name+': '+(((r && r.today_plan)||'').trim()||'nothing recorded')); });
+    var blocked = ms.filter(function(m){ var r = rowFor(m.id); return r && (r.blocker||'').trim(); });
+    lines.push('Blockers:');
+    if (!blocked.length) lines.push('none');
+    else blocked.forEach(function(m){ var r = rowFor(m.id); var l = m.name+': '+r.blocker.trim(); var alt = (r.alternative||'').trim(); if (alt) l += '. Alternative: '+alt; lines.push(l); });
+    return lines.join('\n');
+  }
+  window.tmbCopyMessage = async function(){
+    var txt = messageText(), ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; } catch(e){
+      try { var ta = document.createElement('textarea'); ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); } catch(e2){ ok = false; }
+    }
+    toast(ok ? 'Message copied. Paste it into the staff chat.' : 'Copy failed. Long-press the preview and copy it by hand.', ok ? 'success' : 'error');
+  };
+  function chip(r){
+    if (!r) return '<span class="tmb-chip todo">To brief</span>';
+    if ((r.blocker||'').trim()) return '<span class="tmb-chip block">Blocker noted</span>';
+    return '<span class="tmb-chip done">Done</span>';
+  }
+  function paintList(){
+    var box = document.getElementById('tmb-list'); if (!box) return;
+    var q = (T.search||'').toLowerCase().trim();
+    var ms = T.members.slice();
+    if (q) ms = ms.filter(function(m){ return m.name.toLowerCase().indexOf(q) > -1; });
+    if (T.filter === 'todo') ms = ms.filter(function(m){ return !rowFor(m.id); });
+    if (T.filter === 'done') ms = ms.filter(function(m){ return !!rowFor(m.id); });
+    if (T.filter === 'blockers') ms = ms.filter(function(m){ var r = rowFor(m.id); return r && (r.blocker||'').trim(); });
+    if (!ms.length) { box.innerHTML = '<div style="padding:26px 14px;text-align:center;color:var(--text2);font-size:13px">No one matches this filter.</div>'; return; }
+    box.innerHTML = ms.map(function(m){
+      var r = rowFor(m.id);
+      var plan = ((r && r.today_plan)||'').trim();
+      return '<div class="tmb-row" onclick="tmbOpenSheet('+m.id+')">'
+        + '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+escT(m.name)+'</div>'
+        + '<div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(plan?escT(plan):'Social media manager')+'</div></div>'
+        + (r && r.on_track === false ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--red,#d64545);flex-shrink:0"></span>' : '')
+        + chip(r)
+        + (r ? '<span style="font-size:11px;color:var(--text2);flex-shrink:0">Edit</span>' : '')
+        + '</div>';
+    }).join('');
+  }
+  window.tmbRender = async function(){
+    var root = document.getElementById('tmb-root'); if (!root) return;
+    var sub = document.getElementById('tmb-sub');
+    if (typeof currentSmmScope !== 'function' || !currentSmmScope()){
+      if (sub) sub.textContent = '';
+      root.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text2);font-size:13px">This page belongs to the SMM heads. Sign in as an SMM seat to run the morning brief.</div>';
+      return;
+    }
+    if (!(await loadRoster())) { root.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text2);font-size:13px">The roster could not be read. Pull down to retry.</div>'; return; }
+    await loadRows();
+    var briefed = T.members.filter(function(m){ return !!rowFor(m.id); }).length;
+    var allDone = T.members.length > 0 && briefed === T.members.length;
+    if (sub) sub.textContent = dateLabel()+'. Speak to each person, record it, then copy one message for the staff chat. '+briefed+' of '+T.members.length+' briefed.';
+    root.innerHTML =
+      '<div class="tmb-card">'
+      + '<div class="tmb-bar">'
+      + '<input class="fi" id="tmb-search" placeholder="Search your list" value="'+escT(T.search)+'" oninput="window._tmbSearch(this.value)">'
+      + '<select class="fi" style="width:150px" onchange="window._tmbFilter(this.value)">'
+      + '<option value="all"'+(T.filter==='all'?' selected':'')+'>All</option>'
+      + '<option value="todo"'+(T.filter==='todo'?' selected':'')+'>To brief</option>'
+      + '<option value="done"'+(T.filter==='done'?' selected':'')+'>Done</option>'
+      + '<option value="blockers"'+(T.filter==='blockers'?' selected':'')+'>Blockers</option>'
+      + '</select></div>'
+      + '<div id="tmb-list"></div>'
+      + '<div style="padding:14px">'
+      + '<button class="btn btn-primary" style="width:100%;min-height:44px" '+(allDone?'onclick="tmbCopyMessage()"':'disabled')+'>'+(allDone?'Copy the staff chat message':'Copy unlocks when every person is briefed')+'</button>'
+      + (allDone ? '<pre class="tmb-pre">'+escT(messageText())+'</pre>' : '')
+      + '</div></div>';
+    paintList();
+  };
+  window._tmbSearch = function(v){ T.search = v; paintList(); };
+  window._tmbFilter = function(v){ T.filter = v; paintList(); };
+  window.tmbOpenSheet = function(mid){
+    var m = T.members.find(function(x){ return x.id === mid; }); if (!m) return;
+    var r = rowFor(mid);
+    var prev = T.prev[mid];
+    var yPrefill = r ? (r.yesterday_done||'') : ((prev && prev.today_plan)||'');
+    T.openMember = mid;
+    document.getElementById('tmb-modal-title').textContent = m.name+', '+dateLabel();
+    document.getElementById('tmb-yesterday').value = yPrefill;
+    document.getElementById('tmb-prefill-hint').style.display = (!r && yPrefill) ? '' : 'none';
+    document.getElementById('tmb-questions').value = r ? (r.questions||'') : '';
+    document.getElementById('tmb-blocker').value = r ? (r.blocker||'') : '';
+    document.getElementById('tmb-alternative').value = r ? (r.alternative||'') : '';
+    document.getElementById('tmb-today').value = r ? (r.today_plan||'') : '';
+    document.getElementById('tmb-ontrack').checked = !!(r && r.on_track);
+    document.getElementById('tmb-save-btn').textContent = r ? 'Save changes' : 'Save brief';
+    openModal('tmb');
+  };
+  window.tmbSave = async function(){
+    if (!T.headId || !T.openMember) { toast('Your roster row was not found', 'error'); return; }
+    var v = function(id){ var x = document.getElementById(id).value.trim(); return x || null; };
+    var btn = document.getElementById('tmb-save-btn'); btn.disabled = true;
+    var w = await sb.from('morning_briefs').upsert({
+      brief_date: localDay(), head: T.headId, member: T.openMember,
+      yesterday_done: v('tmb-yesterday'), questions: v('tmb-questions'),
+      blocker: v('tmb-blocker'), alternative: v('tmb-alternative'),
+      today_plan: v('tmb-today'), on_track: document.getElementById('tmb-ontrack').checked,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'brief_date,head,member' });
+    btn.disabled = false;
+    if (w.error) { toast('Save failed: '+(w.error.message||'the database refused it'), 'error'); return; }
+    closeModal('tmb'); toast('Check-in saved');
+    window.tmbRender();
+  };
+  /* The button follows the seat from the first paint, not only after a nav. */
+  try { window.tmbNavSync(); } catch(e){}
+})();
+</script>
+<!-- @@BBSMM_TEAMBRIEF_END@@ -->
 <!-- @@BB_PUSH_BEGIN@@ -->
 <script>
 /* ════════════════════════════════════════════════════════════════════════════
