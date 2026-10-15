@@ -830,7 +830,7 @@ unless a save is mid-flight (`MEALS_SAVING`); returning to the app re-draws
 Today. **Proven both ways** on a probe seat `ZZPROBE`, deleted after: laptop
 ticks two, stale phone ticks one. Old code kept one of three. Fixed code kept
 three of three. An untick still removes exactly one.
-**Not in the harness on purpose:** the harness writes nothing to the database,
-and this proof must. The probe script is in this entry's commit message.
+**Not in the harness on purpose:** the harness writes nothing to the database. This proof
+must. The probe script is in this entry's commit message.
 **Lesson: any record two devices can edit must be saved as a CHANGE, never as a
 copy. A copy is correct only on the device that last read it.**
