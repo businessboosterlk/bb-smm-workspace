@@ -834,3 +834,12 @@ three of three. An untick still removes exactly one.
 must. The probe script is in this entry's commit message.
 **Lesson: any record two devices can edit must be saved as a CHANGE, never as a
 copy. A copy is correct only on the device that last read it.**
+
+### L-SMM-058 · the delivery tick wrote the whole row back
+**Found:** 2026-10-15, sweeping for the L-SMM-057 shape. **Status:** FIXED.
+`bbdTog` wrote this tab's whole `vals` object. Three apps tick the same row, so
+any box the Command Centre or the standalone tracker ticked since this tab
+loaded was erased. Fixed to read the row fresh and change only box k. Proven on
+a probe row: another app ticked ig, a stale tab ticked fb. Old code kept fb
+only. Fixed code kept fb and ig. Estate rule: L-ESTATE-TWO-DEVICES in the
+bb-rock-solid register.

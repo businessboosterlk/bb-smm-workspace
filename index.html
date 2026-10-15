@@ -5238,8 +5238,16 @@ async function bbdTog(id,k){
   BBD_INFLIGHT++;
   renderSmmDelivery(true);
   var job=(BBD_QUEUE[id]||Promise.resolve()).then(async function(){
-    var res=await sb.from('bb_delivery').update({vals:Object.assign({},r.vals),updated_at:new Date().toISOString()}).eq('id',id);
+    /* A CHANGE, NEVER A COPY. Three apps tick this same row (this one, the
+       Command Centre, the standalone tracker). Writing this tab's whole vals
+       erased any box another app ticked since this tab loaded. Read the row
+       fresh, change only box k, write that. Same fault as L-SMM-057. */
+    var fr=await sb.from('bb_delivery').select('vals').eq('id',id).maybeSingle();
+    if(fr.error) throw fr.error;
+    var fresh=Object.assign({}, (fr.data&&fr.data.vals)||{}); fresh[k]=want;
+    var res=await sb.from('bb_delivery').update({vals:fresh,updated_at:new Date().toISOString()}).eq('id',id);
     if(res.error) throw res.error;
+    r.vals=fresh;
   }).catch(function(e){
     console.error('bbdTog',e);
     if(r.vals[k]===want) r.vals[k]=!want;
