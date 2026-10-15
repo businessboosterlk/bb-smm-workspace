@@ -3403,7 +3403,11 @@ async function loadClients() {
   try {
     /* A churned client is history, not a choice. Six of them filled every dropdown and the
        Clients page until 6 Oct 2026. Internal and active stay. */
-    let query = sb.from('clients').select('*').neq('status', 'churned').order('name');
+    /* NAMED COLUMNS, never '*' (Video L-VID-057, 15 Oct 2026). mrr and contact were
+       locked from the public key that day; a '*' read asks for them, Postgres refuses
+       the WHOLE request and every SMM saw an empty client list. Contact Person on the
+       client card now reads blank because the public key may not see it. */
+    let query = sb.from('clients').select('id,name,package,month,health,industry,start_date,renewal,notes,created_at,client_type,assigned_smm,plan_ready,monthly_posts,monthly_videos,monthly_stories,status,ended_on').neq('status', 'churned').order('name');
     const scope = viewScope();
     if (scope) query = query.eq('assigned_smm', scope);
     const { data, error } = await query;
