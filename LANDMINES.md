@@ -819,7 +819,7 @@ posted" every time, never "not posted".**
 it says missed." **Status:** FIXED.
 Two faults. (1) `renderMeals` read the day's ticks once and reused them all
 day, so a phone left open from the morning never saw what the laptop ticked
-since, and showed the afternoon as MISSED. (2) `mealsSave` wrote
+since. It showed the afternoon as MISSED. (2) `mealsSave` wrote
 `state.meals = MEALS_STATE`, the device's WHOLE record, over the database. A
 stale phone that then ticked one box erased every laptop tick since morning, so
 the recap, the streak and the 15:31 missed-meal push all saw a real miss that
@@ -829,7 +829,7 @@ on top of a fresh read (`mealsSave(changes)`); the strip re-reads on every draw
 unless a save is mid-flight (`MEALS_SAVING`); returning to the app re-draws
 Today. **Proven both ways** on a probe seat `ZZPROBE`, deleted after: laptop
 ticks two, stale phone ticks one. Old code kept one of three. Fixed code kept
-three of three, and an untick still removes exactly one.
+three of three. An untick still removes exactly one.
 **Not in the harness on purpose:** the harness writes nothing to the database,
 and this proof must. The probe script is in this entry's commit message.
 **Lesson: any record two devices can edit must be saved as a CHANGE, never as a
