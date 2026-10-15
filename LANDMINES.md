@@ -814,7 +814,7 @@ An empty note was refused with no write. `bb_month_close` still held 0 rows.
 reads. And a missing tick is not a missing post: the screen says "not marked
 posted" every time, never "not posted".**
 
-### L-SMM-035 · a stale phone erased the laptop's meal ticks
+### L-SMM-050 · a stale phone erased the laptop's meal ticks
 **Found:** 2026-10-15, reported by an SMM: "I tick on my laptop, open the phone,
 it says missed." **Status:** FIXED.
 Two faults. (1) `renderMeals` read the day's ticks once and reused them all
