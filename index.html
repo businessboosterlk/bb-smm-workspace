@@ -2283,7 +2283,7 @@ tr:last-child td { border-bottom: none; }
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Due Date</label><input class="fi" type="date" id="t-due"></div>
-      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="th">Thulaib</option><option value="sh">Shiara</option><option value="both">Thulaib and Shiara</option><option value="Ushane">Ushane</option><option value="Suhana">Suhana</option><option value="Rukshan">Rukshan</option><option value="Tiana">Tiana</option><option value="Nirvana">Nirvana</option></select></div>
+      <div class="fg"><label class="fl">Assign To</label><select class="fi" id="t-assign"><option value="th">Thulaib</option><option value="sh">Shiara</option><option value="both">Thulaib and Shiara</option><option value="Ushane">Ushane</option><option value="Suhana">Suhana</option><option value="Rukshan">Rukshan</option><option value="Tiana">Tiana</option><option value="Nirvana">Nirvana</option><option value="Hithesh">Hithesh</option></select></div>
     </div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="t-notes" rows="2" placeholder="Optional notes"></textarea></div>
     <button class="btn btn-primary" id="t-submit-btn" style="width:100%;justify-content:center" onclick="submitTaskAdd()">Add Task</button>
@@ -2351,7 +2351,7 @@ try {
 } catch (e) { console.warn(e); }
 
 // ============ USERS (login) ============
-const USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '2222', TIANA: '1010' };
+const USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '2222', TIANA: '1010', HITHESH: '3344' };
 
 // ============ STATE ============
 const S = {
@@ -2404,7 +2404,10 @@ const USER_ROLES = {
   THULAIB:  { code: 'TH', role: 'CEO', name: 'Thulaib', smm: null },
   SHIARA:   { code: 'SH', role: 'COO', name: 'Shiara', smm: null },
   NIRVANA:  { code: 'NV', role: 'SMM', name: 'Nirvana', smm: 'NIRVANA' },
-  TIANA:    { code: 'TI', role: 'SMM', name: 'Tiana', smm: 'TIANA' }
+  TIANA:    { code: 'TI', role: 'SMM', name: 'Tiana', smm: 'TIANA' },
+  /* Added 15 Oct 2026 on Thulaib's ask: the third SMM (team_members 29). He owns no client yet,
+     so Just mine is empty until clients carry assigned_smm HITHESH; Everyone shows every client. */
+  HITHESH:  { code: 'HI', role: 'SMM', name: 'Hithesh', smm: 'HITHESH' }
 };
 
 // ============ PILLARS ============
@@ -4900,33 +4903,58 @@ async function mealsLoad(user){
     return (r.data && r.data.state && r.data.state.meals) ? r.data.state.meals : {};
   }catch(e){ return {}; }
 }
-async function mealsSave(){
+/* TWO DEVICES, ONE RECORD. Fixed 15 October 2026 after an SMM ticked on her laptop
+   and her phone said MISSED. Two faults, both here and in renderMeals:
+   (1) the day's ticks were read once and reused all day, so a phone left open from
+   the morning never saw what the laptop ticked since; (2) a save wrote this device's
+   WHOLE meal record over the database, so a stale phone that ticked one box erased
+   every tick made on the laptop, and the recap, the streak and the 15:31 push then
+   saw a real miss. Now a save applies ONLY the boxes this device changed, on top of
+   a fresh read, and adopts the merged result. L-SMM-035. */
+var MEALS_SAVING = 0;
+async function mealsSave(changes){
   if(!sb || !S.currentUser) return;
   var dateStr = mealsToday();
+  MEALS_SAVING++;
   try{
-    /* merge into the row the pillars also write; never overwrite their keys */
     var cur = await sb.from('daily_pillar_state').select('state').eq('user_name', S.currentUser).eq('pillar_date', dateStr).maybeSingle();
+    if(cur.error) throw cur.error;
     var state = (cur.data && cur.data.state) ? Object.assign({}, cur.data.state) : {};
-    state.meals = MEALS_STATE;
+    var meals = JSON.parse(JSON.stringify(state.meals || {}));
+    Object.keys(changes || {}).forEach(function(mk){
+      if(!meals[mk]) meals[mk] = {};
+      Object.keys(changes[mk]).forEach(function(tk){
+        var v = changes[mk][tk];
+        if(v) { if(!meals[mk][tk]) meals[mk][tk] = v; } else delete meals[mk][tk];
+      });
+    });
+    state.meals = meals;
     var r = await sb.from('daily_pillar_state').upsert({ user_name:S.currentUser, pillar_date:dateStr, state:state, updated_at:new Date().toISOString() }, { onConflict:'user_name,pillar_date' });
     if(r.error) throw r.error;
+    MEALS_STATE = meals; MEALS_DATE = dateStr;
   }catch(e){ console.warn('[meals] not saved', e && e.message); if(typeof toast==='function') toast('Could not save that tick','error'); }
+  finally{ MEALS_SAVING--; }
+  renderMeals();
 }
 async function mealTick(mealKey, tickKey, force){
   if(!MEALS_STATE) MEALS_STATE = {};
   if(!MEALS_STATE[mealKey]) MEALS_STATE[mealKey] = {};
   var on = force!==undefined ? force : !MEALS_STATE[mealKey][tickKey];
-  if(on) MEALS_STATE[mealKey][tickKey] = new Date().toISOString(); else delete MEALS_STATE[mealKey][tickKey];
-  renderMeals();                       /* optimistic */
-  await mealsSave();
+  var stamp = on ? new Date().toISOString() : null;
+  if(on) MEALS_STATE[mealKey][tickKey] = stamp; else delete MEALS_STATE[mealKey][tickKey];
+  var ch = {}; ch[mealKey] = {}; ch[mealKey][tickKey] = stamp;
+  MEALS_SAVING++; renderMeals(); MEALS_SAVING--;   /* optimistic, never reloads over itself */
+  await mealsSave(ch);
 }
 async function mealTickAll(mealKey, itemKey){
   var item = mealItemsFor(mealKey).filter(function(i){return i.key===itemKey;})[0]; if(!item) return;
   if(!MEALS_STATE) MEALS_STATE = {}; if(!MEALS_STATE[mealKey]) MEALS_STATE[mealKey] = {};
   var allOn = item.ticks.every(function(t){ return !!MEALS_STATE[mealKey][t.k]; });
   var stamp = new Date().toISOString();
-  item.ticks.forEach(function(t){ if(allOn) delete MEALS_STATE[mealKey][t.k]; else if(!MEALS_STATE[mealKey][t.k]) MEALS_STATE[mealKey][t.k]=stamp; });
-  renderMeals(); await mealsSave();
+  var ch = {}; ch[mealKey] = {};
+  item.ticks.forEach(function(t){ if(allOn){ delete MEALS_STATE[mealKey][t.k]; ch[mealKey][t.k]=null; } else if(!MEALS_STATE[mealKey][t.k]){ MEALS_STATE[mealKey][t.k]=stamp; ch[mealKey][t.k]=stamp; } });
+  MEALS_SAVING++; renderMeals(); MEALS_SAVING--;
+  await mealsSave(ch);
 }
 /* Is this a BB working day? The BB week is Monday to Friday. */
 function mealsWorkingDay(d){ var w=d.getDay(); return w>=1 && w<=5; }
@@ -5011,11 +5039,14 @@ function mealSummary(mealState, items){
 }
 function fmtTime(d){ return d ? d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''; }
 
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible' && typeof S!=='undefined' && S && S.currentUser && S.currentPage==='today'){ try{ renderMeals(); }catch(e){} }
+});
 async function renderMeals(){
   var root = document.getElementById('meals-strip'); if(!root) return;
   var scope = (typeof currentSmmScope==='function') ? currentSmmScope() : null;
   if(!scope){ return renderMealsTeam(root); }
-  if(MEALS_STATE===null || MEALS_DATE!==mealsToday()){ MEALS_DATE=mealsToday(); MEALS_STATE = await mealsLoad(); }
+  if(!MEALS_SAVING){ MEALS_DATE=mealsToday(); MEALS_STATE = await mealsLoad(); }   /* always fresh: another device may have ticked */
   var ctx = await mealsContext();
   /* streak: the seat's rows since launch */
   var since=new Date(); since.setDate(since.getDate()-120);
