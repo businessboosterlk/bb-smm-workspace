@@ -1390,6 +1390,8 @@ tr:last-child td { border-bottom: none; }
   padding: var(--sat) 14px 0;
 }
 .mobile-topbar-title { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.01em; }
+.mtb-booster { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--accent, #00E5FF); background: transparent; color: var(--accent, #00E5FF); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.mtb-booster svg { width: 18px; height: 18px; }
 .hamburger-btn { background: none; border: none; color: var(--text); cursor: pointer; padding: 4px; display: flex; align-items: center; }
 .hamburger-btn svg { width: 24px; height: 24px; }
 .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 250; }
@@ -1609,6 +1611,9 @@ tr:last-child td { border-bottom: none; }
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
   <span class="mobile-topbar-title" id="mobile-topbar-title">SMM Workspace</span>
+  <!-- BOOSTER ON THE PHONE (22 Oct 2026, Thulaib: Hithesh could not see Booster). On a phone the sidebar hides behind the menu button,
+       and Booster lived only in the sidebar, so the SMM door was out of sight. The same launcher, always in view in the phone bar. -->
+  <button class="mtb-booster" type="button" id="mtb-booster" onclick="openBooster()" aria-label="Open Booster"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg><span>Booster</span></button>
 </div>
 <div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
