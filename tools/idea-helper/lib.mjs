@@ -3,7 +3,7 @@
    (memory smm-three-way-split-and-half-the-ideas). The helper SUGGESTS, the SMM decides: a kept idea is edited and owned by
    the SMM, a dropped one costs nothing. It never replaces the SMM's own ideas and it never writes to a client.
    Grounding, read only: the client's staff brain (bb_client_brain, never the owners' copy), its content pillars, what is
-   already planned this month (so nothing repeats), the team's Inspo Hub links for that client, and dates BB is sure of.
+   already planned this month (so nothing repeats), the team's Inspo Hub links for that client and dates BB is sure of.
    Gate: house style, no invented price, offer, discount or giveaway, no date outside the given list, every idea names a pillar
    that exists, an objective and a funnel stage from the fixed lists. Up to three drafts, then refuse. */
 import { createRequire } from 'module'; import fs from 'fs'; import path from 'path'; import { execFileSync } from 'child_process';
@@ -40,7 +40,7 @@ export async function gather(clientId) {
 
 const SYSTEM = `You are a senior social media strategist at Business Booster, a marketing agency in Sri Lanka. You suggest content ideas to the client's social media manager (SMM). The SMM chooses, edits and owns every idea; yours are a starting point, so make each one specific enough to make this week.
 Rules for every idea:
-- Grounded: it must come from a fact in the client brain, a pillar, an Inspo Hub link or a date given. Say which in "why".
+- Grounded: it must come from a fact in the client brain, a pillar, an Inspo Hub link or a given date. Say which in "why".
 - Never invent a price, an offer, a discount, a sale, a giveaway, a product, a set size, an award or a statistic. Never imply a lower price ("for less", "save", "deal") unless the client brain names a current offer. Never promise a result.
 - Never make a promise on the client's behalf about replies, delivery times or service. Never build an idea on an internal problem the brain records (complaints, unanswered messages, staff or payment issues): those are for the SMM to fix, never for the audience.
 - Only use a date from the dates list. Never name a competitor.
