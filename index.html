@@ -1476,6 +1476,28 @@ tr:last-child td { border-bottom: none; }
 .wp-sheet-bar { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .wp-sheet-bar .btn { width: 100%; justify-content: center; }
 .wp-sheet-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+/* WEEK IN REVIEW card (23 Oct 2026) */
+.wr-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 16px; margin-top: 12px; }
+.wr-card summary { cursor: pointer; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 36px; list-style: none; }
+.wr-card summary::-webkit-details-marker { display: none; }
+.wr-title { font-size: 14px; font-weight: 800; }
+.wr-held { font-size: 11px; font-weight: 700; color: var(--text3); border: 1px solid var(--border2); border-radius: 999px; padding: 2px 10px; }
+.wr-sum { font-size: 13px; color: var(--text2); line-height: 1.5; margin: 8px 0; }
+.wr-nums { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--text3); margin: 6px 0 4px; }
+.wr-nums b { color: var(--text); font-size: 14px; }
+.wr-h { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); margin: 12px 0 4px; }
+.wr-card ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.wr-note { width: 100%; min-height: 64px; margin-top: 4px; box-sizing: border-box; }
+.wr-save { margin-top: 8px; }
+.wr-note-read { font-size: 13px; color: var(--text2); margin-top: 12px; padding: 8px 10px; background: var(--bg3); border-radius: 8px; }
+.wr-note-read b { display: block; font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+.wr-acts { margin-top: 12px; display: flex; gap: 8px; }
+@media print {
+  body.wr-printing * { visibility: hidden !important; }
+  body.wr-printing #wpReview, body.wr-printing #wpReview * { visibility: visible !important; color: #141820 !important; }
+  body.wr-printing #wpReview { position: absolute; left: 0; top: 0; width: 100%; background: #fff !important; border: 0; }
+  body.wr-printing #wpReview .wr-acts, body.wr-printing #wpReview .wr-save, body.wr-printing #wpReview textarea { display: none !important; }
+}
 @media (pointer:coarse){ .wp-auto{min-height:44px!important} .wp-slot .wp-task-main{flex-direction:column!important;align-items:flex-start!important;justify-content:center!important} .wp-open{min-height:36px;min-width:36px;padding:0 12px;font-size:12px;justify-content:center} .wp-slot-time,.wp-proof,.wp-band,.wp-flag{font-size:11px} .wp-band.lunch,.wp-band.gap{min-height:30px} }
 
 /* MORNING BRIEF PANEL (7 Oct 2026), ported from the Command Centre console. App font, tabular figures,
@@ -2095,6 +2117,7 @@ tr:last-child td { border-bottom: none; }
       </div>
     </div>
     <div id="wpSeatsWrap"></div>
+    <div id="wpReviewWrap"></div>
     <div class="wp-board" id="wpBoard"></div>
     <div id="wpPendingSection"></div>
   </section>
@@ -6825,6 +6848,7 @@ async function wpLoadWeek(){
     });
     wpCarry = r2.ok ? await r2.json() : [];
   } catch(e){ wpCarry = []; }
+  await wpLoadReviews();
   wpRender();
 }
 function wpCarryHtml(){
@@ -6913,7 +6937,7 @@ function wpSlotHtml(p){
 function wpBandHtml(p){
   const h = Math.max(p.kind === 'lunch' ? 30 : 22, Math.round(p.mins * WP_PX_PER_MIN));
   if(p.kind === 'lunch') return '<div class="wp-band lunch" style="height:' + h + 'px" title="Lunch is set by BB for every working day. Moving it is Thulaib\'s decision.">' + WP_ICON_LOCK + 'Lunch ' + WP_LUNCH.from + ' to ' + WP_LUNCH.to + '</div>';
-  return '<div class="wp-band gap" style="height:' + h + 'px">Empty ' + wpHM(p.from) + ' to ' + wpHM(p.to) + ', ' + wpMins(p.mins) + '</div>';
+  return '<div class="wp-band gap" style="height:' + h + 'px">Free ' + wpHM(p.from) + ' to ' + wpHM(p.to) + ', ' + wpMins(p.mins) + '</div>';
 }
 /* WHOSE DAY. An SMM sees her own rows (the read is filtered). Thulaib and Shiara read every
    row, so they pick ONE seat at a time: three people's slots in one column is not a day.
@@ -6939,7 +6963,7 @@ function wpSeatsHtml(){
     const rows = wpTasks.filter(t => t.created_by === n && (dow ? t.day_of_week === dow : true));
     const lay = wpDayLayout(rows, true);
     return '<button class="wp-seat' + (n === cs.seat ? ' on' : '') + '" type="button" onclick="wpPickSeat(\'' + escHtml(n).replace(/'/g, '') + '\')">' + escHtml(n)
-      + '<span class="wp-seat-n">' + (dow ? 'today ' : 'week ') + lay.proof + ' of ' + lay.slots + ' with proof</span></button>';
+      + '<span class="wp-seat-n">' + (dow ? 'today ' : 'week ') + lay.proof + ' of ' + lay.slots + ' with work linked</span></button>';
   }).join('') + '</div>';
 }
 function wpVisibleTasks(){ return wpIsMaster() ? wpTasks.filter(t => t.created_by === wpCurrentSeat().seat) : wpTasks; }
@@ -6948,6 +6972,8 @@ function wpRender(){
   if(!board) return;
   const seatsEl = document.getElementById('wpSeatsWrap');
   if(seatsEl) seatsEl.innerHTML = wpSeatsHtml();
+  const revEl = document.getElementById('wpReviewWrap');
+  if(revEl){ const keep = document.getElementById('wrNote'); const typed = keep ? keep.value : null; revEl.innerHTML = wpReviewHtml(wpReviewFor(), wpIsMaster()); const nn = document.getElementById('wrNote'); if(nn && typed != null) nn.value = typed; }
   const today = new Date(); today.setHours(0,0,0,0);
   const pad = n => String(n).padStart(2,'0');
   const carryHtml = wpCarryHtml();
@@ -6998,7 +7024,7 @@ function wpRender(){
       <div class="wp-day-header ${isToday?'today':''}">
         <div class="wp-hd-row"><span class="wp-dname">${name.slice(0,3)}</span>${openTasks.length?'<span class="wp-daycount">'+openTasks.length+'</span>':''}</div>
         <div class="wp-date">${wpFmtDate(dayDate)}</div>
-        ${lay2 && lay2.slots ? '<div class="wp-proof">'+lay2.proof+' of '+lay2.slots+' slots with proof</div>' : ''}
+        ${lay2 && lay2.slots ? '<div class="wp-proof">'+lay2.proof+' of '+lay2.slots+' with work linked</div>' : ''}
       </div>
       <div class="wp-day-body">${body}</div>
     </div>`;
@@ -7033,6 +7059,70 @@ async function wpToggleDone(id){
   try { const r = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + id, { method: 'PATCH', headers, body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }) }); ok = r.ok; }
   catch(e){ ok = false; }
   if(!ok){ t.status = prev; wpRender(); toast('Could not save that tick', 'error'); }
+}
+/* ── WEEK IN REVIEW (23 Oct 2026). Written on Fridays by the Mac's job (tools/week-review/friday.mjs) through a
+   token-checked function; this page only reads it and lets the SMM add one line back. A coach's note, never a report
+   card: kind words first, unfinished work is "carried", no scores, no comparison (Thulaib: not a prison).
+   An SMM sees her or his own review once it is released. Thulaib and Shiara also see a held one, marked held. ── */
+let wpReviews = [];
+async function wpLoadReviews(){
+  const ws = wpDateStr(wpWeekStart), prev = new Date(wpWeekStart); prev.setDate(prev.getDate()-7);
+  try {
+    const r = await fetch(SMM_SB_URL + '/rest/v1/smm_week_review?week_start=in.(' + ws + ',' + wpDateStr(prev) + ')&select=id,seat,week_start,numbers,words,released_at,smm_note,smm_note_at', { headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY } });
+    wpReviews = r.ok ? await r.json() : [];
+  } catch(e){ wpReviews = []; }
+}
+function wpReviewFor(){
+  const master = wpIsMaster();
+  const seat = master ? wpCurrentSeat().seat : ((USER_ROLES[S.currentUser]||{}).name);
+  const ws = wpDateStr(wpWeekStart), prev = new Date(wpWeekStart); prev.setDate(prev.getDate()-7);
+  const ok = r => r.seat === seat && (master || r.released_at);
+  /* The week shown first; on the current week, last week's until this week's exists. */
+  const here = wpReviews.find(r => ok(r) && r.week_start === ws);
+  if(here) return { r: here, last: false };
+  const isCurrent = ws === wpDateStr(wpGetMonday(new Date()));
+  const before = isCurrent ? wpReviews.find(r => ok(r) && r.week_start === wpDateStr(prev)) : null;
+  return before ? { r: before, last: true } : null;
+}
+function wpReviewHtml(found, asMaster){
+  if(!found) return '';
+  const r = found.r, w = r.words || {}, n = r.numbers || {};
+  const li = a => (a||[]).map(x => '<li>' + escHtml(x) + '</li>').join('') || '<li>Nothing to note</li>';
+  const who = asMaster ? escHtml(r.seat) + '\'s week' : 'Your week';
+  const note = asMaster
+    ? (r.smm_note ? '<div class="wr-note-read"><b>' + escHtml(r.seat) + ' added</b>' + escHtml(r.smm_note) + '</div>' : '')
+    : (r.released_at ? '<label class="fl" for="wrNote">Your note (optional)</label><textarea class="fi wr-note" id="wrNote" maxlength="600" placeholder="Anything the week does not show: a client who kept you waiting, something you are proud of">' + escHtml(r.smm_note||'') + '</textarea>'
+        + '<button class="btn btn-ghost btn-sm wr-save" type="button" onclick="wpSaveReviewNote(' + r.id + ')">Save my note</button>' : '');
+  return '<details class="wr-card" id="wpReview"' + (found.last ? '' : ' open') + '>'
+    + '<summary><span class="wr-title">' + who + (found.last ? ', last week' : '') + ' in review</span>'
+    + (r.released_at ? '' : '<span class="wr-held">Held, not sent yet</span>') + '</summary>'
+    + '<p class="wr-sum">' + escHtml(w.summary||'') + '</p>'
+    + '<div class="wr-nums"><span><b>' + (n.done||0) + ' of ' + (n.tasks||0) + '</b> finished</span><span><b>' + (n.timed||0) + '</b> with a time</span><span><b>' + (n.linked||0) + '</b> with work linked</span><span><b>' + (n.ideas||0) + '</b> ideas banked</span></div>'
+    + '<div class="wr-h">Went well</div><ul>' + li(w.went_well) + '</ul>'
+    + '<div class="wr-h">Carried to next week</div><ul>' + li(w.carried) + '</ul>'
+    + '<div class="wr-h">For next week</div><ul>' + li(w.next_week) + '</ul>'
+    + (w.learned ? '<div class="wr-h">What the week shows</div><p class="wr-sum">' + escHtml(w.learned) + '</p>' : '')
+    + note
+    + '<div class="wr-acts"><button class="btn btn-ghost btn-sm" type="button" onclick="wpPrintReview()">Save as PDF</button></div>'
+    + '</details>';
+}
+/* One column, read fresh is not needed: only this person writes this note. Checks the answer. */
+async function wpSaveReviewNote(id){
+  const el = document.getElementById('wrNote'); if(!el) return;
+  const v = el.value.trim().slice(0,600) || null;
+  let r = null;
+  try { r = await fetch(SMM_SB_URL + '/rest/v1/smm_week_review?id=eq.' + id, { method: 'PATCH', headers: { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify({ smm_note: v, smm_note_at: new Date().toISOString() }) }); } catch(e){ r = null; }
+  const rows = r && r.ok ? await r.json() : [];
+  if(!rows.length){ toast('Could not save your note', 'error'); return; }
+  const x = wpReviews.find(y => y.id === id); if(x){ x.smm_note = v; }
+  toast('Note saved');
+}
+function wpPrintReview(){
+  const d = document.getElementById('wpReview'); if(d) d.open = true;
+  document.body.classList.add('wr-printing');
+  const done = () => { document.body.classList.remove('wr-printing'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  try { window.print(); } catch(e){ done(); }
 }
 /* A TICK ON ONE DEVICE APPEARS ON THE OTHER. A phone left open since the morning re-reads the
    week when it comes back on screen (L-ESTATE-TWO-DEVICES rule 3). Never while the sheet is open. */
@@ -9889,7 +9979,8 @@ async function runSelfTest(){
                 'smm_shoots','smm_weekly_plan','daily_pillar_state','bb_delivery',
                 'graphic_projects','video_projects','video_project_comments','video_project_links',
                 'content_plans',  /* back on 6 Oct 2026: the Clients page reads it again (SMM-2) */
-                'smm_publish_log','bb_month_close','bb_commitment_ledger'];  /* month close, 7 Oct 2026 */
+                'smm_publish_log','bb_month_close','bb_commitment_ledger',  /* month close, 7 Oct 2026 */
+                'smm_week_review'];  /* week in review, 23 Oct 2026 */
   /* bb_month_close and the ledger view have no id column; the ledger is a view over
      every month, so it is counted for this month only (month close, 7 Oct 2026). */
   const RT_COL={bb_month_close:'client_id',bb_commitment_ledger:'client_id'};
@@ -10251,6 +10342,15 @@ async function runSelfTest(){
     const steps=document.querySelectorAll('#wpFrom option').length;
     ok('Hours: a stored 15:10 is kept, never rounded away',kept,'value '+document.getElementById('wpFrom').value+', '+steps+' options');
     wpTimeOptions(document.getElementById('wpFrom'),null);
+    /* The week in review card, drawn from a probe review in memory. Kind words only; a held review never offers a note. */
+    const RV={id:-9,seat:'Probe',week_start:'2026-10-19',numbers:{tasks:4,done:3,timed:2,linked:1,ideas:0},words:{summary:'probe',went_well:['a'],carried:['b'],next_week:['c'],learned:''},released_at:'2026-10-23T12:00:00Z',smm_note:null};
+    const box2=document.createElement('div');
+    box2.innerHTML=wpReviewHtml({r:RV,last:false},false);
+    const txt=box2.textContent;
+    ok('Review: the card says carried, never slipped or missed',/Carried to next week/.test(txt)&&!/slipped|missed|failed/i.test(txt),txt.slice(0,60));
+    ok('Review: a released review offers the SMM a note and Save as PDF',!!box2.querySelector('#wrNote')&&/Save as PDF/.test(txt),'note '+!!box2.querySelector('#wrNote'));
+    box2.innerHTML=wpReviewHtml({r:Object.assign({},RV,{released_at:null}),last:false},false);
+    ok('Review: a held review offers no note and says held',!box2.querySelector('#wrNote')&&/Held, not sent yet/.test(box2.textContent),'held');
    }catch(e){ok('Hours: the checks ran',false,String(e&&e.message||e));}
   })();
 

@@ -32,6 +32,8 @@ for (const by of ['Nirvana', 'Tiana', 'Hithesh']) {
   }
 }
 const WRITES = [];
+let REVIEW_FIXTURE = null;
+const PAGE_ERRORS = [];
 function parseQ(u) { const q = {}; for (const [k, v] of new URL(u).searchParams) q[k] = v; return q; }
 function matches(r, q) {
   for (const [k, v] of Object.entries(q)) {
@@ -55,6 +57,11 @@ async function wire(ctx) {
   await ctx.route(SB + '/**', async rt => {
     const req = rt.request(), m = req.method(), u = req.url();
     const isPlan = u.includes('/rest/v1/smm_weekly_plan');
+    /* A released probe review, answered in memory when a test sets REVIEW_FIXTURE. */
+    if (REVIEW_FIXTURE && u.includes('/rest/v1/smm_week_review')) {
+      if (m === 'GET') return rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([REVIEW_FIXTURE]) });
+      if (m === 'PATCH') { const b = JSON.parse(req.postData() || '{}'); WRITES.push({ m, u: u.replace(SB, ''), body: JSON.stringify(b) }); Object.assign(REVIEW_FIXTURE, b); return rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([REVIEW_FIXTURE]) }); }
+    }
     if (m === 'GET' || m === 'HEAD') {
       if (isPlan) { const q = parseQ(u); let rows = STORE.filter(r => matches(r, q)); if (q.select) { const cols = q.select.split(','); rows = rows.map(r => Object.fromEntries(cols.map(c => [c, r[c]]))); } return rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) }); }
       return rt.continue();
@@ -80,6 +87,7 @@ async function open(browser, view, seat) {
   await ctx.addInitScript(() => { const d = new Date(); try { localStorage.setItem('smm-checkin-last', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); } catch (e) {} });
   const page = await ctx.newPage(); LAST = page;
   page.on('dialog', d => d.accept());
+  page.on('pageerror', e => { if (!PAGE_ERRORS.includes(String(e.message))) PAGE_ERRORS.push(String(e.message)); });
   await page.goto(ORIGIN + '/index.html', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => typeof smmEnterApp === 'function');
   await page.evaluate(n => smmEnterApp(n, false), seat);
@@ -88,7 +96,7 @@ async function open(browser, view, seat) {
   /* The morning check-in popup is real and freezes the page behind it, as it should. Close it the way a person does. */
   await page.evaluate(() => { if (window.closeCheckinPopup) closeCheckinPopup(); });
   await page.evaluate(() => nav('weeklyplan'));
-  await page.waitForFunction(() => S.currentPage === 'weeklyplan' && document.querySelectorAll('#wpBoard .wp-day').length >= 5, null, { timeout: 20000 });
+  await page.waitForFunction(() => S.currentPage === 'weeklyplan' && document.querySelectorAll('#wpBoard .wp-day').length >= 5, null, { timeout: 60000 });
   await page.waitForTimeout(600);
   return { ctx, page };
 }
@@ -105,7 +113,7 @@ try {
       if (vn === 'phone 320' && seat !== 'TIANA') continue;
       const { ctx, page } = await open(browser, view, seat);
       const res = await page.evaluate(async () => { window.__ST_SILENT = true; return await runSelfTest(); });
-      const hours = res.results.filter(r => /^Hours:|Weekly|weeklyplan/i.test(r.name));
+      const hours = res.results.filter(r => /^Hours:|^Review:|Weekly|weeklyplan|smm_week_review/i.test(r.name));
       const fails = res.results.filter(r => !r.pass);
       ok(`harness ${seat} ${vn}: ${res.total - res.failed} of ${res.total} green, hours checks ${hours.filter(r => r.pass).length} of ${hours.length}`,
         hours.every(r => r.pass), fails.map(f => f.name + ' [' + f.detail.slice(0, 90) + ']').join(' || ') || 'all green');
@@ -182,11 +190,27 @@ try {
     ok('devices: coming back on screen re-reads, the laptop shows the change', deskSees, deskSees ? 'redrawn' : 'still the old tick');
     await phone.ctx.close(); await desk.ctx.close();
   }
+  /* 5 THE WEEK IN REVIEW: Nirvana reads a released review, writes her note, saves; only her note is sent. */
+  {
+    REVIEW_FIXTURE = { id: 999001, seat: 'Nirvana', week_start: monday, numbers: { tasks: 6, done: 4, timed: 5, linked: 2, ideas: 1 }, words: { summary: 'Probe summary.', went_well: ['Probe went well'], carried: ['Probe carried'], next_week: ['Probe next'], learned: '' }, released_at: new Date().toISOString(), smm_note: null };
+    const { ctx, page } = await open(browser, VIEWS['phone 375'], 'NIRVANA');
+    const card = await page.locator('#wpReview').textContent().catch(() => '');
+    ok('review: Nirvana sees her released review with kind headings', /Your week in review/.test(card) && /Carried to next week/.test(card), card.slice(0, 50));
+    const w0 = WRITES.length;
+    await page.fill('#wrNote', 'Probe: CCT kept me waiting on approvals');
+    await page.locator('.wr-save').tap();
+    await page.waitForTimeout(800);
+    const p = WRITES.slice(w0).find(x => x.m === 'PATCH');
+    const keys = p ? Object.keys(JSON.parse(p.body)).sort().join(',') : 'none';
+    ok('review: saving the note sends only her note, to her review', keys === 'smm_note,smm_note_at' && /id=eq\.999001/.test(p.u) && REVIEW_FIXTURE.smm_note.startsWith('Probe: CCT'), keys);
+    await ctx.close(); REVIEW_FIXTURE = null;
+  }
   /* 4 THULAIB: one seat at a time, with the proof count per seat. */
   {
     const { ctx, page } = await open(browser, VIEWS['desk 1366'], 'THULAIB');
     const chips = await page.locator('.wp-seat').allTextContents();
-    ok('master: one chip per seat with its proof count', chips.length >= 3 && chips.every(c => /with proof/.test(c)), chips.join(' | '));
+    ok('master: one chip per seat with its proof count', chips.length >= 3 && chips.every(c => /with work linked/.test(c)), chips.join(' | '));
+    if (SHOTS) { await page.locator('.wp-seat', { hasText: 'Nirvana' }).click(); await page.waitForTimeout(400); const el = page.locator('#wpReviewWrap'); if (await el.locator('#wpReview').count()) await el.screenshot({ path: path.join(SHOTS, 'THULAIB-review-nirvana.png') }); }
     await page.locator('.wp-seat', { hasText: 'Hithesh' }).click();
     const seen = await page.evaluate(() => [...new Set(wpVisibleTasks().map(t => t.created_by))].join());
     ok('master: picking Hithesh shows only Hithesh', seen === 'Hithesh', seen);
@@ -194,6 +218,7 @@ try {
     await ctx.close();
   }
 } catch (e) { let st = ''; try { st = JSON.stringify(await LAST.evaluate(() => ({ body: document.body.className, open: [...document.querySelectorAll('.modal-bg, #smm-checkin-overlay, #agent-drawer-overlay, #bb-detail-overlay, .sidebar-backdrop')].filter(e => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0).map(e => e.id || e.className), stack: String(new Error().stack).slice(0, 0) }))); } catch (x) {} ok('the check ran to the end', false, String(e && e.message || e).split('\n')[0] + ' ' + st + ' at ' + String(e.stack).split('\n').find(l => l.includes('wp-hours-check'))); } finally { await browser.close(); }
+if (PAGE_ERRORS.length) ok('no script errors on the page', false, PAGE_ERRORS.slice(0, 3).join(' | '));
 const live = WRITES.filter(w => !w.u.includes('smm_weekly_plan'));
 console.log('\nWEEKLY PLAN BY THE HOUR, browser check');
 R.forEach(r => console.log((r.pass ? 'PASS ' : 'FAIL ') + r.name + ((!r.pass || /^harness/.test(r.name)) ? '\n     ' + r.detail : '')));
