@@ -10,7 +10,8 @@ import fs from 'fs'; import path from 'path'; import url from 'url';
 const require = createRequire(import.meta.url);
 const { chromium } = require(path.join(process.env.HOME, 'bb-systems/batch/node_modules/playwright'));
 const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '..');
-const ORIGIN = 'http://localhost:8799';
+/* WP_LIVE=1 loads the real published page instead of this folder; writes are still answered in memory. */
+const ORIGIN = process.env.WP_LIVE ? 'https://businessboosterlk.github.io/bb-smm-workspace' : 'http://localhost:8799';
 const SB = 'https://yyviiwnqgphyklcoijyd.supabase.co';
 const shotsAt = process.argv.indexOf('--shots'); const SHOTS = shotsAt > 0 ? process.argv[shotsAt + 1] : null;
 const pad = n => String(n).padStart(2, '0');
@@ -43,7 +44,7 @@ function matches(r, q) {
   return true;
 }
 async function wire(ctx) {
-  await ctx.route(ORIGIN + '/**', async rt => {
+  if (!process.env.WP_LIVE) await ctx.route(ORIGIN + '/**', async rt => {
     let p = new URL(rt.request().url()).pathname; if (p === '/') p = '/index.html';
     if (p === '/index.html' && process.env.WP_FILE) return rt.fulfill({ status: 200, body: fs.readFileSync(process.env.WP_FILE), contentType: 'text/html' });
     const f = path.join(ROOT, p);
