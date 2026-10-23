@@ -78,3 +78,5 @@ grant execute on function public.bb_week_review_release(date, boolean) to anon, 
 -- ROLLBACK:
 -- drop function public.bb_week_review_release(date, boolean); drop function public.bb_week_review_put(text, date, jsonb, jsonb, text, numeric);
 -- drop table public.smm_week_review;
+
+-- 23 Oct, later: bb_week_review_put never rewrites a RELEASED review (the SMM may have answered it). Applied as smm_week_review_put_keeps_released.
