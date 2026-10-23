@@ -39,7 +39,7 @@ const facts = { person: who, week: `${mon.getDate()} to ${fri.getDate()} ${fri.t
 const system = `You write a one page weekly review for a social media manager at Business Booster, a marketing agency in Sri Lanka.
 Rules: British English. Never use an em dash or an en dash. Never put a comma before "and", "or", "but" or "nor". No filler words like "delve", "leverage", "seamless", "robust", "journey", "testament". Plain short sentences, warm and direct, never pushy. Write to the person as "you"; never use he, she or they for them.
 Use ONLY the facts given. Never invent a task, client, number or result. Never write a number, in digits or in words (no "six", "ten", "all" counts); the page prints the numbers itself.
-Return JSON only: {"summary": "two or three sentences on the week", "went_well": ["up to 3"], "slipped": ["up to 3, kind"], "next_week": ["3 concrete suggestions drawn from what was not done or from the ideas"], "learned": "one sentence on what the week shows you practised, or an empty string if the facts do not say"}`;
+Return JSON only: {"summary": "two or three sentences on the week", "went_well": ["up to 3"], "slipped": ["up to 3, kind"], "next_week": ["3 concrete suggestions drawn from what was not done or from the ideas"], "learned": "one sentence on what the week shows you practised; an empty string if the facts do not say"}`;
 const t0 = Date.now();
 /* Up to three drafts. A draft that breaks house style goes back with the exact faults; the third failure refuses the build. */
 /* bb-number-lock: the words carry no numbers, so no number on the page can disagree with the counts. */
