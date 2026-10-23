@@ -1411,7 +1411,7 @@ tr:last-child td { border-bottom: none; }
 }
 
 /* ═══════════════ WEEKLY PLAN ═══════════════ */
-.wp-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 12px; }
+.wp-board { display: grid; grid-template-columns: repeat(var(--wp-cols, 7), 1fr); gap: 8px; margin-top: 12px; }
 .wp-day { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; min-height: 240px; display: flex; flex-direction: column; }
 .wp-day-header { padding: 10px 12px; border-bottom: 1px solid var(--border); }
 .wp-day-header.today { background: rgba(0,229,255,0.06); }
@@ -1448,6 +1448,35 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 1200px) { .wp-board { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 768px) { .wp-board { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .wp-board { grid-template-columns: 1fr; } }
+/* WEEKLY PLAN BY THE HOUR (Thulaib, 23 Oct 2026). Each working day is a timeline of slots, so Thulaib and Shiara
+   see the day and the proof without a WhatsApp message. Lunch is a locked band. Colour never stands alone: every
+   amber or red edge also carries its word. */
+.wp-seats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.wp-seat { min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border2); background: var(--bg2); color: var(--text2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.wp-seat.on { border-color: var(--accent); color: var(--accent); background: var(--accent10); }
+.wp-seat .wp-seat-n { font-size: 11px; font-weight: 600; color: var(--text3); }
+.wp-proof { font-size: 10px; font-weight: 600; color: var(--text3); margin-top: 2px; }
+.wp-tl { display: flex; flex-direction: column; gap: 3px; }
+.wp-slot { position: relative; display: flex; gap: 8px; align-items: flex-start; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; box-sizing: border-box; min-width: 0; }
+.wp-slot.lunch-clash { border-left: 3px solid var(--yellow); }
+.wp-slot.overtime { border-left: 3px solid var(--red); }
+.wp-slot.done .wp-task-text { text-decoration: line-through; color: var(--text3); font-weight: 400; }
+.wp-slot-time { font-size: 10px; font-weight: 700; color: var(--text3); font-variant-numeric: tabular-nums; }
+.wp-flag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin: 3px 4px 0 0; }
+.wp-flag.amber { color: var(--yellow); background: var(--y10); }
+.wp-flag.red { color: var(--red); background: var(--r10); }
+.wp-open { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent20); border-radius: 4px; padding: 1px 6px; margin: 3px 4px 0 0; text-decoration: none; }
+.wp-open svg { width: 11px; height: 11px; }
+.wp-band { display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; font-size: 10px; font-weight: 600; color: var(--text3); box-sizing: border-box; text-align: center; padding: 2px 6px; }
+.wp-band.gap { border: 1px dashed var(--border); }
+.wp-band.lunch { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); cursor: default; }
+.wp-band.lunch svg { width: 11px; height: 11px; flex-shrink: 0; }
+.wp-untimed-label { margin-top: 8px; }
+.wp-sheet-times { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wp-sheet-bar { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.wp-sheet-bar .btn { width: 100%; justify-content: center; }
+.wp-sheet-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+@media (pointer:coarse){ .wp-slot .wp-task-main{flex-direction:column!important;align-items:flex-start!important;justify-content:center!important} .wp-open{min-height:36px;min-width:36px;padding:0 12px;font-size:12px;justify-content:center} .wp-slot-time,.wp-proof,.wp-band,.wp-flag{font-size:11px} .wp-band.lunch,.wp-band.gap{min-height:30px} }
 
 /* MORNING BRIEF PANEL (7 Oct 2026), ported from the Command Centre console. App font, tabular figures,
    a big number beside a small unit, sentence case, colour only on status dots. Phone: centred head, two by two figures. */
@@ -2065,6 +2094,7 @@ tr:last-child td { border-bottom: none; }
         <button class="btn btn-primary" onclick="wpOpenAdd()">+ Add Task</button>
       </div>
     </div>
+    <div id="wpSeatsWrap"></div>
     <div class="wp-board" id="wpBoard"></div>
     <div id="wpPendingSection"></div>
   </section>
@@ -2092,14 +2122,21 @@ tr:last-child td { border-bottom: none; }
 <div class="modal-bg" id="modal-wp-task">
   <div class="modal">
     <div class="modal-head"><div class="modal-title" id="wpModalTitle">Add to Weekly Plan</div><button class="modal-close" onclick="closeModal('wp-task')">×</button></div>
-    <div class="fg"><label class="fl">What needs doing *</label><input class="fi" type="text" id="wpNotes" placeholder="e.g. Reply to all DMs · Post Square 1 reel at 12 · Send SEO report"></div>
-    <div class="fg"><label class="fl">Day *</label><select class="fi" id="wpDay"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="7">Sunday</option></select></div>
-    <div class="fg"><label class="fl">Client (optional)</label><select class="fi" id="wpClient"></select></div>
-    <div class="fg"><label class="fl">Status</label><select class="fi" id="wpStatus"><option value="planned">To do</option><option value="in_progress">In progress</option><option value="done">Done</option></select></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('wp-task')">Cancel</button>
-      <button class="btn btn-sm" id="wpDeleteBtn" style="display:none;background:var(--red);color:#fff" onclick="wpDeleteTask()">Delete</button>
+    <div class="fg"><label class="fl" for="wpNotes">What needs doing *</label><input class="fi" type="text" id="wpNotes" placeholder="e.g. Research Sastho reels, draft CCT captions"></div>
+    <div class="fg"><label class="fl" for="wpDay">Day *</label><select class="fi" id="wpDay"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option></select></div>
+    <!-- TIME SLOT (23 Oct 2026). 15 minute steps, 08:00 to 19:00. Lunch 12:30 to 13:30 is set by BB and drawn on every day. -->
+    <div class="wp-sheet-times">
+      <div class="fg"><label class="fl" for="wpFrom">From</label><select class="fi" id="wpFrom"></select></div>
+      <div class="fg"><label class="fl" for="wpTo">To</label><select class="fi" id="wpTo"></select></div>
+    </div>
+    <div class="fg"><label class="fl" for="wpClient">Client (optional)</label><select class="fi" id="wpClient"></select></div>
+    <!-- PROOF IS A LINK, NEVER AN UPLOAD: storage here is readable by anyone holding the app. -->
+    <div class="fg"><label class="fl" for="wpLink">Link to the work (optional)</label><input class="fi" type="url" id="wpLink" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://docs.google.com/..."><div class="wp-sheet-hint">Research, a draft or a plan. A Drive, Docs or Canva link that starts with https://</div></div>
+    <div class="fg"><label class="fl" for="wpStatus">Status</label><select class="fi" id="wpStatus"><option value="planned">To do</option><option value="in_progress">In progress</option><option value="done">Done</option></select></div>
+    <div class="wp-sheet-bar">
       <button class="btn btn-primary" onclick="wpSaveTask()">Save</button>
+      <button class="btn btn-sm" id="wpDeleteBtn" style="display:none;background:var(--r10);color:var(--red);border:1px solid var(--r20)" onclick="wpDeleteTask()">Delete</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('wp-task')">Cancel</button>
     </div>
   </div>
 </div>
@@ -6806,20 +6843,123 @@ async function wpCarryPatch(id, body){
 }
 function wpCarryMove(id){ wpCarryPatch(id, { week_start: wpDateStr(wpWeekStart) }); }
 function wpCarryDone(id){ wpCarryPatch(id, { status: 'done' }); }
+/* ── WEEKLY PLAN BY THE HOUR (Thulaib, 23 Oct 2026) ─────────────────────────
+   Each working day is drawn as TIME SLOTS: rows sorted by start, height by length.
+   The columns are starts_at, ends_at and link on smm_weekly_plan, all nullable, so
+   every row written before today keeps working and shows under "No time yet".
+   LUNCH IS STRUCTURE. 12:30 to 13:30 is drawn on every working day and nobody can
+   move it from the app; moving it is Thulaib's call (bb-operator-control).
+   The working day is 08:30 to 17:30: empty time inside it is drawn with its minutes
+   and anything after 17:30 is drawn red as overtime. The view shows what really
+   happened, so a slot that runs over lunch is drawn where it sits, with an amber edge. */
+const WP_LUNCH = { from: '12:30', to: '13:30' };
+const WP_DAY = { from: '08:30', to: '17:30' };
+const WP_PICK = { from: '08:00', to: '19:00', step: 15 };
+const WP_PX_PER_MIN = 0.8;
+/* The two icons are Lucide (lucide-static 1.47.0, ISC), copied from the package file, never typed. The tick is the one this page always drew. */
+const WP_TICK = '<svg width="10" height="8" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7.5L10 1" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const WP_ICON_LOCK = '<svg class="lucide lucide-lock" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+const WP_ICON_OPEN = '<svg class="lucide lucide-external-link" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+function wpMin(t){ if(!t) return null; const m = String(t).match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1])*60 + (+m[2]) : null; }
+function wpHM(n){ return String(Math.floor(n/60)).padStart(2,'0') + ':' + String(n%60).padStart(2,'0'); }
+function wpMins(n){ const h = Math.floor(n/60), m = n%60; return (h ? h + ' h' : '') + (h && m ? ' ' : '') + (m || !h ? m + ' min' : ''); }
+/* A LINK IS PROOF, NEVER A FILE. Storage buckets are public to the anon key, so an upload
+   would be readable by anyone holding the app. Only https, checked when saved AND when drawn. */
+function wpSafeLink(s){
+  s = String(s == null ? '' : s).trim();
+  if(!/^https:\/\/\S+$/i.test(s)) return null;
+  try { const u = new URL(s); return u.protocol === 'https:' && u.hostname ? u.href : null; } catch(e){ return null; }
+}
+/* ONE EVALUATOR for a day. The board, the proof counts and the harness all call this. */
+function wpDayLayout(rows, working){
+  const L0 = wpMin(WP_LUNCH.from), L1 = wpMin(WP_LUNCH.to), D0 = wpMin(WP_DAY.from), D1 = wpMin(WP_DAY.to);
+  const timed = [], untimed = [];
+  (rows||[]).forEach(r => {
+    const a = wpMin(r.starts_at), b = wpMin(r.ends_at);
+    if(a != null && b != null && b > a) timed.push({ row: r, from: a, to: b }); else untimed.push(r);
+  });
+  timed.sort((x,y) => x.from - y.from || x.to - y.to || (x.row.id||0) - (y.row.id||0));
+  const parts = timed.map(s => ({ kind: 'slot', row: s.row, from: s.from, to: s.to, mins: s.to - s.from,
+    lunch: working && s.from < L1 && s.to > L0,
+    over: working ? Math.max(0, s.to - Math.max(s.from, D1)) : 0,
+    link: !!wpSafeLink(s.row.link) }));
+  if(working) parts.push({ kind: 'lunch', from: L0, to: L1, mins: L1 - L0 });
+  parts.sort((x,y) => x.from - y.from || (x.kind === 'lunch' ? 1 : 0) - (y.kind === 'lunch' ? 1 : 0) || x.to - y.to);
+  const items = [];
+  let cur = D0;
+  const gap = (a, b) => { const s = Math.max(a, D0), e = Math.min(b, D1); if(working && e > s) items.push({ kind: 'gap', from: s, to: e, mins: e - s }); };
+  parts.forEach(p => { if(p.from > cur) gap(cur, p.from); items.push(p); cur = Math.max(cur, p.to); });
+  gap(cur, D1);
+  const slots = parts.filter(p => p.kind === 'slot');
+  return { items: items, untimed: untimed, slots: slots.length, proof: slots.filter(s => s.link).length,
+           lunchClash: slots.filter(s => s.lunch).length, overtime: slots.filter(s => s.over > 0).length };
+}
+function wpSlotHtml(p){
+  const t = p.row, isDone = t.status === 'done';
+  const h = Math.max(44, Math.round(p.mins * WP_PX_PER_MIN));
+  const link = wpSafeLink(t.link);
+  const flags = (p.lunch ? '<span class="wp-flag amber">Over lunch</span>' : '')
+    + (p.over ? '<span class="wp-flag red">Overtime ' + wpMins(p.over) + '</span>' : '');
+  return '<div class="wp-slot' + (isDone ? ' done' : '') + (p.lunch ? ' lunch-clash' : '') + (p.over ? ' overtime' : '') + '" data-id="' + t.id + '" style="min-height:' + h + 'px">'
+    + '<div class="wp-check ' + (isDone ? 'done' : '') + '" onclick="event.stopPropagation();wpToggleDone(' + t.id + ')">' + (isDone ? WP_TICK : '') + '</div>'
+    + '<div class="wp-task-main" onclick="wpOpenEdit(' + t.id + ')">'
+    +   '<div class="wp-slot-time">' + wpHM(p.from) + ' to ' + wpHM(p.to) + ', ' + wpMins(p.mins) + '</div>'
+    +   '<div class="wp-task-text">' + escHtml(t.notes || 'Task') + '</div>'
+    +   '<div>' + (t.client_name ? '<span class="wp-task-chip">' + escHtml(t.client_name) + '</span> ' : '')
+    +     (link ? '<a class="wp-open" href="' + escHtml(link) + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">' + WP_ICON_OPEN + 'Open</a>' : '')
+    +     flags + '</div>'
+    + '</div></div>';
+}
+function wpBandHtml(p){
+  const h = Math.max(p.kind === 'lunch' ? 30 : 22, Math.round(p.mins * WP_PX_PER_MIN));
+  if(p.kind === 'lunch') return '<div class="wp-band lunch" style="height:' + h + 'px" title="Lunch is set by BB for every working day. Moving it is Thulaib\'s decision.">' + WP_ICON_LOCK + 'Lunch ' + WP_LUNCH.from + ' to ' + WP_LUNCH.to + '</div>';
+  return '<div class="wp-band gap" style="height:' + h + 'px">Empty ' + wpHM(p.from) + ' to ' + wpHM(p.to) + ', ' + wpMins(p.mins) + '</div>';
+}
+/* WHOSE DAY. An SMM sees her own rows (the read is filtered). Thulaib and Shiara read every
+   row, so they pick ONE seat at a time: three people's slots in one column is not a day.
+   The pick sticks per person on this device. */
+let wpSeat = null;
+function wpIsMaster(){ const r = USER_ROLES[S.currentUser] || {}; return !r.smm; }
+function wpSeatNames(){ return Object.keys(USER_ROLES).filter(k => USER_ROLES[k].smm).map(k => USER_ROLES[k].name); }
+function wpSeatKey(){ return 'smm-wp-seat-' + (S.currentUser || ''); }
+function wpCurrentSeat(){
+  const names = wpSeatNames();
+  const others = [...new Set(wpTasks.map(t => t.created_by).filter(n => n && names.indexOf(n) < 0))];
+  const all = names.concat(others);
+  if(!wpSeat){ try { wpSeat = localStorage.getItem(wpSeatKey()); } catch(e){} }
+  if(all.indexOf(wpSeat) < 0) wpSeat = all[0];
+  return { seat: wpSeat, all: all };
+}
+function wpPickSeat(name){ wpSeat = name; try { localStorage.setItem(wpSeatKey(), name); } catch(e){} wpRender(); }
+function wpTodayDow(){ const d = new Date(); d.setHours(0,0,0,0); const diff = Math.round((d - new Date(wpWeekStart)) / 86400000); return diff >= 0 && diff < 7 ? diff + 1 : null; }
+function wpSeatsHtml(){
+  if(!wpIsMaster()) return '';
+  const cs = wpCurrentSeat(), dow = wpTodayDow();
+  return '<div class="wp-seats" id="wpSeats">' + cs.all.map(n => {
+    const rows = wpTasks.filter(t => t.created_by === n && (dow ? t.day_of_week === dow : true));
+    const lay = wpDayLayout(rows, true);
+    return '<button class="wp-seat' + (n === cs.seat ? ' on' : '') + '" type="button" onclick="wpPickSeat(\'' + escHtml(n).replace(/'/g, '') + '\')">' + escHtml(n)
+      + '<span class="wp-seat-n">' + (dow ? 'today ' : 'week ') + lay.proof + ' of ' + lay.slots + ' with proof</span></button>';
+  }).join('') + '</div>';
+}
+function wpVisibleTasks(){ return wpIsMaster() ? wpTasks.filter(t => t.created_by === wpCurrentSeat().seat) : wpTasks; }
 function wpRender(){
   const board = document.getElementById('wpBoard');
   if(!board) return;
+  const seatsEl = document.getElementById('wpSeatsWrap');
+  if(seatsEl) seatsEl.innerHTML = wpSeatsHtml();
   const today = new Date(); today.setHours(0,0,0,0);
   const pad = n => String(n).padStart(2,'0');
   const carryHtml = wpCarryHtml();
+  const tasks = wpVisibleTasks();
   board.innerHTML = carryHtml + WP_DAYS.map((name,i)=>{
     const dayNum = i+1;
+    const working = dayNum <= 5;
     const dayDate = new Date(wpWeekStart); dayDate.setDate(dayDate.getDate()+i);
     const ds = dayDate.getFullYear()+'-'+pad(dayDate.getMonth()+1)+'-'+pad(dayDate.getDate());
     const isToday = dayDate.getTime()===today.getTime();
-    const dayTasks = wpTasks.filter(t=>t.day_of_week===dayNum);
+    const dayTasks = tasks.filter(t=>t.day_of_week===dayNum);
     const openTasks = dayTasks.filter(t=>t.status!=='done');
-    const doneTasks = dayTasks.filter(t=>t.status==='done');
 
     // AUTO, what's going up that day (from the Posting Plan + shoots; read-only)
     const posts = (S.contentPlans||[]).filter(p=>(p.scheduled_date||'').slice(0,10)===ds);
@@ -6837,42 +6977,51 @@ function wpRender(){
       autoRows += '<div class="wp-auto" onclick="nav(\'shoot-pipeline\')"><span class="wp-auto-dot" style="background:var(--orange)"></span>'
         + '<div class="wp-auto-label"><b style="color:var(--orange)">SHOOT</b> '+escHtml(cl?cl.name:(s.title||''))+'</div></div>';
     });
+    /* The table only holds Monday to Friday (CHECK day_of_week 1 to 5). A weekend column
+       is drawn only when something goes up that day and never offers + task. */
+    if(!working && !autoRows) return '';
     const autoSection = autoRows ? '<div class="wp-sec-label">Going up</div>'+autoRows : '';
 
-    // MANUAL tasks
-    let taskSection;
-    if(openTasks.length || doneTasks.length){
-      taskSection = '<div class="wp-sec-label"'+(autoRows?' style="margin-top:6px"':'')+'>My tasks</div>'
-        + openTasks.map(wpRenderTask).join('') + doneTasks.map(wpRenderTask).join('');
-    } else {
-      taskSection = autoRows ? '' : '<div class="wp-empty">Nothing planned</div>';
+    let body = autoSection;
+    if(working){
+      const lay = wpDayLayout(dayTasks, true);
+      body += '<div class="wp-sec-label"'+(autoRows?' style="margin-top:6px"':'')+'>The day</div>'
+        + '<div class="wp-tl">' + lay.items.map(p => p.kind === 'slot' ? wpSlotHtml(p) : wpBandHtml(p)).join('') + '</div>';
+      if(lay.untimed.length){
+        const ord = lay.untimed.filter(t=>t.status!=='done').concat(lay.untimed.filter(t=>t.status==='done'));
+        body += '<div class="wp-sec-label wp-untimed-label">No time yet</div>' + ord.map(wpRenderTask).join('');
+      }
+      body += '<button class="wp-add-inline" onclick="wpOpenAdd(' + dayNum + ')">+ task</button>';
     }
-
-    return `<div class="wp-day${isToday?' is-today':''}">
+    const lay2 = working ? wpDayLayout(dayTasks, true) : null;
+    return `<div class="wp-day${isToday?' is-today':''}" data-day="${dayNum}">
       <div class="wp-day-header ${isToday?'today':''}">
         <div class="wp-hd-row"><span class="wp-dname">${name.slice(0,3)}</span>${openTasks.length?'<span class="wp-daycount">'+openTasks.length+'</span>':''}</div>
         <div class="wp-date">${wpFmtDate(dayDate)}</div>
+        ${lay2 && lay2.slots ? '<div class="wp-proof">'+lay2.proof+' of '+lay2.slots+' slots with proof</div>' : ''}
       </div>
-      <div class="wp-day-body">
-        ${autoSection}${taskSection}
-        <button class="wp-add-inline" onclick="wpOpenAdd(${dayNum})">+ task</button>
-      </div>
+      <div class="wp-day-body">${body}</div>
     </div>`;
   }).join('');
+  /* Weekend columns come and go, so the desk grid is as wide as the days drawn. */
+  board.style.setProperty('--wp-cols', board.querySelectorAll('.wp-day').length || 5);
   const pendSec = document.getElementById('wpPendingSection');
   if(pendSec) pendSec.innerHTML='';
 }
 function wpRenderTask(t){
   const isDone = t.status==='done';
   const text = t.notes || (t.client_name ? (escHtml(t.client_name)+', '+(WP_TYPES[t.task_type]||t.task_type||'post')) : 'Task');
-  return `<div class="wp-task ${isDone?'done':''}">
-    <div class="wp-check ${isDone?'done':''}" onclick="event.stopPropagation();wpToggleDone(${t.id})">${isDone?'<svg width="10" height="8" viewBox="0 0 11 9" fill="none"><path d="M1 4L4 7.5L10 1" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+  const link = wpSafeLink(t.link);
+  return `<div class="wp-task ${isDone?'done':''}" data-id="${t.id}">
+    <div class="wp-check ${isDone?'done':''}" onclick="event.stopPropagation();wpToggleDone(${t.id})">${isDone?WP_TICK:''}</div>
     <div class="wp-task-main" onclick="wpOpenEdit(${t.id})">
       <div class="wp-task-text">${escHtml(t.notes||'')||text}</div>
-      ${t.client_name?'<span class="wp-task-chip">'+escHtml(t.client_name)+'</span>':''}
+      <div>${t.client_name?'<span class="wp-task-chip">'+escHtml(t.client_name)+'</span> ':''}${link?'<a class="wp-open" href="'+escHtml(link)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">'+WP_ICON_OPEN+'Open</a>':''}</div>
     </div>
   </div>`;
 }
+/* THE TICK SENDS ONE FIELD and checks the answer. fetch does not throw on a 4xx, so the old
+   tick stayed green on screen when the write was refused (L-SMM-044 shape). */
 async function wpToggleDone(id){
   const t = wpTasks.find(x=>x.id===id);
   if(!t) return;
@@ -6880,9 +7029,19 @@ async function wpToggleDone(id){
   const prev = t.status;
   t.status = newStatus; wpRender();
   const headers = { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
-  try { await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + id, { method: 'PATCH', headers, body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }) }); }
-  catch(e){ t.status = prev; wpRender(); toast('Failed', 'error'); }
+  let ok = false;
+  try { const r = await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + id, { method: 'PATCH', headers, body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }) }); ok = r.ok; }
+  catch(e){ ok = false; }
+  if(!ok){ t.status = prev; wpRender(); toast('Could not save that tick', 'error'); }
 }
+/* A TICK ON ONE DEVICE APPEARS ON THE OTHER. A phone left open since the morning re-reads the
+   week when it comes back on screen (L-ESTATE-TWO-DEVICES rule 3). Never while the sheet is open. */
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState !== 'visible' || typeof S === 'undefined' || !S || !S.currentUser || S.currentPage !== 'weeklyplan') return;
+  const m = document.getElementById('modal-wp-task');
+  if(m && m.style.display === 'flex') return;
+  try { wpLoadWeek(); } catch(e){}
+});
 async function wpCarryOver(){
   if(!wpWeekStart) return;
   const prev = new Date(wpWeekStart); prev.setDate(prev.getDate()-7);
@@ -6909,16 +7068,35 @@ function wpPopulateClients(){
     S.clients.forEach(c=>{ sel.innerHTML+=`<option value="${escHtml(c.name)}">${escHtml(c.name)}</option>`; });
   }
 }
+function wpTimeOptions(sel, keep){
+  if(!sel) return;
+  const a = wpMin(WP_PICK.from), b = wpMin(WP_PICK.to);
+  const list = [];
+  for(let m = a; m <= b; m += WP_PICK.step) list.push(wpHM(m));
+  /* A stored time off the 15 minute grid (written elsewhere or 15:10) is kept and shown,
+     never rounded away on an edit. */
+  const k = keep ? wpHM(wpMin(keep)) : null;
+  if(k && list.indexOf(k) < 0){ list.push(k); list.sort(); }
+  sel.innerHTML = '<option value="">No time</option>' + list.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  sel.value = k || '';
+}
+let wpEditSnap = null;
+function wpFormFill(t){
+  wpTimeOptions(document.getElementById('wpFrom'), t && t.starts_at);
+  wpTimeOptions(document.getElementById('wpTo'), t && t.ends_at);
+  document.getElementById('wpLink').value = (t && t.link) || '';
+}
 function wpOpenAdd(prefillDay){
-  wpEditId = null;
+  wpEditId = null; wpEditSnap = null;
   document.getElementById('wpModalTitle').textContent = 'Add to Weekly Plan';
   document.getElementById('wpDeleteBtn').style.display = 'none';
   wpPopulateClients();
-  const gd = new Date().getDay(); // 0=Sun..6=Sat -> our 1=Mon..7=Sun
-  document.getElementById('wpDay').value = prefillDay || (gd===0 ? 7 : gd);
+  const gd = new Date().getDay(); // 0=Sun..6=Sat -> our 1=Mon..5=Fri; a weekend opens on Monday
+  document.getElementById('wpDay').value = prefillDay || (gd>=1 && gd<=5 ? gd : 1);
   document.getElementById('wpClient').value = '';
   document.getElementById('wpStatus').value = 'planned';
   document.getElementById('wpNotes').value = '';
+  wpFormFill(null);
   openModal('wp-task');
   setTimeout(()=>{ const n=document.getElementById('wpNotes'); if(n) n.focus(); }, 100);
 }
@@ -6926,6 +7104,8 @@ function wpOpenEdit(id){
   const t = wpTasks.find(x=>x.id===id);
   if(!t) return;
   wpEditId = id;
+  /* What this screen loaded, kept apart from wpTasks so a re-read cannot move it. */
+  wpEditSnap = wpRowFields(t);
   document.getElementById('wpModalTitle').textContent = 'Edit Task';
   document.getElementById('wpDeleteBtn').style.display = '';
   wpPopulateClients();
@@ -6933,31 +7113,92 @@ function wpOpenEdit(id){
   document.getElementById('wpClient').value = t.client_name||'';
   document.getElementById('wpStatus').value = (t.status==='pending' ? 'planned' : (t.status||'planned'));
   document.getElementById('wpNotes').value = t.notes||'';
+  wpFormFill(t);
   openModal('wp-task');
 }
-async function wpSaveTask(){
-  const task = document.getElementById('wpNotes').value.trim();
-  if(!task){ toast('Type what needs doing','error'); return; }
-  const clientName = document.getElementById('wpClient').value || null;
-  const data = {
-    week_start: wpDateStr(wpWeekStart),
-    day_of_week: parseInt(document.getElementById('wpDay').value),
-    client_name: clientName,
-    task_type: 'post',
-    task_count: 1,
-    assigned_to: (USER_ROLES[S.currentUser]||{}).name || null,
+/* The fields the sheet owns, normalised so '08:30:00' from the database equals '08:30' from the form. */
+const WP_FIELDS = ['day_of_week','client_name','status','notes','starts_at','ends_at','link'];
+function wpNorm(k, v){
+  if(v === undefined || v === '' ) v = null;
+  if(v == null) return null;
+  if(k === 'starts_at' || k === 'ends_at'){ const m = wpMin(v); return m == null ? null : wpHM(m); }
+  if(k === 'day_of_week') return +v;
+  if(k === 'status' && v === 'pending') return 'planned';
+  return String(v);
+}
+function wpRowFields(r){ const o = {}; WP_FIELDS.forEach(k => { o[k] = wpNorm(k, r ? r[k] : null); }); return o; }
+/* SAVE AS A CHANGE, NEVER A COPY (L-ESTATE-TWO-DEVICES). Only the fields the person changed
+   are sent, so an edit on the laptop cannot undo a tick the phone made since. */
+function wpChangedFields(loaded, next){
+  const out = {};
+  WP_FIELDS.forEach(k => { if(wpNorm(k, loaded[k]) !== wpNorm(k, next[k])) out[k] = wpNorm(k, next[k]); });
+  return out;
+}
+function wpFormRead(){
+  return wpRowFields({
+    day_of_week: document.getElementById('wpDay').value,
+    client_name: document.getElementById('wpClient').value,
     status: document.getElementById('wpStatus').value,
-    notes: task,
-    updated_at: new Date().toISOString()
-  };
+    notes: document.getElementById('wpNotes').value.trim(),
+    starts_at: document.getElementById('wpFrom').value,
+    ends_at: document.getElementById('wpTo').value,
+    link: document.getElementById('wpLink').value.trim()
+  });
+}
+/* The rules a slot must meet, in words the SMM can act on. Returns null when it passes. */
+function wpFormProblem(f){
+  if(!f.notes) return 'Type what needs doing';
+  if(!(f.day_of_week >= 1 && f.day_of_week <= 5)) return 'Pick a working day, Monday to Friday';
+  if((f.starts_at == null) !== (f.ends_at == null)) return 'Give both From and To or neither';
+  if(f.starts_at != null && wpMin(f.ends_at) <= wpMin(f.starts_at)) return 'To must be after From';
+  if(f.link != null && !wpSafeLink(f.link)) return 'The link must start with https://';
+  return null;
+}
+async function wpSaveTask(){
+  const f = wpFormRead();
+  const problem = wpFormProblem(f);
+  if(problem){ toast(problem, 'error'); return; }
+  if(f.link) f.link = wpSafeLink(f.link);
   const headers = { 'apikey': SMM_SB_KEY, 'Authorization': 'Bearer ' + SMM_SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  const base = SMM_SB_URL + '/rest/v1/smm_weekly_plan';
   if(wpEditId){
-    await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan?id=eq.' + wpEditId, { method: 'PATCH', headers, body: JSON.stringify(data) });
+    const changes = wpChangedFields(wpEditSnap || {}, f);
+    if(!Object.keys(changes).length){ closeModal('wp-task'); return; }
+    /* Read the row fresh. If another device changed a field this person also changed,
+       refuse and refresh rather than overwrite (L-ESTATE-TWO-DEVICES rule 2). */
+    let fresh = null;
+    try {
+      const fr = await fetch(base + '?id=eq.' + wpEditId + '&select=' + WP_FIELDS.join(','), { headers });
+      if(!fr.ok) throw new Error(fr.status);
+      fresh = (await fr.json())[0] || null;
+    } catch(e){ toast('Could not reach the plan, nothing saved', 'error'); return; }
+    if(!fresh){ toast('That task was deleted on another device', 'error'); closeModal('wp-task'); wpLoadWeek(); return; }
+    const clash = Object.keys(changes).filter(k => wpNorm(k, fresh[k]) !== wpNorm(k, wpEditSnap[k]) && wpNorm(k, fresh[k]) !== changes[k]);
+    if(clash.length){ toast('Someone changed this on another device. It is refreshed, make your change again', 'error'); closeModal('wp-task'); wpLoadWeek(); return; }
+    changes.updated_at = new Date().toISOString();
+    let r = null;
+    try { r = await fetch(base + '?id=eq.' + wpEditId, { method: 'PATCH', headers, body: JSON.stringify(changes) }); } catch(e){ r = null; }
+    if(!r || !r.ok){ toast('Could not save the task' + (r ? ' (HTTP ' + r.status + ')' : ''), 'error'); return; }
     toast('Task updated');
   } else {
     const userInfo = USER_ROLES[S.currentUser];
-    data.created_by = userInfo ? userInfo.name : (S.currentUser || 'Unknown');
-    await fetch(SMM_SB_URL + '/rest/v1/smm_weekly_plan', { method: 'POST', headers, body: JSON.stringify(data) });
+    const data = {
+      week_start: wpDateStr(wpWeekStart),
+      day_of_week: f.day_of_week,
+      client_name: f.client_name,
+      task_type: 'post',
+      task_count: 1,
+      assigned_to: (userInfo||{}).name || null,
+      status: f.status || 'planned',
+      notes: f.notes,
+      created_by: userInfo ? userInfo.name : (S.currentUser || 'Unknown'),
+      updated_at: new Date().toISOString()
+    };
+    /* The three new columns are sent only when filled, so a row with no time is the same row as before. */
+    ['starts_at','ends_at','link'].forEach(k => { if(f[k] != null) data[k] = f[k]; });
+    let r = null;
+    try { r = await fetch(base, { method: 'POST', headers, body: JSON.stringify(data) }); } catch(e){ r = null; }
+    if(!r || !r.ok){ toast('Could not add the task' + (r ? ' (HTTP ' + r.status + ')' : ''), 'error'); return; }
     toast('Task added');
   }
   closeModal('wp-task');
@@ -9967,6 +10208,50 @@ async function runSelfTest(){
          +' <- registered as L-SMM-004, filter by MEANING not a name list')
        :(all.length+' people, all SMM'));
    }catch(e){ok('Team: SMM shows only SMM people',false,'query failed: '+(e&&e.message));}
+  })();
+
+  /* ── L · THE DAY BY THE HOUR (23 Oct 2026). Zero writes: probe rows live in memory and go
+     through the SAME evaluator and the same slot drawing the board uses. ─────────────────── */
+  await (async function(){
+   try{
+    nav('weeklyplan'); await wpLoadWeek();
+    const board=document.getElementById('wpBoard');
+    const lunch=[1,2,3,4,5].filter(d=>board.querySelector('.wp-day[data-day="'+d+'"] .wp-band.lunch'));
+    ok('Hours: the lunch band is drawn on all five working days',lunch.length===5,lunch.length+' of 5 days ('+(wpIsMaster()?'seat '+wpCurrentSeat().seat:S.currentUser)+')');
+    const vis=wpVisibleTasks(), missing=vis.filter(t=>!board.querySelector('[data-id="'+t.id+'"]'));
+    ok('Hours: every row of the week is on the board, timed or not',missing.length===0,missing.length?(missing.length+' of '+vis.length+' not drawn, e.g. id '+missing[0].id):(vis.length+' rows, all drawn'));
+    const P=[{id:-1,day_of_week:1,starts_at:'12:00:00',ends_at:'13:00:00',notes:'probe over lunch'},
+             {id:-2,day_of_week:1,starts_at:'17:00',ends_at:'18:00',notes:'probe overtime'},
+             {id:-3,day_of_week:1,starts_at:'09:00',ends_at:'10:00',notes:'probe proof',link:'https://docs.google.com/probe'},
+             {id:-4,day_of_week:1,notes:'probe no time'}];
+    const lay=wpDayLayout(P,true);
+    const slot=id=>lay.items.find(p=>p.kind==='slot'&&p.row.id===id);
+    const gaps=lay.items.filter(p=>p.kind==='gap').map(p=>wpHM(p.from)+'-'+wpHM(p.to));
+    ok('Hours: a probe slot over lunch is flagged',lay.lunchClash===1&&slot(-1).lunch&&!slot(-3).lunch,lay.lunchClash+' flagged');
+    ok('Hours: a probe slot after 17:30 is overtime, 30 min',lay.overtime===1&&slot(-2).over===30,'over '+(slot(-2)||{}).over+' min');
+    ok('Hours: proof counts only slots with a safe link',lay.proof===1&&lay.slots===3,lay.proof+' of '+lay.slots);
+    ok('Hours: a row with no time stays in the list',lay.untimed.length===1&&lay.untimed[0].id===-4,lay.untimed.length+' untimed');
+    ok('Hours: empty time is drawn inside 08:30 to 17:30 only',gaps.join(',')==='08:30-09:00,10:00-12:00,13:30-17:00',gaps.join(','));
+    const box=document.createElement('div');
+    box.innerHTML=wpSlotHtml(slot(-1))+wpSlotHtml(slot(-2))+wpSlotHtml(slot(-3));
+    const amber=box.querySelector('.wp-slot.lunch-clash'), red=box.querySelector('.wp-slot.overtime'), open=box.querySelector('a.wp-open');
+    ok('Hours: the drawn slots carry amber, red and their words',!!amber&&/Over lunch/.test(amber.textContent)&&!!red&&/Overtime 30 min/.test(red.textContent),'amber '+!!amber+', red '+!!red);
+    ok('Hours: the Open chip opens a new tab and hands over no opener',!!open&&open.target==='_blank'&&/noopener/.test(open.rel),open?open.getAttribute('href'):'no chip');
+    const bad=['javascript:alert(1)','http://docs.google.com/x','https://','data:text/html,x',' https://a b'].filter(x=>wpSafeLink(x)!==null);
+    ok('Hours: only https links are accepted',bad.length===0&&wpSafeLink('https://docs.google.com/x')!==null,bad.length?('let through: '+bad.join(' | ')):'5 refused, 1 kept');
+    const ch=wpChangedFields(wpRowFields({day_of_week:2,status:'done',notes:'a',starts_at:'08:30:00',ends_at:'09:00:00'}),
+                             wpRowFields({day_of_week:'2',status:'done',notes:'b',starts_at:'08:30',ends_at:'09:00'}));
+    ok('Hours: an edit sends only what changed',JSON.stringify(Object.keys(ch))==='["notes"]',JSON.stringify(ch));
+    const m=document.getElementById('modal-wp-task');
+    const days=[].slice.call(document.querySelectorAll('#wpDay option')).map(o=>+o.value);
+    ok('Hours: the sheet has From, To and Link with no file upload',!!document.getElementById('wpFrom')&&!!document.getElementById('wpTo')&&!!document.getElementById('wpLink')&&!m.querySelector('input[type=file]'),'fields present');
+    ok('Hours: the sheet offers Monday to Friday only',days.join()==='1,2,3,4,5','days '+days.join());
+    wpTimeOptions(document.getElementById('wpFrom'),'15:10:00');
+    const kept=document.getElementById('wpFrom').value==='15:10';
+    const steps=document.querySelectorAll('#wpFrom option').length;
+    ok('Hours: a stored 15:10 is kept, never rounded away',kept,'value '+document.getElementById('wpFrom').value+', '+steps+' options');
+    wpTimeOptions(document.getElementById('wpFrom'),null);
+   }catch(e){ok('Hours: the checks ran',false,String(e&&e.message||e));}
   })();
 
   /* ── K · layout and design ──────────────────────────────────────────── */

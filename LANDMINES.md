@@ -843,3 +843,27 @@ loaded was erased. Fixed to read the row fresh and change only box k. Proven on
 a probe row: another app ticked ig, a stale tab ticked fb. Old code kept fb
 only. Fixed code kept fb and ig. Estate rule: L-ESTATE-TWO-DEVICES in the
 bb-rock-solid register.
+
+### L-SMM-059 · the plan sheet offered days the table refuses and said saved anyway
+**Found:** 2026-10-23, building the day by the hour. **Status:** FIXED on branch smm-time-slots.
+The add and edit sheet offered Saturday and Sunday. `smm_weekly_plan` has CHECK day_of_week 1 to 5,
+so the database refused every weekend row. `wpSaveTask` never read the answer (fetch does not throw on
+a 4xx), so it said Task added and the row never existed. The edit also wrote the WHOLE sheet back:
+status, assigned_to and every field, so a laptop sheet opened before a phone tick undid the tick. A
+master editing an SMM's row re-filed `assigned_to` under the master. Third, the tick itself never read
+its answer either.
+**The block:** the sheet offers Monday to Friday only and refuses anything else with words; every write
+checks `r.ok`; an edit sends only the fields this person changed (`wpChangedFields`), after a fresh read
+that refuses when another device changed the same field; the week re-reads when the app comes back on
+screen. **Proven both ways** by `tools/wp-hours-check.mjs` against a copy with the old save: it sent
+all eight fields and the phone tick read planned afterwards. The fixed code sent `ends_at` only and the
+tick survived. The check never writes: every POST, PATCH and DELETE is answered in memory.
+**Lesson: a sheet must offer only what the table accepts. A save is not saved until the answer says so.**
+
+### L-SMM-060 · a test froze behind the morning check-in popup
+**Found:** 2026-10-23. **Status:** FIXED in the check, not a fault in the app.
+The daily check-in popup opens on a four second timer after sign-in. A browser check that taps after
+that moment finds the page pinned behind it (body.sheet-open, every other child inert), which is the
+freeze working as designed. Closing it at 2.5 seconds did not help because it had not opened yet.
+**The block:** `tools/wp-hours-check.mjs` marks today's check-in as seen before the page loads.
+**Lesson: before blaming a tap, list what the page thinks is open. A timed popup outlives a fixed wait.**
