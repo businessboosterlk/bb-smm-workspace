@@ -1,0 +1,3 @@
+-- 24 Oct 2026, Thulaib: lunch is not locked, each SMM picks the hour. A lunch is a smm_weekly_plan row with task_type 'lunch' and
+-- status 'done'. bb_smm_morning_brief's planned-this-week count now skips lunch rows (migration smm_morning_brief_skips_lunch, an exact
+-- replace of one line that refuses if the line is not found). No schema change.

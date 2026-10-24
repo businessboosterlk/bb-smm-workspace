@@ -17,7 +17,8 @@ export function mondayOf(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); con
 
 export async function gather(who, week) {
   const mon = new Date(week + 'T00:00:00'); const fri = new Date(mon); fri.setDate(fri.getDate() + 4); const sun = new Date(mon); sun.setDate(sun.getDate() + 7);
-  const rows = await get(`smm_weekly_plan?week_start=eq.${week}&created_by=eq.${encodeURIComponent(who)}&order=day_of_week.asc,starts_at.asc.nullslast,id.asc`);
+  /* A lunch row is the SMM's own break (24 Oct): never a task, never counted. */
+  const rows = (await get(`smm_weekly_plan?week_start=eq.${week}&created_by=eq.${encodeURIComponent(who)}&order=day_of_week.asc,starts_at.asc.nullslast,id.asc`)).filter(r => r.task_type !== 'lunch');
   const ideas = await get(`shared_ideas?captured_by=eq.${encodeURIComponent(who)}&captured_at=gte.${week}&captured_at=lt.${iso(sun)}&select=text,client_id`).catch(() => []);
   const clients = await get('clients?select=id,name');
   const cname = id => (clients.find(c => c.id === id) || {}).name || '';

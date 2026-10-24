@@ -17,7 +17,7 @@ const shotsAt = process.argv.indexOf('--shots'); const SHOTS = shotsAt > 0 ? pro
 const pad = n => String(n).padStart(2, '0');
 const monday = (() => { const d = new Date(); const g = d.getDay(); d.setDate(d.getDate() - g + (g === 0 ? -6 : 1)); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); })();
 
-/* The fixture: a working week per seat, with one slot over lunch, one after 17:30 and rows with no time. */
+/* The fixture: a working week per seat, each with its own lunch (Tiana's Thursday 14:30 to 15:10 as it really was, none on Tuesday), one slot after 17:30 and rows with no time. */
 let nextId = 900000;
 const STORE = [];
 function row(by, day, from, to, notes, extra) { STORE.push(Object.assign({ id: nextId++, week_start: monday, day_of_week: day, client_name: null, task_type: 'post', task_count: 1, notes, status: 'planned', assigned_to: by, created_by: by, starts_at: from, ends_at: to, link: null, created_at: new Date().toISOString() }, extra || {})); }
@@ -25,8 +25,9 @@ for (const by of ['Nirvana', 'Tiana', 'Hithesh']) {
   for (let d = 1; d <= 5; d++) {
     row(by, d, '08:30:00', '09:00:00', 'Morning brief to the team');
     row(by, d, '09:45:00', '12:00:00', 'Deep block: captions and approvals', { client_name: 'Sastho', link: 'https://docs.google.com/document/d/probe-' + by + d });
-    row(by, d, '12:00:00', '12:45:00', 'Systems check, runs over lunch');
-    row(by, d, '13:30:00', '14:30:00', 'Creative hour', { status: d < 3 ? 'done' : 'planned' });
+    row(by, d, '12:00:00', '12:45:00', 'Systems check');
+    if (d !== 2) row(by, d, by === 'Tiana' && d === 4 ? '14:30:00' : '13:00:00', by === 'Tiana' && d === 4 ? '15:10:00' : '14:00:00', 'Lunch', { task_type: 'lunch', status: 'done' });
+    row(by, d, '15:15:00', '16:15:00', 'Creative hour', { status: d < 3 ? 'done' : 'planned' });
     row(by, d, '17:00:00', '18:00:00', 'Evening check and report');
     row(by, d, null, null, 'Reply to the CCT group (no time yet)');
   }
@@ -125,7 +126,7 @@ try {
   {
     const { ctx, page } = await open(browser, VIEWS['phone 375'], 'TIANA');
     const before = STORE.length, w0 = WRITES.length;
-    await page.locator('.wp-day[data-day="2"] .wp-add-inline').tap();
+    await page.locator('.wp-day[data-day="2"] .wp-add-inline:not(.wp-add-lunch)').tap();
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display === 'flex');
     await page.fill('#wpNotes', 'Probe: research Bio Solv reels');
     await page.selectOption('#wpFrom', '15:00'); await page.selectOption('#wpTo', '16:15');
@@ -157,7 +158,7 @@ try {
     await popup.close();
     await page.bringToFront(); await page.waitForTimeout(500);
     /* Back once and twice after a sheet */
-    await page.locator('.wp-day[data-day="3"] .wp-add-inline').tap();
+    await page.locator('.wp-day[data-day="3"] .wp-add-inline:not(.wp-add-lunch)').tap();
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display === 'flex');
     await page.goBack().catch(() => {});
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display !== 'flex', null, { timeout: 8000 }).catch(() => {});
@@ -167,6 +168,27 @@ try {
     await page.goBack().catch(() => {}); await page.waitForTimeout(800);
     const s2 = await page.evaluate(() => ({ sheet: document.getElementById('modal-wp-task').style.display, pg: (typeof S !== 'undefined' ? S.currentPage : null), url: location.href })).catch(() => ({ left: true }));
     ok('click: Back twice leaves the plan (or the app), the sheet stays shut', s2.left || s2.sheet !== 'flex', JSON.stringify(s2));
+    await ctx.close();
+  }
+  /* 2b LUNCH IS THEIRS: + lunch on the one day without a lunch, moved to 13:30 to 14:15. */
+  {
+    const { ctx, page } = await open(browser, VIEWS['phone 375'], 'TIANA');
+    const w0 = WRITES.length;
+    ok('lunch: + lunch shows only on the day without a lunch', await page.locator('.wp-add-lunch').count() === 1 && await page.locator('.wp-day[data-day="2"] .wp-add-lunch').count() === 1, (await page.locator('.wp-add-lunch').count()) + ' offers');
+    await page.locator('.wp-day[data-day="2"] .wp-add-lunch').tap();
+    await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display === 'flex');
+    const sheet = await page.evaluate(() => ({ title: wpModalTitle.textContent, from: wpFrom.value, to: wpTo.value, client: getComputedStyle(wpClientFg).display, link: getComputedStyle(wpLinkFg).display }));
+    ok('lunch: the sheet starts at 12:30 to 13:30 and asks only for the hour', sheet.from === '12:30' && sheet.to === '13:30' && sheet.client === 'none' && sheet.link === 'none', JSON.stringify(sheet));
+    await page.selectOption('#wpFrom', '13:30'); await page.selectOption('#wpTo', '14:15');
+    await page.locator('.wp-sheet-bar .btn-primary').tap();
+    await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display !== 'flex');
+    const post = WRITES.slice(w0).find(x => x.m === 'POST'); const b = post ? JSON.parse(post.body) : {};
+    ok('lunch: saved as her lunch at 13:30 to 14:15, done, never a task', b.task_type === 'lunch' && b.status === 'done' && b.starts_at === '13:30' && b.ends_at === '14:15', JSON.stringify({ t: b.task_type, s: b.status, a: b.starts_at, e: b.ends_at }));
+    await page.waitForFunction(() => !!document.querySelector('.wp-day[data-day="2"] .wp-band.lunch'));
+    const band = await page.locator('.wp-day[data-day="2"] .wp-band.lunch').textContent();
+    ok('lunch: Tuesday now shows Lunch 13:30 to 14:15 and no + lunch', /Lunch 13:30 to 14:15/.test(band) && await page.locator('.wp-day[data-day="2"] .wp-add-lunch').count() === 0, band.trim());
+    const thu = await page.locator('.wp-day[data-day="4"] .wp-band.lunch').textContent();
+    ok('lunch: Thursday shows the real 14:30 to 15:10 lunch', /Lunch 14:30 to 15:10/.test(thu), thu.trim());
     await ctx.close();
   }
   /* 3 TWO DEVICES: a tick on the phone appears on the laptop and a stale laptop edit keeps it. */
