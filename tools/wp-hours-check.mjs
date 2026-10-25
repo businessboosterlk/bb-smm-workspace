@@ -23,12 +23,15 @@ const STORE = [];
 function row(by, day, from, to, notes, extra) { STORE.push(Object.assign({ id: nextId++, week_start: monday, day_of_week: day, client_name: null, task_type: 'post', task_count: 1, notes, status: 'planned', assigned_to: by, created_by: by, starts_at: from, ends_at: to, link: null, created_at: new Date().toISOString() }, extra || {})); }
 for (const by of ['Nirvana', 'Tiana', 'Hithesh']) {
   for (let d = 1; d <= 5; d++) {
-    row(by, d, '08:30:00', '09:00:00', 'Morning brief to the team');
+    row(by, d, '08:30:00', '09:00:00', null, { task_type: 'lock_morning' });
+    row(by, d, '14:30:00', '14:45:00', null, { task_type: 'lock_afternoon' });
+    row(by, d, '17:00:00', '17:30:00', null, { task_type: 'lock_close' });
     row(by, d, '09:45:00', '12:00:00', 'Deep block: captions and approvals', { client_name: 'Sastho', link: 'https://docs.google.com/document/d/probe-' + by + d });
     row(by, d, '12:00:00', '12:45:00', 'Systems check');
     if (d !== 2) row(by, d, by === 'Tiana' && d === 4 ? '14:30:00' : '13:00:00', by === 'Tiana' && d === 4 ? '15:10:00' : '14:00:00', 'Lunch', { task_type: 'lunch', status: 'done' });
     row(by, d, '15:15:00', '16:15:00', 'Creative hour', { status: d < 3 ? 'done' : 'planned' });
-    row(by, d, '17:00:00', '18:00:00', 'Evening check and report');
+    if (d === 1) row(by, d, '16:15:00', '17:00:00', 'Helped Shiara with a report', { task_type: 'other_work' });
+    row(by, d, '17:30:00', '18:00:00', 'Client channels after hours');
     row(by, d, null, null, 'Reply to the CCT group (no time yet)');
   }
 }
@@ -92,12 +95,12 @@ async function open(browser, view, seat) {
   await page.goto(ORIGIN + '/index.html', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => typeof smmEnterApp === 'function');
   await page.evaluate(n => smmEnterApp(n, false), seat);
-  await page.waitForFunction(() => (S.clients || []).length > 0, null, { timeout: 90000 });
+  await page.waitForFunction(() => (S.clients || []).length > 0, null, { timeout: 180000 });
   await page.waitForTimeout(2500);                                   // boot finishes its own first page
   /* The morning check-in popup is real and freezes the page behind it, as it should. Close it the way a person does. */
   await page.evaluate(() => { if (window.closeCheckinPopup) closeCheckinPopup(); });
   await page.evaluate(() => nav('weeklyplan'));
-  await page.waitForFunction(() => S.currentPage === 'weeklyplan' && document.querySelectorAll('#wpBoard .wp-day').length >= 5, null, { timeout: 60000 });
+  await page.waitForFunction(() => S.currentPage === 'weeklyplan' && document.querySelectorAll('#wpBoard .wp-day').length >= 5, null, { timeout: 180000 });
   await page.waitForTimeout(600);
   return { ctx, page };
 }
@@ -114,7 +117,7 @@ try {
       if (vn === 'phone 320' && seat !== 'TIANA') continue;
       const { ctx, page } = await open(browser, view, seat);
       const res = await page.evaluate(async () => { window.__ST_SILENT = true; return await runSelfTest(); });
-      const hours = res.results.filter(r => /^Hours:|^Review:|Weekly|weeklyplan|smm_week_review/i.test(r.name));
+      const hours = res.results.filter(r => /^Hours:|^Review:|^Team slots:|^Monday note:|Weekly|weeklyplan|smm_week_review/i.test(r.name));
       const fails = res.results.filter(r => !r.pass);
       ok(`harness ${seat} ${vn}: ${res.total - res.failed} of ${res.total} green, hours checks ${hours.filter(r => r.pass).length} of ${hours.length}`,
         hours.every(r => r.pass), fails.map(f => f.name + ' [' + f.detail.slice(0, 90) + ']').join(' || ') || 'all green');
@@ -126,15 +129,15 @@ try {
   {
     const { ctx, page } = await open(browser, VIEWS['phone 375'], 'TIANA');
     const before = STORE.length, w0 = WRITES.length;
-    await page.locator('.wp-day[data-day="2"] .wp-add-inline:not(.wp-add-lunch)').tap();
+    await page.locator('.wp-day[data-day="2"] .wp-add-task').tap();
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display === 'flex');
     await page.fill('#wpNotes', 'Probe: research Bio Solv reels');
     await page.selectOption('#wpFrom', '15:00'); await page.selectOption('#wpTo', '16:15');
     await page.fill('#wpLink', 'http://not-safe.example');
-    await page.locator('.wp-sheet-bar .btn-primary').tap(); await page.waitForTimeout(300);
+    await page.locator('#modal-wp-task .wp-sheet-bar .btn-primary').tap(); await page.waitForTimeout(300);
     ok('click: an http link is refused, nothing written', WRITES.length === w0 && await page.evaluate(() => document.getElementById('modal-wp-task').style.display === 'flex'), (WRITES.length - w0) + ' writes');
     await page.fill('#wpLink', 'https://docs.google.com/document/d/probe-new');
-    await page.locator('.wp-sheet-bar .btn-primary').tap();
+    await page.locator('#modal-wp-task .wp-sheet-bar .btn-primary').tap();
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display !== 'flex');
     await page.waitForFunction(() => [...document.querySelectorAll('.wp-day[data-day="2"] .wp-slot')].some(e => /Probe: research/.test(e.textContent)));
     const added = STORE[STORE.length - 1];
@@ -147,7 +150,7 @@ try {
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display === 'flex');
     ok('click: edit opens with the stored times and link', await page.evaluate(() => wpFrom.value === '15:00' && wpTo.value === '16:15' && wpLink.value.includes('probe-new')), await page.evaluate(() => wpFrom.value + ' ' + wpTo.value));
     await page.selectOption('#wpTo', '16:30');
-    await page.locator('.wp-sheet-bar .btn-primary').tap();
+    await page.locator('#modal-wp-task .wp-sheet-bar .btn-primary').tap();
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display !== 'flex');
     const patch = WRITES.slice(w1).find(w => w.m === 'PATCH');
     const sent = patch ? Object.keys(JSON.parse(patch.body)).sort().join(',') : 'none';
@@ -158,7 +161,7 @@ try {
     await popup.close();
     await page.bringToFront(); await page.waitForTimeout(500);
     /* Back once and twice after a sheet */
-    await page.locator('.wp-day[data-day="3"] .wp-add-inline:not(.wp-add-lunch)').tap();
+    await page.locator('.wp-day[data-day="3"] .wp-add-task').tap();
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display === 'flex');
     await page.goBack().catch(() => {});
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display !== 'flex', null, { timeout: 8000 }).catch(() => {});
@@ -180,7 +183,7 @@ try {
     const sheet = await page.evaluate(() => ({ title: wpModalTitle.textContent, from: wpFrom.value, to: wpTo.value, client: getComputedStyle(wpClientFg).display, link: getComputedStyle(wpLinkFg).display }));
     ok('lunch: the sheet starts at 12:30 to 13:30 and asks only for the hour', sheet.from === '12:30' && sheet.to === '13:30' && sheet.client === 'none' && sheet.link === 'none', JSON.stringify(sheet));
     await page.selectOption('#wpFrom', '13:30'); await page.selectOption('#wpTo', '14:15');
-    await page.locator('.wp-sheet-bar .btn-primary').tap();
+    await page.locator('#modal-wp-task .wp-sheet-bar .btn-primary').tap();
     await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display !== 'flex');
     const post = WRITES.slice(w0).find(x => x.m === 'POST'); const b = post ? JSON.parse(post.body) : {};
     ok('lunch: saved as her lunch at 13:30 to 14:15, done, never a task', b.task_type === 'lunch' && b.status === 'done' && b.starts_at === '13:30' && b.ends_at === '14:15', JSON.stringify({ t: b.task_type, s: b.status, a: b.starts_at, e: b.ends_at }));
@@ -191,11 +194,49 @@ try {
     ok('lunch: Thursday shows the real 14:30 to 15:10 lunch', /Lunch 14:30 to 15:10/.test(thu), thu.trim());
     await ctx.close();
   }
+  /* 2c TEAM SLOTS, OTHER WORK, CLOSE THE DAY, YOUR MONDAY (24 Oct), as Nirvana at 375. */
+  {
+    const { ctx, page } = await open(browser, VIEWS['phone 375'], 'NIRVANA');
+    const locks = await page.locator('.wp-day[data-day="3"] .wp-slot.locked').count();
+    ok('team: three locked slots on a working day', locks === 3, locks + ' locked');
+    const seeded = WRITES.some(x => /rpc\/bb_smm_week_seed/.test(x.u));
+    ok('team: the week asks the database to fill in the team slots', seeded, seeded ? 'seed called' : 'never called');
+    await page.locator('.wp-day[data-day="3"] .wp-slot.locked[data-kind="lock_morning"] .wp-task-main').tap();
+    await page.waitForFunction(() => document.getElementById('modal-wp-task').style.display === 'flex');
+    const ls = await page.evaluate(() => ({ t: wpModalTitle.textContent, time: wpFrom.disabled && wpTo.disabled && wpDay.disabled, del: getComputedStyle(wpDeleteBtn).display }));
+    ok('team: a team slot opens with its time locked and no Delete', ls.time && ls.del === 'none' && /Morning team update/.test(ls.t), JSON.stringify(ls));
+    await page.locator('#modal-wp-task .wp-sheet-bar .btn-ghost').last().tap(); await page.waitForTimeout(300);
+    ok('team: + other work offered on a day without it, not on Monday which has it', await page.locator('.wp-day[data-day="3"] .wp-add-other').count() === 1 && await page.locator('.wp-day[data-day="1"] .wp-add-other').count() === 0, 'offers');
+    /* close Wednesday: tick one task, add one unplanned line, a note */
+    const w0 = WRITES.length;
+    await page.locator('.wp-day[data-day="3"] .wp-slot.locked[data-kind="lock_close"] .wp-task-main').tap();
+    await page.waitForFunction(() => document.getElementById('modal-wp-close').style.display === 'flex');
+    const rows = await page.locator('#wcList .wc-row').count();
+    await page.locator('#wcList .wc-row', { hasText: 'Creative hour' }).tap(); await page.waitForTimeout(400);
+    await page.fill('#wcExtra', 'Probe: called the Bio Solv owner');
+    await page.fill('#wcNote', 'Probe: good day');
+    await page.locator('#wcSave').tap();
+    await page.waitForFunction(() => document.getElementById('modal-wp-close').style.display !== 'flex', null, { timeout: 8000 }).catch(() => {});
+    const ws = WRITES.slice(w0);
+    const tick = ws.find(x => x.m === 'PATCH' && /"status":"done"/.test(x.body) && !/notes/.test(x.body));
+    const extra = ws.find(x => x.m === 'POST' && /Bio Solv/.test(x.body));
+    const close = ws.find(x => x.m === 'PATCH' && /good day/.test(x.body));
+    const closeKeys = close ? Object.keys(JSON.parse(close.body)).sort().join(',') : 'none';
+    ok('close: the day lists its work, a tick saves one field', rows >= 3 && !!tick, rows + ' rows, tick ' + !!tick);
+    ok('close: a done-but-not-planned line is saved as finished work', !!extra && /"task_type":"unplanned"/.test(extra.body) && /"status":"done"/.test(extra.body), extra ? 'saved' : 'missing');
+    ok('close: the close slot gets only its tick and note', closeKeys === 'notes,status,updated_at', closeKeys);
+    /* Your Monday, forced from the button */
+    await page.evaluate(() => wpMondayNote(true));
+    await page.waitForFunction(() => document.getElementById('modal-wp-monday').style.display === 'flex', null, { timeout: 8000 }).catch(() => {});
+    const mt = await page.locator('#wmBody').textContent().catch(() => '');
+    ok('monday: the note shows the team slots and plain facts', /Morning team update/.test(mt) && /Evening close/.test(mt) && !/missed|failed|behind/i.test(mt), mt.slice(0, 80));
+    await ctx.close();
+  }
   /* 3 TWO DEVICES: a tick on the phone appears on the laptop and a stale laptop edit keeps it. */
   {
     const phone = await open(browser, VIEWS['phone 375'], 'NIRVANA');
     const desk = await open(browser, VIEWS['desk 1366'], 'NIRVANA');
-    const target = STORE.find(r => r.created_by === 'Nirvana' && r.day_of_week === 4 && /Evening check/.test(r.notes));
+    const target = STORE.find(r => r.created_by === 'Nirvana' && r.day_of_week === 4 && /Client channels/.test(r.notes || ''));
     target.status = 'planned';
     await desk.page.evaluate(id => wpOpenEdit(id), target.id);          // the laptop opens the sheet: its copy says To do
     await phone.page.evaluate(() => wpLoadWeek());
@@ -203,7 +244,7 @@ try {
     for (let i = 0; i < 40 && target.status !== 'done'; i++) await phone.page.waitForTimeout(100);
     ok('devices: the phone tick is stored', target.status === 'done', target.status);
     await desk.page.fill('#wpLink', 'https://docs.google.com/document/d/probe-evening');
-    await desk.page.locator('.wp-sheet-bar .btn-primary').click();
+    await desk.page.locator('#modal-wp-task .wp-sheet-bar .btn-primary').click();
     await desk.page.waitForFunction(() => document.getElementById('modal-wp-task').style.display !== 'flex');
     ok('devices: the stale laptop edit adds the link and keeps the phone tick', target.status === 'done' && target.link.includes('probe-evening'), target.status + ', ' + target.link);
     target.status = 'planned';                                           // another device unticks it

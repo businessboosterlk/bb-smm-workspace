@@ -867,3 +867,13 @@ that moment finds the page pinned behind it (body.sheet-open, every other child 
 freeze working as designed. Closing it at 2.5 seconds did not help because it had not opened yet.
 **The block:** `tools/wp-hours-check.mjs` marks today's check-in as seen before the page loads.
 **Lesson: before blaming a tap, list what the page thinks is open. A timed popup outlives a fixed wait.**
+
+### L-SMM-061 · a locked slot that a bulk move could carry
+**Found:** 2026-10-24, designing the three team slots. **Status:** BLOCKED before it shipped.
+The team slots are plan rows the database refuses to move (trigger smm_weekly_plan_locked_guard). "Move all into this week"
+PATCHes every unfinished row of last week in ONE request, so a single unticked team slot would have made the whole move fail,
+and the old page never read the answer. Every reader that lists "not finished" rows now adds
+`or=(task_type.is.null,task_type.not.like.lock_*)` (carry panel, Move here, Move all, the check-in popup, the Monday note), and the
+counting readers skip lunch and team slots (Today, the Friday review, the Monday brief, the Command Centre board).
+**Lesson: a row the database protects must be left out of every bulk write by the query, never by hope. A new kind of row means
+grepping every reader of the table, in every app, before it ships.**

@@ -17,8 +17,11 @@ export function mondayOf(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); con
 
 export async function gather(who, week) {
   const mon = new Date(week + 'T00:00:00'); const fri = new Date(mon); fri.setDate(fri.getDate() + 4); const sun = new Date(mon); sun.setDate(sun.getDate() + 7);
-  /* A lunch row is the SMM's own break (24 Oct): never a task, never counted. */
-  const rows = (await get(`smm_weekly_plan?week_start=eq.${week}&created_by=eq.${encodeURIComponent(who)}&order=day_of_week.asc,starts_at.asc.nullslast,id.asc`)).filter(r => r.task_type !== 'lunch');
+  /* Lunch and the three team slots (24 Oct) are never tasks and never counted. The evening close note IS read: it is what
+     the SMM said about the day. Work done but not planned (task_type unplanned) counts as work, finished. */
+  const all = await get(`smm_weekly_plan?week_start=eq.${week}&created_by=eq.${encodeURIComponent(who)}&order=day_of_week.asc,starts_at.asc.nullslast,id.asc`);
+  const rows = all.filter(r => r.task_type !== 'lunch' && !/^lock_/.test(r.task_type || ''));
+  const dayNotes = all.filter(r => r.task_type === 'lock_close' && r.notes).map(r => ({ day: DAYS[r.day_of_week - 1], note: r.notes }));
   const ideas = await get(`shared_ideas?captured_by=eq.${encodeURIComponent(who)}&captured_at=gte.${week}&captured_at=lt.${iso(sun)}&select=text,client_id`).catch(() => []);
   const clients = await get('clients?select=id,name');
   const cname = id => (clients.find(c => c.id === id) || {}).name || '';
@@ -31,7 +34,8 @@ export async function gather(who, week) {
     clients: [...new Set(rows.map(r => r.client_name).filter(Boolean))].length
   };
   const facts = { week: `${mon.getDate()} to ${fri.getDate()} ${fri.toLocaleString('en-GB', { month: 'short' })}`,
-    tasks: rows.map(r => ({ day: DAYS[r.day_of_week - 1], client: r.client_name || null, what: r.notes, finished: r.status === 'done', time: r.starts_at ? r.starts_at.slice(0, 5) + ' to ' + r.ends_at.slice(0, 5) : null, work_linked: !!r.link })),
+    tasks: rows.map(r => ({ day: DAYS[r.day_of_week - 1], client: r.client_name || null, what: r.notes, finished: r.status === 'done', time: r.starts_at ? r.starts_at.slice(0, 5) + ' to ' + r.ends_at.slice(0, 5) : null, work_linked: !!r.link, not_planned_but_done: r.task_type === 'unplanned', other_work: r.task_type === 'other_work' })),
+    their_notes_at_the_end_of_the_day: dayNotes,
     ideas_banked: ideas.map(i => ({ client: cname(i.client_id), idea: i.text })) };
   return { who, week, rows, numbers, facts };
 }
