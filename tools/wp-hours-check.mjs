@@ -88,19 +88,24 @@ async function open(browser, view, seat) {
   await wire(ctx);
   /* The morning check-in popup is real and freezes the page behind it, as it should. It opens on a
      four second timer, so mark today's check-in as seen before the page loads. */
+  /* On the live host the app runs its own silent self-test once a day per person, which walks every page; mark it done so it never collides with this check. */
+  await ctx.addInitScript(() => { const iso = new Date().toISOString().slice(0, 10); try { ['THULAIB', 'SHIARA', 'NIRVANA', 'TIANA', 'HITHESH'].forEach(n => localStorage.setItem('smm-harness-' + n + '-' + iso, '1')); } catch (e) {} });
   await ctx.addInitScript(() => { const d = new Date(); try { localStorage.setItem('smm-checkin-last', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); } catch (e) {} });
   const page = await ctx.newPage(); LAST = page;
   page.on('dialog', d => d.accept());
   page.on('pageerror', e => { if (!PAGE_ERRORS.includes(String(e.message))) PAGE_ERRORS.push(String(e.message)); });
   await page.goto(ORIGIN + '/index.html', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => typeof smmEnterApp === 'function');
-  await page.evaluate(n => smmEnterApp(n, false), seat);
+  await page.evaluate(n => { window.__seat = n; smmEnterApp(n, false); }, seat);
   await page.waitForFunction(() => (S.clients || []).length > 0, null, { timeout: 180000 });
   await page.waitForTimeout(2500);                                   // boot finishes its own first page
   /* The morning check-in popup is real and freezes the page behind it, as it should. Close it the way a person does. */
   await page.evaluate(() => { if (window.closeCheckinPopup) closeCheckinPopup(); });
   await page.evaluate(() => nav('weeklyplan'));
-  await page.waitForFunction(() => S.currentPage === 'weeklyplan' && document.querySelectorAll('#wpBoard .wp-day').length >= 5, null, { timeout: 180000 });
+  /* On the live site a first visit installs the offline copy and reloads once, which lands on Today: go back to the plan. */
+  for (let i = 0; i < 6; i++) { await page.waitForTimeout(1500); const pg = await page.evaluate(() => typeof S !== 'undefined' && S.currentUser ? S.currentPage : null).catch(() => null); if (pg === 'weeklyplan') break; await page.evaluate(() => { if (typeof S !== 'undefined' && !S.currentUser) smmEnterApp(window.__seat, false); if (typeof nav === 'function') nav('weeklyplan'); }).catch(() => {}); }
+  try { await page.waitForFunction(() => S.currentPage === 'weeklyplan' && document.querySelectorAll('#wpBoard .wp-day').length >= 5, null, { timeout: 90000 }); }
+  catch (e) { const st = await page.evaluate(() => ({ navTry: (function(){ try { nav('weeklyplan'); return 'after nav: ' + S.currentPage; } catch (x) { return 'nav threw ' + x.message; } })(), errs: (window.__ST_LOG || []).slice(-3).map(x => x.kind + ': ' + String(x.msg).slice(0, 90)), seat: S.currentUser, page: S.currentPage, days: document.querySelectorAll('#wpBoard .wp-day').length, board: (document.getElementById('wpBoard') || {}).innerHTML ? document.getElementById('wpBoard').innerHTML.length : -1, tasks: (typeof wpTasks !== 'undefined' ? wpTasks.length : -1) })).catch(x => ({ evalFailed: String(x.message).slice(0, 80) })); throw new Error('the plan never drew: ' + JSON.stringify(st)); }
   await page.waitForTimeout(600);
   return { ctx, page };
 }
