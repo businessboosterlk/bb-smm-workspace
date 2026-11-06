@@ -10609,6 +10609,51 @@ async function runSelfTest(){
    }catch(e){ok('Post on and Spot check: the checks ran',false,String(e&&e.message||e));}
   })();
 
+  /* ── MY CARD and NO SELF RATING (Team Score phase 2): pure parts only, no reads, no writes ── */
+  (function(){
+   try{
+    const M=window.MYC_PURE,P=window.SC_PURE;
+    if(!M){ok('My card: the pure parts are loaded',false,'window.MYC_PURE missing');return;}
+    const TEAM=[
+     {id:12,name:'NIRVANA',role:'Social Media Manager',is_head:true,head_of:'smm',active:true},
+     {id:29,name:'HITHESH',role:'Social Media Manager',is_head:false,head_of:null,active:true},
+     {id:2,name:'KANEESHA',role:'Social Media Manager',is_head:false,head_of:null,active:false},
+     {id:5,name:'USHANE',role:'video_head',is_head:true,head_of:'video',active:true},
+     {id:24,name:'SHIARA',role:'COO',is_head:false,head_of:null,active:true},
+     {id:25,name:'KISHINI',role:'Dev Head',is_head:true,head_of:null,active:true},
+     {id:23,name:'THULAIB',role:'CEO',is_head:false,head_of:null,active:true}];
+    const card=(id,name)=>({id,name,role:'Publisher',posted:{count:1,items:[]},waiting:{count:0,items:[]},book:{made:2,owed:4,clients:[]}});
+    const head=(id,name)=>({id,name,headOf:'smm',stages:['Team review'],speed:{n:0,timed:0,direct:0,median:null,onTargetPct:null,waiting:0},sendBacks:{count:0},skipped:[]});
+    const blank={s:{cohort:0,completed:0,ratingCount:0},dated:false};
+    const V={lines:{},smm:[card(12,'NIRVANA'),card(29,'HITHESH')],heads:[head(12,'NIRVANA'),head(5,'USHANE'),head(24,'SHIARA')],sc:{12:blank,29:blank}};
+    const box=document.createElement('div');
+    const draw=n=>{box.innerHTML=M.drawFor(M.whoIn(TEAM,n),V);return [...box.querySelectorAll('.myc-card')].map(b=>b.dataset.sys+b.dataset.pid).join(',');};
+    const h=M.whoIn(TEAM,'hithesh');
+    ok('My card: the signed in name is matched to the team list ignoring case',h.id===29&&h.smm===true&&h.head===false,JSON.stringify(h));
+    ok('My card: an SMM sees only their own SMM card',draw('HITHESH')==='s29',draw('HITHESH'));
+    ok('My card: an SMM card says tracked, not scored when nothing is due',/Tracked, not scored/.test(box.textContent)&&/1 posted this week/.test(box.textContent),box.textContent.slice(0,80));
+    ok('My card: every figure on the card carries data-fig and data-fmt',box.querySelectorAll('[data-fig]').length>0&&[...box.querySelectorAll('[data-fig]')].every(e=>e.dataset.fmt),box.querySelectorAll('[data-fig]').length+' figures');
+    ok('My card: a head who is also an SMM sees both cards',draw('NIRVANA')==='s12,h12',draw('NIRVANA'));
+    ok('My card: a head sees their head card only',draw('USHANE')==='h5'&&draw('SHIARA')==='h24',draw('USHANE')+' '+draw('SHIARA'));
+    ok('My card: a leaver sees no card',draw('KANEESHA')===''&&M.whoIn(TEAM,'KANEESHA').id===null,draw('KANEESHA')||'none');
+    ok('My card: someone not in the team list sees no card',draw('NOBODY')===''&&draw('')===''&&draw(null)==='','none');
+    ok('My card: neither an SMM nor a counted head sees no card',draw('THULAIB')===''&&draw('KISHINI')==='','none');
+    ok('My card: a name held by two active rows shows nothing',M.drawFor(M.whoIn(TEAM.concat([{id:99,name:'Hithesh',role:'editor',active:true}]),'HITHESH'),V)==='','ambiguous');
+    if(!P||!P.canRate){ok('Spot check: the self rating rule is loaded',false,'SC_PURE.canRate missing');return;}
+    ok('Spot check: a rater may not rate their own posts',P.canRate('NIRVANA','NIRVANA')===false&&P.canRate('nirvana','NIRVANA')===false,'own');
+    ok('Spot check: a rater may rate another SMM',P.canRate('NIRVANA','TIANA')&&P.canRate('SHIARA','NIRVANA')&&P.canRate('THULAIB','NIRVANA'),'others');
+    ok('Spot check: a seat outside the three never rates',P.canRate('HITHESH','TIANA')===false&&P.canRate('','TIANA')===false&&P.canRate('SHIARA','')===false,'gate');
+    const item={id:5501,title:'Own post',client:'A client',posted:Date.UTC(2026,10,3,4,0),link:'https://example.com/x',rating:null};
+    const p={id:12,name:'NIRVANA',key:'NIRVANA',posted:1,picks:[item]};
+    box.innerHTML=P.cardHtml(p,'NIRVANA');
+    ok('Spot check: your own card has no star buttons and says who rates it',box.querySelectorAll('.sc-star').length===0&&box.querySelector('[data-sc-readonly]')&&/Your own posts are rated by SHIARA or Thulaib\./.test(box.textContent),box.querySelectorAll('.sc-star').length+' stars');
+    box.innerHTML=P.cardHtml(p,'SHIARA');
+    ok('Spot check: another rater sees five star buttons on the same item',box.querySelectorAll('.sc-star[data-sc-job="5501"]').length===5&&!box.querySelector('[data-sc-readonly]')&&!/Your own posts/.test(box.textContent),box.querySelectorAll('.sc-star').length+' stars');
+    box.innerHTML=P.cardHtml(Object.assign({},p,{picks:[Object.assign({},item,{rating:{stars:4,by_name:'SHIARA'}})]}),'NIRVANA');
+    ok('Spot check: your own rated item shows its stars read only',box.querySelectorAll('.sc-star[data-sc-job]').length===0&&/Rated 4 of 5 by SHIARA/.test(box.textContent),'read only');
+   }catch(e){ok('My card and self rating: the checks ran',false,String(e&&e.message||e));}
+  })();
+
   /* ── K · layout and design ──────────────────────────────────────────── */
   (function(){
    const host=document.querySelector('.main')||document.body;
@@ -10959,7 +11004,10 @@ renderContentPlan = function() {
      of the week start and the person id, so a reload shows the same 5. Each
      pick opens its own link and takes 1 to 5 stars: one bb_review_events row
      (system smm, job_id = smm_publish_log.id, kind rating). A rated item shows
-     its stars read only. Reads only, apart from that one insert. Every class
+     its stars read only. Reads only, apart from that one insert.
+     NO SELF RATING (6 Nov 2026): a rater never rates their own posts. When the
+     credited SMM is the signed in seat, that card is read only, with no star
+     buttons, and says who rates it instead; scRate refuses it as well. Every class
      carries the sc- prefix so nothing reaches a rule outside this block. -->
 <style>
 .sc-bar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
@@ -10985,6 +11033,7 @@ renderContentPlan = function() {
 .sc-rated{font-size:12px;color:var(--text2);margin-top:4px}
 .sc-empty{padding:18px 14px;font-size:13px;color:var(--text2)}
 .sc-note{font-size:12px;color:var(--text2);margin-top:12px}
+.sc-own{padding:10px 14px;font-size:12.5px;color:var(--text2);background:var(--bg3);border-bottom:1px solid var(--border)}
 @media (max-width:768px){ .sc-grid{grid-template-columns:1fr} .sc-bar select{width:100%;min-width:0} .sc-bar label{flex:1} }
 </style>
 <script>
@@ -10998,6 +11047,11 @@ renderContentPlan = function() {
 
   /* ── PURE PARTS (the self test calls these) ─────────────────────────── */
   function scAllowedFor(name){ return SC_SEATS.indexOf(String(name || '').toUpperCase()) > -1; }
+  /* A seat may rate an item only when the credited SMM is someone else. */
+  function scCanRate(rater, credited){
+    var r = String(rater || '').trim().toUpperCase(), c = String(credited || '').trim().toUpperCase();
+    return scAllowedFor(r) && !!c && r !== c;
+  }
   /* Monday 00:00 Colombo as UTC ms, for this week (0) or a week back (-1). */
   function scWeekStart(nowMs, back){
     var off = 330 * 60000, c = new Date(nowMs + off);
@@ -11020,7 +11074,7 @@ renderContentPlan = function() {
     for (var i = list.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var x = list[i]; list[i] = list[j]; list[j] = x; }
     return list.slice(0, n == null ? SC_PICK : n);
   }
-  window.SC_PURE = { allowedFor: scAllowedFor, weekStart: scWeekStart, dayStr: scDayStr, firstTick: scFirstTick, pick: scPick };
+  window.SC_PURE = { allowedFor: scAllowedFor, canRate: scCanRate, weekStart: scWeekStart, dayStr: scDayStr, firstTick: scFirstTick, pick: scPick, cardHtml: function(p, me){ return cardHtml(p, me); } };
 
   /* ── NAV: the button, the page, the gate ────────────────────────────── */
   function scAllowed(){ return typeof S !== 'undefined' && scAllowedFor(S.currentUser); }
@@ -11151,27 +11205,36 @@ renderContentPlan = function() {
   function esc(s){ return typeof escHtml === 'function' ? escHtml(s == null ? '' : String(s)) : String(s == null ? '' : s); }
   function when(ms){ return new Date(ms).toLocaleString('en-GB', { timeZone: 'Asia/Colombo', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
   function safeUrl(u){ return /^https?:\/\//i.test(String(u || '')) ? String(u) : null; }
-  function starsHtml(x, personId){
+  function starsHtml(x, personId, own){
     var r = x.rating;
     if (r) {
       var h = '<div class="sc-stars" data-sc-rated="' + x.id + '" aria-label="Rated ' + r.stars + ' of 5">';
       for (var i = 1; i <= 5; i++) h += '<button type="button" class="sc-star' + (i <= r.stars ? ' on' : '') + '" disabled aria-hidden="true" tabindex="-1">' + STAR + '</button>';
       return h + '</div><div class="sc-rated">Rated ' + r.stars + ' of 5 by ' + esc(r.by_name || 'someone') + '</div>';
     }
+    if (own) return '<div class="sc-rated" data-sc-own="' + x.id + '">Not rated yet</div>';
     var busy = !!SC.saving[x.id];
     var g = '<div class="sc-stars" role="group" aria-label="Rate this post">';
     for (var n = 1; n <= 5; n++) g += '<button type="button" class="sc-star" data-sc-job="' + x.id + '" data-sc-person="' + personId + '" data-sc-n="' + n + '" aria-label="' + n + (n === 1 ? ' star' : ' stars') + '"' + (busy ? ' disabled' : '') + '>' + STAR + '</button>';
     return g + '</div>';
   }
-  function itemHtml(x, p){
+  function itemHtml(x, p, own){
     var url = safeUrl(x.link);
     return '<div class="sc-item" data-sc-item="' + x.id + '">'
       + '<div class="sc-title">' + esc(x.title || 'Untitled') + '</div>'
       + '<div class="sc-meta">' + esc(x.client || 'No client') + ' · posted ' + esc(when(x.posted)) + '</div>'
       + '<div class="sc-row">'
       +   (url ? '<a class="sc-open" href="' + esc(url) + '" target="_blank" rel="noopener">Open it</a>' : '<span class="sc-nolink">No link recorded</span>')
-      +   starsHtml(x, p.id)
+      +   starsHtml(x, p.id, own)
       + '</div></div>';
+  }
+  function cardHtml(p, me){
+    var own = !!p.key && String(me || '').trim().toUpperCase() === p.key;   /* the credited SMM is the signed in seat */
+    return '<div class="sc-card" data-sc-person="' + p.id + '"' + (own ? ' data-sc-readonly="1"' : '') + '>'
+      + '<div class="sc-head"><div class="sc-name">' + esc(p.name) + '</div><div class="sc-count">' + p.posted + ' posted, ' + p.picks.length + ' picked</div></div>'
+      + (own ? '<div class="sc-own">Your own posts are rated by SHIARA or Thulaib.</div>' : '')
+      + (p.picks.length ? p.picks.map(function(x){ return itemHtml(x, p, own); }).join('') : '<div class="sc-empty">Nothing marked posted for their clients in this week.</div>')
+      + '</div>';
   }
   function scPaint(){
     var root = document.getElementById('sc-root'); if (!root) return;
@@ -11184,12 +11247,7 @@ renderContentPlan = function() {
       + '</div>';
     if (!d) { root.innerHTML = bar + '<div class="sc-empty">Loading</div>'; scWire(); return; }
     if (!d.people.length) { root.innerHTML = bar + '<div class="sc-empty">No active Social Media Manager was found in the team list.</div>'; scWire(); return; }
-    root.innerHTML = bar + '<div class="sc-grid" data-sc-week="' + d.wk + '">' + d.people.map(function(p){
-      return '<div class="sc-card" data-sc-person="' + p.id + '">'
-        + '<div class="sc-head"><div class="sc-name">' + esc(p.name) + '</div><div class="sc-count">' + p.posted + ' posted, ' + p.picks.length + ' picked</div></div>'
-        + (p.picks.length ? p.picks.map(function(x){ return itemHtml(x, p); }).join('') : '<div class="sc-empty">Nothing marked posted for their clients in this week.</div>')
-        + '</div>';
-    }).join('') + '</div>'
+    root.innerHTML = bar + '<div class="sc-grid" data-sc-week="' + d.wk + '">' + d.people.map(function(p){ return cardHtml(p, S.currentUser); }).join('') + '</div>'
       + (d.noSmm ? '<div class="sc-note">' + d.noSmm + (d.noSmm === 1 ? ' posted item belongs' : ' posted items belong') + ' to clients with no active SMM and ' + (d.noSmm === 1 ? 'is' : 'are') + ' not shown.</div>' : '')
       + '<div class="sc-note">Posted means the first of the four platform ticks. Each item is credited to the client\'s SMM as the client list reads today.</div>';
     scWire();
@@ -11224,6 +11282,8 @@ renderContentPlan = function() {
     var jobId = Number(btn.getAttribute('data-sc-job')), personId = Number(btn.getAttribute('data-sc-person')), stars = Number(btn.getAttribute('data-sc-n'));
     var x = findItem(jobId);
     if (!x || x.rating || SC.saving[jobId] || !(stars >= 1 && stars <= 5)) return;
+    var who = SC.data.people.filter(function(p){ return p.picks.indexOf(x) > -1; })[0];
+    if (!who || who.id !== personId || !scCanRate(S.currentUser, who.key)) return;   /* never your own posts */
     SC.saving[jobId] = true; scPaint();
     var w = null;
     try {
@@ -11243,6 +11303,659 @@ renderContentPlan = function() {
 })();
 </script>
 <!-- @@BBSMM_SPOTCHECK_END@@ -->
+<!-- @@BBSMM_MYCARD_BEGIN@@ -->
+<!-- MY CARD (Team Score phase 2, 6 Nov 2026, Thulaib approved bb_pending 1460 to 1466). The signed in person's own Team
+     Score card, read only: an active Social Media Manager sees their SMM card, an active head (head_of video, graphic or
+     smm or the COO) sees their head card, someone who is both sees both, anyone else sees nothing and gets no button.
+     The card and drill-down code is a COPY of the Command Centre's Team Score fence (index.html @@BBCC_TEAMSCORE@@,
+     TS_V 6) with ts renamed to myc and the colours mapped to this file's tokens, so both pages draw the same figures
+     from the same rows; checks/mycard-recount.mjs diffs every data-fig between the two. The engine, the adapter and
+     ts-smm.js load from team-score/ (byte copies of the masters) with a version query. Reads only, never a write. -->
+<style>
+.myc-empty{padding:28px;text-align:center;color:var(--text2);font-size:13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)}
+.myc-sec{margin:0 0 22px}
+.myc-sec-hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+.myc-sec-hd h2{font-size:15px;font-weight:600;margin:0;color:var(--text)}
+.myc-sec-hd .myc-team{font-size:12px;color:var(--text2)}
+.myc-name{font-size:13.5px;font-weight:600}
+.myc-score b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.myc-band{display:inline-block;margin-left:6px;font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);color:var(--text2)}
+.myc-band[data-band="excellent"]{color:var(--green);background:var(--g10)}
+.myc-band[data-band="verygood"]{color:var(--cyan);background:var(--c10)}
+.myc-band[data-band="satisfactory"],.myc-band[data-band="needswork"]{color:var(--yellow);background:var(--y10)}
+.myc-band[data-band="poor"]{color:var(--red);background:var(--r10)}
+.myc-why{display:block;font-size:11.5px;color:var(--text2);margin-top:2px}
+.myc-foot{font-size:11.5px;color:var(--text2);margin:8px 2px 0}
+#myc-sheet{align-items:center}
+#myc-sheet>.myc-sheet{background:var(--bg);border:1px solid var(--border);border-radius:16px;width:min(1180px,94vw);max-height:90dvh;display:flex;flex-direction:column;overflow:hidden}
+.myc-sheet-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.myc-sheet-hd h2{font-size:17px;font-weight:600;margin:0;color:var(--text)}
+.myc-sheet-hd .myc-cap{font-size:12px;color:var(--text2);margin-top:2px}
+.myc-x{width:44px;height:44px;display:grid;place-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text);cursor:pointer;flex-shrink:0}
+.myc-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.myc-sheet-bd{overflow:auto;padding:18px;display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:22px;align-items:start}
+.myc-side,.myc-main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;min-width:0}
+.myc-big{display:flex;align-items:flex-end;gap:12px}
+.myc-big strong{font-size:52px;line-height:1;font-weight:600;letter-spacing:-0.04em;font-variant-numeric:tabular-nums;color:var(--text)}
+.myc-big strong.myc-na{font-size:22px;letter-spacing:0}
+.myc-math{border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text2);font-size:13px;line-height:1.6;margin:0}
+.myc-math span{color:var(--text);font-weight:600}
+.myc-facts{margin:0;display:grid;gap:10px}
+.myc-facts>div{display:grid;grid-template-columns:96px 1fr;gap:10px;font-size:13px}
+.myc-facts dt{color:var(--text2)}
+.myc-facts dd{margin:0;color:var(--text)}
+.myc-h3{font-size:13px;font-weight:600;margin:0 0 6px;color:var(--text)}
+.myc-ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px;color:var(--text2)}
+.myc-ul b{color:var(--text);font-weight:600}
+.myc-coach{margin:0;padding:12px 14px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);font-size:13px;color:var(--text)}
+.myc-tw{overflow:auto;border:1px solid var(--border);border-radius:10px;max-height:52vh}
+.myc-jobs{width:100%;border-collapse:collapse;font-size:12.5px}
+.myc-jobs th{position:sticky;top:0;background:var(--bg2);text-align:left;font-weight:500;color:var(--text2);padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.myc-jobs td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top}
+.myc-jobs td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.myc-jobs .myc-ref{display:block;font-size:11px;color:var(--text2)}
+.myc-chip{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);color:var(--text2);white-space:nowrap}
+.myc-chip[data-s="ontime"]{color:var(--green);background:var(--g10)}
+.myc-chip[data-s="late"],.myc-chip[data-s="overdue"]{color:var(--red);background:var(--r10)}
+.myc-chip[data-s="awaiting"]{color:var(--cyan);background:var(--c10)}
+@media(max-width:760px){
+  #myc-sheet{padding:0!important;align-items:stretch}
+  #myc-sheet>.myc-sheet{width:100%;max-height:none;height:100%;height:100dvh;border-radius:0;border:0;overflow:hidden} 
+  .myc-sheet-hd{padding:calc(env(safe-area-inset-top) + 10px) 16px 10px}
+  .myc-sheet-bd{grid-template-columns:minmax(0,1fr);padding:16px 16px calc(env(safe-area-inset-bottom) + 24px)}
+  .myc-tw{max-height:none}
+  .myc-facts>div{grid-template-columns:1fr;gap:2px}
+}
+@media(max-width:639.98px){
+  .myc-tw{border:0;border-radius:0;overflow:visible}
+  .myc-jobs,.myc-jobs tbody{display:block}
+  .myc-jobs thead{display:none}
+  .myc-jobs tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;padding:12px 14px;margin:0 0 10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+  .myc-jobs td{display:block;padding:0;border:0;min-width:0;text-align:left}
+  .myc-jobs td.myc-t{grid-column:1/-1;font-size:13.5px;font-weight:600}
+  .myc-jobs td[data-l]::before{content:attr(data-l);display:block;font-size:11px;font-weight:400;color:var(--text2);margin-bottom:2px}
+}
+.myc-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.myc-card{display:flex;flex-direction:column;gap:8px;width:100%;min-height:120px;text-align:left;font:inherit;color:var(--text);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer}
+.myc-card:hover{background:var(--bg3)}
+.myc-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.myc-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.myc-card-top .myc-name{font-size:14px}
+.myc-tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:var(--text2);white-space:nowrap}
+.myc-tag-q{color:var(--text2);background:var(--bg3)}
+.myc-headline{font-size:13px;line-height:1.5;color:var(--text)}
+.myc-mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-size:12px;color:var(--text2)}
+.myc-mini b{display:block;font-size:15px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.myc-red{color:var(--red)}
+.myc-mini .myc-red b,.myc-red b{color:var(--red)}
+.myc-bks{display:grid;gap:10px}
+.myc-bk-row{display:grid;gap:4px;font-size:12.5px;color:var(--text2)}
+.myc-bk-row b{color:var(--text);font-weight:600}
+.myc-bk{position:relative;height:12px;border-radius:6px;background:var(--bg3);overflow:hidden}
+.myc-bk span{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.myc-bk .o{border:1.5px dashed var(--red);background:transparent;box-sizing:border-box}
+.myc-bk .m{background:var(--cyan)}
+.myc-bk .p{background:var(--green)}
+.myc-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--text2)}
+.myc-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.myc-grey{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text2);font-size:13px}
+.myc-grey .myc-cap{font-size:11.5px;color:var(--text2);margin-top:2px}
+.myc-ul li.myc-red,.myc-ul li.myc-red b{color:var(--red)}
+.myc-jobs tr.myc-red td{color:var(--red)}
+.myc-card-score{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.myc-card-score .myc-why{flex-basis:100%;margin-top:0}
+.myc-card-score .myc-score b{font-size:22px;letter-spacing:-0.02em}
+@media(max-width:760px){
+  .myc-cards{grid-template-columns:minmax(0,1fr)}
+  .myc-card{padding:14px}
+}
+
+/* MY CARD (this block only): the page bar, the sections and the sheet sizing on the SMM Workspace's own .modal-bg */
+#page-mycard .myc-bar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+#page-mycard .myc-bar label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--text2)}
+#page-mycard .myc-bar select{font-size:16px;min-height:44px;padding:6px 12px;min-width:280px}
+#myc-body{min-height:40vh}
+#myc-body .myc-cards{grid-template-columns:minmax(0,1fr)}
+@media(min-width:761px){#myc-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:0 18px;align-items:start}#myc-body>.myc-foot,#myc-body>.myc-empty{grid-column:1/-1}}
+#myc-sheet{padding:20px}
+#myc-sheet>.myc-sheet{max-height:90dvh}
+.myc-sheet-bd{overscroll-behavior:contain}
+@media(max-width:760px){
+  #page-mycard .myc-bar label{flex:1}
+  #page-mycard .myc-bar select{width:100%;min-width:0}
+  #myc-sheet{padding:0}
+  #myc-sheet>.myc-sheet{max-height:none}
+  .myc-sheet-hd{padding-left:calc(env(safe-area-inset-left) + 16px);padding-right:calc(env(safe-area-inset-right) + 16px)}
+  .myc-sheet-bd{padding-left:calc(env(safe-area-inset-left) + 16px);padding-right:calc(env(safe-area-inset-right) + 16px)}
+}
+</style>
+<script>
+(function(){
+'use strict';
+var MYC_V = '1';   // bump with every new copy of team-score/*.js so a phone does not keep the old one
+var MYC = { libs: null, base: null, baseAt: 0, weeks: {}, smmBase: null, smmBaseAt: 0, smmWeeks: {}, smmView: null, token: 0, week: null, team: null, teamAt: 0, who: null, whoFor: null };
+
+/* ── copied from the Command Centre Team Score fence ─────────────────── */
+var MYC_STATE = { completed: 'Completed', awaiting: 'Waiting for review', overdue: 'Overdue', in_progress: 'In progress', cancelled: 'Cancelled' };
+var MYC_ICON_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
+function mycEsc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); }
+/* One formatter for every figure. recount.mjs carries the same rules and compares the text. */
+function mycFmt(v, f) {
+  if (f === 'day') return v ? TS_ADAPTER.dayLabel(Date.parse(v)) : 'Not yet';
+  if (f === 'when') return v ? TS_ADAPTER.dayLabel(Date.parse(v)) + ' ' + new Date(Date.parse(v) + 5.5 * 3600e3).toISOString().slice(11, 16) : 'Not yet';
+  if (f === 'yesno') return v === null || v === undefined ? 'Not yet' : (v ? 'Yes' : 'No');
+  if (v === null || v === undefined || (typeof v === 'number' && isNaN(v))) return 'Not measurable';
+  if (f === '1dp') return Number(v).toFixed(1);
+  if (f === 'int') return String(Math.round(v));
+  return String(v);
+}
+function mycPct(path, v) { return mycFig(path, v, '1dp') + (v === null || v === undefined ? '' : '%'); }
+function mycFig(path, v, f) { return '<span data-fig="' + mycEsc(path) + '" data-fmt="' + f + '">' + mycEsc(mycFmt(v, f)) + '</span>'; }
+async function mycGetIn(table, cols, idCol, ids, extra) {
+  var out = [], list = Array.from(ids);
+  for (var i = 0; i < list.length; i += 100) {
+    var part = list.slice(i, i + 100);
+    out.push.apply(out, await mycGet(table + '?select=' + cols + '&' + idCol + '=in.(' + part.join(',') + ')' + (extra || '') + '&order=id.asc'));
+  }
+  return out;
+}
+function mycEnc(ms) { return encodeURIComponent(new Date(ms).toISOString()); }
+async function mycBase() {
+  if (MYC.base && Date.now() - MYC.baseAt < 120000) return MYC.base;
+  var r = await Promise.all([
+    mycGet('team_members?select=id,name,role&active=eq.true&order=id.asc'),
+    mycGet('graphic_projects?select=id,title,client_name,assigned_designer_id,deadline,created_at,is_archived&order=id.asc'),
+    mycGet('video_projects?select=id,title,assigned_editor_id,deadline,created_at,is_archived&order=id.asc'),
+    mycGet('graphic_stage_history?select=entered_at&order=entered_at.desc&limit=1')
+  ]);
+  MYC.base = { team: r[0], gp: r[1], vp: r[2], gLast: r[3][0] ? r[3][0].entered_at : null };
+  MYC.baseAt = Date.now();
+  return MYC.base;
+}
+
+/* Only the week shown: the jobs due in it, the jobs moved in it and the jobs with a review event in it, each read with its
+   full history up to the week's end (an approval before the week still decides the state). */
+async function mycWeekData(startMs) {
+  var wk = TS_ADAPTER.week(startMs + 3600e3);
+  var asOf = Math.min(wk.endMs, Date.now());
+  var hit = MYC.weeks[wk.startMs];
+  if (hit && Date.now() - hit.at < (asOf === wk.endMs ? (MYC.weeks[wk.startMs] === hit ? Infinity : 600000) : 120000)) { MYC.weeks[wk.startMs] = hit; return hit; }
+  var basing = mycBase(); basing.catch(function () {});   // read alongside the window rows, they do not depend on each other
+  var win = '&entered_at=gte.' + mycEnc(wk.startMs) + '&entered_at=lte.' + mycEnc(asOf);
+  var w = await Promise.all([
+    mycGet('graphic_stage_history?select=graphic_project_id' + win + '&order=id.asc'),
+    mycGet('video_stage_history?select=video_project_id' + win + '&order=id.asc'),
+    mycGet('bb_review_events?select=system,job_id&created_at=gte.' + mycEnc(wk.startMs) + '&created_at=lte.' + mycEnc(asOf) + '&order=id.asc')
+  ]);
+  var base = await basing;
+  function pick(projects, histKey, histRows, sys) {
+    var ids = new Set();
+    projects.forEach(function (p) {
+      var d = TS_ADAPTER.dueIso(p.deadline), c = Date.parse(p.created_at);
+      if (d && Date.parse(d) >= wk.startMs && Date.parse(d) <= asOf) ids.add(p.id);
+      if (c >= wk.startMs && c <= asOf) ids.add(p.id);
+    });
+    histRows.forEach(function (h) { ids.add(Number(h[histKey])); });
+    w[2].forEach(function (e) { if (e.system === sys) ids.add(Number(e.job_id)); });
+    return ids;
+  }
+  var gIds = pick(base.gp, 'graphic_project_id', w[0], 'graphic');
+  var vIds = pick(base.vp, 'video_project_id', w[1], 'video');
+  var lte = function (col) { return '&' + col + '=lte.' + mycEnc(asOf); };
+  var EV = 'id,system,job_id,person_id,kind,stars,reason,from_stage,to_stage,by_name,created_at';
+  var f = await Promise.all([
+    mycGetIn('graphic_stage_history', 'id,graphic_project_id,stage,entered_at', 'graphic_project_id', gIds, lte('entered_at')),
+    mycGetIn('video_stage_history', 'id,video_project_id,stage,entered_at,moved_by', 'video_project_id', vIds, lte('entered_at')),
+    mycGetIn('video_assignment_history', 'id,video_project_id,editor_id,assigned_at,ended_at', 'video_project_id', vIds, lte('assigned_at')),
+    mycGetIn('bb_review_events', EV, 'job_id', gIds, '&system=eq.graphic' + lte('created_at')),
+    mycGetIn('bb_review_events', EV, 'job_id', vIds, '&system=eq.video' + lte('created_at'))
+  ]);
+  var g = TS_ADAPTER.graphicJobs({ projects: base.gp.filter(function (p) { return gIds.has(p.id); }), history: f[0], events: f[3] }, wk.startMs, asOf);
+  var v = TS_ADAPTER.videoJobs({ projects: base.vp.filter(function (p) { return vIds.has(p.id); }), history: f[1], assignments: f[2], events: f[4] }, wk.startMs, asOf);
+  var out = { at: Date.now(), wk: wk, asOf: asOf, g: g, v: v, team: base.team, gLast: base.gLast };
+  MYC.weeks[wk.startMs] = out;
+  return out;
+}
+function mycSeed(d) { return { periodStart: d.wk.startIso }; }
+function mycLost(v, w) { return v === null ? null : (100 - v) * w; }
+var MYC_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+MYC.smmBase = null; MYC.smmBaseAt = 0; MYC.smmWeeks = {}; MYC.smmView = null;
+
+function mycActive(team) { return team.filter(function (m) { return m.active === true; }); }
+function mycSmmPeople(team) { return mycActive(team).filter(function (m) { return /^social media manager$/i.test(String(m.role || '').trim()); }); }
+function mycHeadPeople(team) {
+  return mycActive(team).filter(function (m) { return (m.is_head && ['video', 'graphic', 'smm'].indexOf(m.head_of) > -1) || /^coo$/i.test(String(m.role || '').trim()); });
+}
+
+async function mycSmmBaseRows() {
+  if (MYC.smmBase && Date.now() - MYC.smmBaseAt < 120000) return MYC.smmBase;
+  var r = await Promise.all([
+    mycGet('team_members?select=id,name,role,is_head,head_of,active&active=eq.true&order=id.asc'),
+    mycGet('clients?select=id,name,assigned_smm,status&order=id.asc'),
+    mycGet('smm_publish_log?select=id,source_table,source_id,client_id,tiktok_at,instagram_at,facebook_at,linkedin_at,planned_on,planned_by,planned_set_at,created_at&order=id.asc'),
+    mycGet('graphic_projects?select=id,title,client_id,assigned_designer_id,target_year,target_month,type,is_archived&order=id.asc'),
+    mycGet('video_projects?select=id,title,client_id,assigned_editor_id,target_year,target_month,is_archived&order=id.asc'),
+    mycGet('graphic_stage_history?select=id,graphic_project_id,stage,entered_at,entered_by&order=id.asc'),
+    mycGet('video_stage_history?select=id,video_project_id,stage,entered_at,moved_by&order=id.asc'),
+    mycGet('video_assignment_history?select=id,video_project_id,editor_id,assigned_at,ended_at&order=id.asc'),
+    mycGet('bb_review_events?select=*&order=id.asc'),
+    mycGet('smm_shoots?select=id,shoot_date,created_at&order=id.asc')
+  ]);
+  MYC.smmBase = { team: r[0], clients: r[1], publog: r[2], gp: r[3], vp: r[4], gh: r[5], vh: r[6], va: r[7], events: r[8], shoots: r[9] };
+  MYC.smmBaseAt = Date.now();
+  return MYC.smmBase;
+}
+async function mycSmmWeek(d) {
+  var hit = MYC.smmWeeks[d.wk.startMs];
+  if (hit && hit.asOf === d.asOf && Date.now() - hit.at < 120000) return hit;
+  var day = new Date(d.asOf + 5.5 * 3600e3), Y = day.getUTCFullYear(), M = day.getUTCMonth() + 1;
+  var monday = new Date(d.wk.startMs + 5.5 * 3600e3).toISOString().slice(0, 10);
+  var r = await Promise.all([
+    mycSmmBaseRows(),
+    mycGet('bb_commitment_ledger?select=client_id,client_name,year,month,kind,contracted,completed,published&year=eq.' + Y + '&month=eq.' + M),
+    mycGet('smm_weekly_plan?select=id,week_start,assigned_to,task_type,status,created_at&week_start=eq.' + monday + '&order=id.asc')
+  ]);
+  var rows = Object.assign({}, r[0], { ledger: r[1], plan: r[2] });
+  var out = { at: Date.now(), asOf: d.asOf, rows: rows };
+  MYC.smmWeeks[d.wk.startMs] = out;
+  return out;
+}
+
+function mycLine(path, s) {
+  return s.cohort ? mycFig(path + '.completed', s.completed, 'raw') + ' of ' + mycFig(path + '.cohort', s.cohort, 'raw') + ' jobs due completed' : 'no job with a deadline was due';
+}
+function mycSmmHeadline(c, lines) {
+  var b = 's.' + c.id;
+  if (c.role === 'Publisher') return mycFig(b + '.posted', c.posted.count, 'raw') + ' posted this week. <span class="' + (c.waiting.count ? 'myc-red' : '') + '">' + mycFig(b + '.waiting', c.waiting.count, 'raw') + ' made, not posted after 2 days.</span>';
+  if (c.role === 'Creative') return mycFig(b + '.rev.n', c.reviews.n, 'raw') + ' team review decisions, ' + mycPct(b + '.rev.onTargetPct', c.reviews.onTargetPct) + ' on target. Not measurable: plan sent dates are not recorded.';
+  if (c.role === 'Operations') return 'Graphics: ' + mycLine(b + '.ops.g', lines.g) + '. Video: ' + mycLine(b + '.ops.v', lines.v) + '. '
+    + (c.ops.shootsNext ? 'Next week’s shoots logged by Tuesday: ' + mycFig(b + '.ops.shootsLogged', c.ops.shootsLogged, 'raw') + ' of ' + mycFig(b + '.ops.shootsNext', c.ops.shootsNext, 'raw') + '.' : 'No shoot is dated next week yet.');
+  return 'No headline: this name is not in the SMM role list set on ' + mycEsc(TS_ADAPTER.dayLabel(Date.parse(c.roleSet))) + '.';
+}
+/* SMM-SCORED helpers. Scored = at least one Post on date due in the week (the engine's cohort). */
+function mycSmmWhy(s, dated) {
+  if (s.cohort === 0 && !dated) return 'Score starts when Post on dates exist';
+  if (s.cohort === 0) return 'No Post on date fell due this week';
+  if (s.completed === 0) return 'Nothing due was posted';
+  if (s.ratingCount === 0) return 'No spot check stars yet';
+  return '';
+}
+function mycSmmCoach(b, s) {
+  var parts = [['c', mycLost(s.completionPct, 0.5)], ['o', mycLost(s.ontimePct, 0.3)], ['q', mycLost(s.qualityPct, 0.2)]].filter(function (x) { return x[1] !== null; });
+  parts.sort(function (x, y) { return y[1] - x[1]; });
+  var top = parts[0];
+  if (!top || top[1] === 0) return s.ratingCount === 0 ? 'Quality is read from the spot check stars. None were given this week, so the score waits for them.' : 'Nothing lost this week. Keep it there.';
+  if (top[0] === 'c') return 'Post what is due first: ' + mycFig(b + '.open', s.cohort - s.completed, 'raw') + ' of ' + mycFig(b + '.cohort', s.cohort, 'raw') + ' posts due this week are not posted.';
+  if (top[0] === 'o') return 'Post on the day set: ' + mycFig(b + '.late', s.ontimeD - s.ontimeN, 'raw') + ' of ' + mycFig(b + '.ontimeD', s.ontimeD, 'raw') + ' posts went up after their Post on day.';
+  return 'Quality cost the most points this week: lift the spot check stars.';
+}
+function mycSmmScoreHtml(b, s, why) {
+  var bd = MM_ENGINE.bandFor(s.overall, 90);
+  return '<span class="myc-card-score"><span class="myc-score"><b>' + mycFig(b + '.overall', s.overall, 'int') + '</b>'
+    + (s.overall === null ? '' : '<span class="myc-band" data-band="' + bd.key + '">' + bd.label + '</span>') + '</span>'
+    + (why ? '<span class="myc-why">' + mycEsc(why) + '</span>' : '') + '</span>'
+    + '<span class="myc-mini"><span>Completion<b>' + mycPct(b + '.completionPct', s.completionPct) + '</b>' + mycFig(b + '.completed', s.completed, 'raw') + ' of ' + mycFig(b + '.cohort', s.cohort, 'raw') + ' posted</span>'
+    + '<span>On time<b>' + mycPct(b + '.ontimePct', s.ontimePct) + '</b>' + mycFig(b + '.ontimeN', s.ontimeN, 'raw') + ' of ' + mycFig(b + '.ontimeD', s.ontimeD, 'raw') + '</span>'
+    + '<span>Quality<b>' + mycPct(b + '.qualityPct', s.qualityPct) + '</b>' + (s.ratingCount ? mycFig(b + '.ratingCount', s.ratingCount, 'raw') + ' stars' : 'no stars yet') + '</span></span>';
+}
+function mycSmmCardHtml(c, lines, sc) {
+  var b = 's.' + c.id, scored = !!(sc && sc.s.cohort), why = sc ? mycSmmWhy(sc.s, sc.dated) : 'Score starts when Post on dates exist';
+  return '<button type="button" class="myc-card" data-sys="s" data-pid="' + c.id + '" data-scored="' + (scored ? '1' : '0') + '" onclick="mycOpenSmm(' + c.id + ')">'
+    + '<span class="myc-card-top"><span class="myc-name">' + mycEsc(c.name) + '</span><span><span class="myc-tag">' + mycEsc(c.role || 'No role set') + '</span> <span class="myc-tag myc-tag-q">' + (scored ? 'Scored' : 'Tracked, not scored') + '</span></span></span>'
+    + (scored ? mycSmmScoreHtml(b + '.sc', sc.s, why) : '<span class="myc-why">' + mycEsc(why) + '</span>')
+    + '<span class="myc-headline">' + mycSmmHeadline(c, lines) + '</span>'
+    + '<span class="myc-mini"><span>Book made<b>' + mycFig(b + '.book.made', c.book.made, 'raw') + '</b>of ' + mycFig(b + '.book.owed', c.book.owed, 'raw') + ' owed</span>'
+    + '<span>Posted<b>' + mycFig(b + '.posted', c.posted.count, 'raw') + '</b>this week</span>'
+    + '<span class="' + (c.waiting.count ? 'myc-red' : '') + '">Not posted<b>' + mycFig(b + '.waiting', c.waiting.count, 'raw') + '</b>after 2 days</span></span>'
+    + '</button>';
+}
+function mycHeadCardHtml(h) {
+  var b = 'h.' + h.id;
+  return '<button type="button" class="myc-card" data-sys="h" data-pid="' + h.id + '" onclick="mycOpenHead(' + h.id + ')">'
+    + '<span class="myc-card-top"><span class="myc-name">' + mycEsc(h.name) + '</span><span class="myc-tag">' + mycEsc(h.stages.join(', ')) + '</span></span>'
+    + '<span class="myc-headline">' + mycFig(b + '.n', h.speed.n, 'raw') + ' decisions' + (h.speed.timed
+      ? ', median ' + mycFig(b + '.median', h.speed.median, '1dp') + ' hours, ' + mycPct(b + '.onTargetPct', h.speed.onTargetPct) + ' on target.'
+      : h.speed.n ? ', ' + mycFig(b + '.direct', h.speed.direct, 'raw') + ' approved straight from another stage. Time to decide: Not measurable, no hand-in time is recorded.'
+      : '. Time to decide: Not measurable, nothing was decided.') + '</span>'
+    + '<span class="myc-mini"><span>Waiting now<b>' + mycFig(b + '.waiting', h.speed.waiting, 'raw') + '</b>jobs</span>'
+    + '<span>Sent back<b>' + mycFig(b + '.sentBack', h.sendBacks.count, 'raw') + '</b>this week</span>'
+    + '<span class="' + (h.skipped.length ? 'myc-red' : '') + '">Skipped<b>' + mycFig(b + '.skipped', h.skipped.length, 'raw') + '</b>decisions</span></span>'
+    + '</button>';
+}
+
+function mycWeekCap(d, what) { return what + '. ' + (d.asOf < d.wk.endMs ? 'This week so far, ' : '') + d.wk.label; }
+function mycStatsDl(b, s) {
+  return '<dl class="myc-facts">'
+    + '<div><dt>Decisions</dt><dd>' + mycFig(b + '.n', s.n, 'raw') + (s.direct ? ', of which ' + mycFig(b + '.direct', s.direct, 'raw') + ' approved straight from another stage with no hand-in time' : '') + '</dd></div>'
+    + '<div><dt>Median</dt><dd>' + mycFig(b + '.median', s.median, '1dp') + (s.median === null ? '' : ' hours') + ' from hand-in to decision</dd></div>'
+    + '<div><dt>Slowest tenth</dt><dd>' + mycFig(b + '.p90', s.p90, '1dp') + (s.p90 === null ? '' : ' hours or more') + '</dd></div>'
+    + '<div><dt>On target</dt><dd>' + mycFig(b + '.onTarget', s.onTarget, 'raw') + ' of ' + mycFig(b + '.timed', s.timed, 'raw') + ' within 24 weekday hours: ' + mycPct(b + '.onTargetPct', s.onTargetPct) + '</dd></div>'
+    + '<div><dt>Sent back</dt><dd>' + mycFig(b + '.sentBack', s.sentBack, 'raw') + ', with a reason: ' + mycPct(b + '.reasonPct', s.reasonPct) + '</dd></div></dl>';
+}
+
+function mycOpenSmm(pid) {
+  var V = MYC.smmView; if (!V) return;
+  var c = V.smm.filter(function (x) { return x.id === pid; })[0]; if (!c) return;
+  var d = V.d, b = 's.' + c.id, side = '', main = '';
+  var sc = V.sc[c.id], s = sc.s, scored = s.cohort > 0, why = mycSmmWhy(s, sc.dated), k = b + '.sc';
+  if (scored) {
+    var bd = MM_ENGINE.bandFor(s.overall, 90);
+    side += '<div class="myc-big"><strong class="' + (s.overall === null ? 'myc-na' : '') + '">' + mycFig(k + '.overall', s.overall, 'int') + '</strong>'
+      + (s.overall === null ? '' : '<span class="myc-band" data-band="' + bd.key + '">' + bd.label + '</span>') + '</div>';
+    if (s.overall === null) side += '<p class="myc-math">Not measurable yet: ' + mycEsc(why.charAt(0).toLowerCase() + why.slice(1)) + '.</p>';
+    else side += '<p class="myc-math">0.5 × ' + mycFig(k + '.completionPct', s.completionPct, '1dp') + ' + 0.3 × ' + mycFig(k + '.ontimePct', s.ontimePct, '1dp')
+      + ' + 0.2 × ' + mycFig(k + '.qualityPct', s.qualityPct, '1dp') + ' = ' + mycFig(k + '.overall', s.overall, '1dp') + '</p>';
+    side += '<dl class="myc-facts">'
+      + '<div><dt>Completion</dt><dd>' + mycFig(k + '.completed', s.completed, 'raw') + ' of ' + mycFig(k + '.cohort', s.cohort, 'raw') + ' posts due were posted: ' + mycPct(k + '.completionPct', s.completionPct) + '</dd></div>'
+      + '<div><dt>On time</dt><dd>' + mycFig(k + '.ontimeN', s.ontimeN, 'raw') + ' of ' + mycFig(k + '.ontimeD', s.ontimeD, 'raw') + ' posted by the end of their Post on day: ' + mycPct(k + '.ontimePct', s.ontimePct) + '</dd></div>'
+      + '<div><dt>Quality</dt><dd>' + (s.ratingCount ? 'average of ' + mycFig(k + '.ratingCount', s.ratingCount, 'raw') + ' spot check star ratings: ' + mycPct(k + '.qualityPct', s.qualityPct) : 'Not measurable: no spot check stars this week.') + '</dd></div></dl>';
+    side += '<div><h3 class="myc-h3">What hurt the score</h3><ul class="myc-ul">'
+      + '<li>Completion: ' + mycFig(k + '.open', s.cohort - s.completed, 'raw') + ' posts due and not posted' + (s.completionPct === null ? '' : ', ' + mycFig(k + '.lost.c', mycLost(s.completionPct, 0.5), '1dp') + ' points') + '</li>'
+      + '<li>On time: ' + mycFig(k + '.late', s.ontimeD - s.ontimeN, 'raw') + ' posted late' + (s.ontimePct === null ? '' : ', ' + mycFig(k + '.lost.o', mycLost(s.ontimePct, 0.3), '1dp') + ' points') + '</li>'
+      + '<li>Quality: ' + (s.qualityPct === null ? 'not scored yet, no spot check stars' : mycFig(k + '.lost.q', mycLost(s.qualityPct, 0.2), '1dp') + ' points') + '</li></ul></div>';
+    side += '<p class="myc-coach">' + mycSmmCoach(k, s) + '</p>';
+    var byRef = {};
+    V.sj.jobs.forEach(function (j) { byRef[j.ref] = j; });
+    main += '<div><h3 class="myc-h3">The posts behind it</h3><div class="myc-tw"><table class="myc-jobs"><thead><tr><th>Post</th><th>Post on</th><th>Posted</th><th>On time</th><th>Stars</th></tr></thead><tbody>';
+    s.rows.forEach(function (r) {
+      var j = byRef[r.ref] || {}, rb = k + '.row.' + r.ref;
+      var chip = r.counted ? '<span class="myc-chip" data-s="' + (r.ontime ? 'ontime' : 'late') + '">' + mycFig(rb + '.ontime', r.ontime, 'yesno') + '</span>'
+        : '<span class="myc-chip" data-s="' + r.state + '">' + mycEsc(r.state === 'overdue' ? 'Not posted' : (MYC_STATE[r.state] || r.state)) + '</span>';
+      main += '<tr data-sref="' + mycEsc(r.ref) + '"><td class="myc-t">' + mycEsc(r.title) + '<span class="myc-ref">' + mycEsc(r.ref) + '</span></td>'
+        + '<td class="n" data-l="Post on">' + mycFig(rb + '.due', j.due, 'day') + '</td><td class="n" data-l="Posted">' + mycFig(rb + '.submittedAt', j.submittedAt, 'day') + '</td>'
+        + '<td data-l="On time">' + chip + '</td><td class="n" data-l="Stars">' + (r.stars ? mycFig(rb + '.stars', r.stars, 'raw') + ' of 5' : 'None') + '</td></tr>';
+    });
+    main += '</tbody></table></div><p class="myc-foot">A post counts for the SMM named on the client today, so a book change moves past jobs too. It is due by the end of its Post on day and counts as posted when the first platform is ticked.</p></div>';
+  } else side += '<p class="myc-math">Tracked, not scored: ' + mycEsc(why.charAt(0).toLowerCase() + why.slice(1)) + '.</p>';
+  side += '<p class="myc-coach">' + mycSmmHeadline(c, V.lines) + '</p>';
+  var max = 1;
+  c.book.clients.forEach(function (x) { max = Math.max(max, x.owed || 0, x.made); });
+  side += '<div><h3 class="myc-h3">Their book, ' + MYC_MONTHS[c.month - 1] + ' ' + c.year + '</h3>'
+    + '<p class="myc-foot">' + mycFig(b + '.book.count', c.book.count, 'raw') + ' active clients. Made ' + mycFig(b + '.book.made', c.book.made, 'raw') + ', posted ' + mycFig(b + '.book.posted', c.book.posted, 'raw') + ', owed ' + mycFig(b + '.book.owed', c.book.owed, 'raw') + ' (posts, videos and stories).</p>'
+    + '<div class="myc-legend"><span><i style="background:var(--cyan)"></i>Made</span><span><i style="background:var(--green)"></i>Posted</span><span><i style="border:1.5px dashed var(--red)"></i>Owed</span></div><div class="myc-bks">';
+  c.book.clients.forEach(function (x) {
+    var cb = b + '.book.c.' + x.id, pc = function (v) { return Math.min(100, (v || 0) / max * 100).toFixed(1) + '%'; };
+    side += '<div class="myc-bk-row"><span><b>' + mycEsc(x.name) + '</b>: made ' + mycFig(cb + '.made', x.made, 'raw') + ', posted ' + mycFig(cb + '.posted', x.posted, 'raw') + (x.owed === null ? ', nothing owed on the ledger' : ', owed ' + mycFig(cb + '.owed', x.owed, 'raw')) + '</span>'
+      + '<span class="myc-bk" aria-hidden="true"><span class="o" style="width:' + pc(x.owed) + '"></span><span class="m" style="width:' + pc(x.made) + '"></span><span class="p" style="width:' + pc(x.posted) + '"></span></span></div>';
+  });
+  side += '</div><p class="myc-foot">Made is the designers’ and editors’ work; it shows the client’s position, not the SMM’s output. Read as the ledger stands today.</p></div>';
+  side += '<div><h3 class="myc-h3">Daily form</h3><p class="myc-foot">' + (c.form.days === null
+    ? mycFig(b + '.form.days', null, 'raw') + ': ' + mycEsc(c.form.reason) + '.'
+    : mycFig(b + '.form.days', c.form.days, 'raw') + ' of ' + mycFig(b + '.form.of', c.form.of, 'raw') + ' weekdays so far with a form sent.') + '</p></div>';
+  side += '<div class="myc-grey"><h3 class="myc-h3">Their own diary</h3><div class="myc-cap">their own list, ticked by themselves</div>'
+    + '<p style="margin:8px 0 0">' + mycFig(b + '.diary.ticked', c.diary.ticked, 'raw') + ' of ' + mycFig(b + '.diary.planned', c.diary.planned, 'raw') + ' planned posts ticked done.</p></div>';
+
+  main += '<div><h3 class="myc-h3">Posted this week: ' + mycFig(b + '.posted', c.posted.count, 'raw') + '</h3>';
+  main += c.posted.items.length ? '<ul class="myc-ul">' + c.posted.items.map(function (x) { return '<li data-key="' + x.id + '"><b>' + mycFig(b + '.posted.' + x.id + '.at', x.at, 'day') + '</b> ' + mycEsc(x.title) + '</li>'; }).join('') + '</ul>' : '<p class="myc-foot">Nothing ticked as posted this week.</p>';
+  main += '</div><div><h3 class="myc-h3 ' + (c.waiting.count ? 'myc-red' : '') + '">Made, not posted after 2 days: ' + mycFig(b + '.waiting', c.waiting.count, 'raw') + '</h3>';
+  main += c.waiting.items.length ? '<ul class="myc-ul">' + c.waiting.items.map(function (x) {
+    var k = x.sys + '-' + x.job;
+    return '<li class="myc-red" data-key="' + k + '"><b>' + mycFig(b + '.waiting.' + k + '.days', x.days, 'int') + ' days</b> ' + mycEsc(x.title) + ' (' + (x.sys === 'g' ? 'post' : 'video') + ', finished ' + mycFig(b + '.waiting.' + k + '.finished', x.finished, 'day') + ')</li>';
+  }).join('') + '</ul>' : '<p class="myc-foot">None. Everything finished for this month has been posted.</p>';
+  main += '</div><div><h3 class="myc-h3">Reviews they did (Team review)</h3>' + mycStatsDl(b + '.rev', c.reviews) + '</div>';
+  main += '<p class="myc-foot">The book is the active clients with this name on them today, so a book change moves past weeks too. Posts count when the first platform is ticked in the publish tracker.</p>';
+  mycSheetOpen(b, c.name, mycWeekCap(d, 'SMM, ' + (c.role || 'no role set') + (scored ? ', scored' : ', tracked, not scored')), '<div class="myc-side">' + side + '</div><div class="myc-main">' + main + '</div>');
+}
+
+function mycOutcome(x) {
+  if (x.outcome === 'passed') return 'Passed';
+  if (x.outcome === 'sent_back') return 'Sent back';
+  var t = String(x.toStage || '').replace(/_/g, ' '); return 'Moved to ' + t.charAt(0).toUpperCase() + t.slice(1);
+}
+function mycOpenHead(pid) {
+  var V = MYC.smmView; if (!V) return;
+  var h = V.heads.filter(function (x) { return x.id === pid; })[0]; if (!h) return;
+  var d = V.d, b = 'h.' + h.id, side = '', main = '';
+  var sp = { n: h.speed.n, timed: h.speed.timed, direct: h.speed.direct, median: h.speed.median, p90: h.speed.p90, onTarget: h.speed.onTarget, onTargetPct: h.speed.onTargetPct, sentBack: h.sendBacks.count, reasonPct: h.sendBacks.reasonPct };
+  side += '<div><h3 class="myc-h3">Review speed</h3>' + mycStatsDl(b, sp)
+    + '<p class="myc-foot">Waiting now: ' + mycFig(b + '.waiting', h.speed.waiting, 'raw') + ' jobs' + (h.speed.waiting ? ', the oldest for ' + mycFig(b + '.oldestWait', h.speed.oldestWait, '1dp') + ' hours' : '') + '.</p></div>';
+  side += '<div><h3 class="myc-h3">Stars</h3><p class="myc-foot">' + mycFig(b + '.starred', h.stars.starred, 'raw') + ' of ' + mycFig(b + '.passes', h.stars.passes, 'raw') + ' passes carry stars.</p></div>';
+  side += '<div><h3 class="myc-h3">Send-backs: ' + mycFig(b + '.sentBack', h.sendBacks.count, 'raw') + '</h3>';
+  side += h.sendBacks.reasons.length ? '<ul class="myc-ul">' + h.sendBacks.reasons.map(function (x) { return '<li><b>' + mycEsc(TS_ADAPTER.dayLabel(x.atMs)) + '</b> ' + mycEsc(x.title) + ': ' + mycEsc(x.reason || 'No reason recorded') + '</li>'; }).join('') + '</ul>' : '<p class="myc-foot">None this week.</p>';
+  if (h.sendBacks.more) side += '<p class="myc-foot">' + mycFig(b + '.reasonsMore', h.sendBacks.more, 'raw') + ' more not listed.</p>';
+  side += '</div><div><h3 class="myc-h3 ' + (h.skipped.length ? 'myc-red' : '') + '">Skipped: ' + mycFig(b + '.skipped', h.skipped.length, 'raw') + '</h3>';
+  side += h.skipped.length ? '<ul class="myc-ul">' + h.skipped.map(function (x) {
+    return '<li class="' + (x.own ? 'myc-red' : '') + '" data-key="' + x.key + '"><b>' + mycFig(b + '.sk.' + x.key + '.at', x.at, 'day') + '</b> ' + mycEsc(x.title) + ': ' + mycEsc(x.decider) + ' decided ' + mycEsc(x.stageLabel) + (x.own ? ', their own work' : '') + '</li>';
+  }).join('') + '</ul>' : '<p class="myc-foot">Nobody else decided in this stage this week.</p>';
+  side += '</div><div><h3 class="myc-h3">Their team</h3><ul class="myc-ul">';
+  if (h.headOf === 'graphic' || h.coo) side += '<li>Graphics: ' + mycLine(b + '.team.g', V.lines.g) + '</li>';
+  if (h.headOf === 'video' || h.coo) side += '<li>Video: ' + mycLine(b + '.team.v', V.lines.v) + '</li>';
+  if (h.headOf === 'smm' || h.coo) V.smm.forEach(function (c) {
+    var t = b + '.team.s.' + c.id;
+    side += '<li>' + mycEsc(c.name) + ': ' + mycFig(t + '.posted', c.posted.count, 'raw') + ' posted, ' + mycFig(t + '.waiting', c.waiting.count, 'raw') + ' not posted after 2 days, ' + mycFig(t + '.rev', c.reviews.n, 'raw') + ' team reviews</li>';
+  });
+  side += '</ul></div>';
+  if (h.coo) {
+    side += '<div><h3 class="myc-h3 ' + (h.solo.length ? 'myc-red' : '') + '">A head’s own work passed with no second reviewer: ' + mycFig(b + '.solo', h.solo.length, 'raw') + '</h3>';
+    side += h.solo.length ? '<ul class="myc-ul">' + h.solo.map(function (x) { return '<li class="myc-red" data-key="' + x.key + '"><b>' + mycEsc(TS_ADAPTER.dayLabel(x.atMs)) + '</b> ' + mycEsc(x.title) + ', passed by ' + mycEsc(x.decider) + '</li>'; }).join('') + '</ul>' : '<p class="myc-foot">None this week.</p>';
+    side += '</div>';
+  }
+  main += '<div><h3 class="myc-h3">The decisions behind it</h3>';
+  if (h.decisions.length) {
+    main += '<div class="myc-tw"><table class="myc-jobs"><thead><tr><th>Job</th><th>Hand-in</th><th>Decision</th><th>Hours</th><th>On target</th><th>Outcome</th><th>Reason</th><th>Stars</th></tr></thead><tbody>';
+    h.decisions.slice().reverse().forEach(function (x) {
+      var r = b + '.d.' + x.key;
+      main += '<tr data-key="' + x.key + '" class="' + (x.own ? 'myc-red' : '') + '"><td class="myc-t">' + mycEsc(x.title) + '<span class="myc-ref">' + mycEsc(x.ref) + ', ' + mycEsc(x.stageLabel) + '</span></td>'
+        + '<td class="n" data-l="Hand-in">' + (x.direct ? 'Not recorded' : mycFig(r + '.handIn', x.handIn, 'when')) + '</td>'
+        + '<td class="n" data-l="Decision">' + mycFig(r + '.at', x.at, 'when') + '</td>'
+        + '<td class="n" data-l="Hours">' + mycFig(r + '.hours', x.hours, '1dp') + '</td>'
+        + '<td data-l="On target">' + (x.direct ? 'Not measurable' : '<span class="myc-chip" data-s="' + (x.onTarget ? 'ontime' : 'late') + '">' + mycFig(r + '.onTarget', x.onTarget, 'yesno') + '</span>') + '</td>'
+        + '<td data-l="Outcome">' + mycEsc(mycOutcome(x)) + '</td>'
+        + '<td data-l="Reason">' + (x.outcome === 'sent_back' ? mycEsc(x.reason || 'No reason recorded') : '') + '</td>'
+        + '<td class="n" data-l="Stars">' + (x.outcome !== 'passed' ? '' : x.stars === null ? 'None' : mycFig(r + '.stars', x.stars, 'raw') + ' of 5') + '</td></tr>';
+    });
+    main += '</tbody></table></div>';
+  } else main += '<p class="myc-foot">No decision this week.</p>';
+  main += '</div><p class="myc-foot">A decision is the move out of the review stage, credited to whoever made it, in the week it was made. Hours run from the move into review; Saturday and Sunday hours do not count against the 24 hour target. '
+    + 'A Graphics approval made straight from To do writes its own Head Review row, so its hand-in time is not recorded.</p>';
+  mycSheetOpen(b, h.name, mycWeekCap(d, 'Head, ' + h.stages.join(', ')), '<div class="myc-side">' + side + '</div><div class="myc-main">' + main + '</div>');
+}
+/* ── end of the copy ─────────────────────────────────────────────────── */
+
+/* ── MY CARD's own parts (not in the copy) ───────────────────────────── */
+/* Reads: anon, paged, throws on a refusal so the page says so instead of drawing zeros. Same queries as the CC. */
+async function mycGet(path) {
+  var out = [];
+  for (var off = 0; off < 20000; off += 1000) {
+    var url = SUPABASE_URL + '/rest/v1/' + path + (path.indexOf('?') > -1 ? '&' : '?') + 'limit=1000&offset=' + off;
+    var r = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } });
+    if (!r.ok) throw new Error(path.split('?')[0] + ' answered ' + r.status);
+    var d = await r.json();
+    out.push.apply(out, d);
+    if (d.length < 1000) break;
+  }
+  return out;
+}
+function mycLoadScript(src) {
+  return new Promise(function (ok, no) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function () { no(new Error('could not load ' + src)); }; document.head.appendChild(s); });
+}
+function mycEnsureLibs() {
+  if (window.MM_ENGINE && window.TS_ADAPTER && window.TS_SMM) return Promise.resolve();
+  if (!MYC.libs) {
+    MYC.libs = Promise.all([mycLoadScript('team-score/engine.js?v=' + MYC_V), mycLoadScript('team-score/ts-adapter.js?v=' + MYC_V), mycLoadScript('team-score/ts-smm.js?v=' + MYC_V)]);
+    MYC.libs.catch(function () { MYC.libs = null; });
+  }
+  return MYC.libs;
+}
+
+/* WHO: the signed in seat matched to team_members where active, ignoring case. One match or none: a name held by two
+   active rows shows nothing rather than the wrong card. */
+function mycKey(s) { return String(s === null || s === undefined ? '' : s).trim().toUpperCase(); }
+function mycWhoIn(team, name) {
+  var key = mycKey(name), none = { id: null, name: null, smm: false, head: false };
+  if (!key) return none;
+  var hits = mycActive(team || []).filter(function (m) { return mycKey(m.name) === key; });
+  if (hits.length !== 1) return none;
+  var m = hits[0];
+  return { id: Number(m.id), name: m.name, smm: mycSmmPeople([m]).length === 1, head: mycHeadPeople([m]).length === 1 };
+}
+function mycSeat() { return typeof S !== 'undefined' && S ? S.currentUser || null : null; }
+function mycAllowed() { var w = MYC.who; return !!(w && MYC.whoFor && MYC.whoFor === mycSeat() && (w.smm || w.head)); }
+function mycNavSync() { var b = document.getElementById('sb-mycard'); if (b) b.style.display = mycAllowed() ? '' : 'none'; }
+async function mycSync() {
+  var name = mycSeat();
+  if (!name) { MYC.who = null; MYC.whoFor = null; mycNavSync(); return null; }
+  if (MYC.whoFor === name && MYC.team && Date.now() - MYC.teamAt < 120000) { mycNavSync(); return MYC.who; }
+  try {
+    var team = await mycGet('team_members?select=id,name,role,is_head,head_of,active&active=eq.true&order=id.asc');
+    MYC.team = team; MYC.teamAt = Date.now();
+  } catch (e) { if (name === mycSeat()) { MYC.who = null; MYC.whoFor = null; mycNavSync(); } return null; }
+  if (name !== mycSeat()) return null;   // the seat changed while the list was read: the newer read decides
+  MYC.who = mycWhoIn(MYC.team, name); MYC.whoFor = name;
+  mycNavSync();
+  return MYC.who;
+}
+
+/* NAV: the button sits under Spot check, shows only for an active SMM or head and the page has no history entry of its
+   own (like every other page here), so Back closes an open sheet first and then leaves the way you came in. */
+(function mount() {
+  var anchor = document.getElementById('sb-spotcheck') || document.getElementById('sb-teambrief');
+  if (anchor && !document.getElementById('sb-mycard')) {
+    anchor.insertAdjacentHTML('afterend',
+      '<button class="sb-item" type="button" data-page="mycard" id="sb-mycard" style="display:none">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17c.8-1.8 2-2.6 3.5-2.6s2.7.8 3.5 2.6"/><path d="M15 10h3"/><path d="M15 14h3"/></svg>'
+      + 'My card</button>');
+    document.getElementById('sb-mycard').addEventListener('click', function () {
+      nav('mycard');
+      if (typeof closeSidebarMobile === 'function') closeSidebarMobile();
+    });
+  }
+  var main = document.querySelector('main.main');
+  if (main && !document.getElementById('page-mycard')) {
+    main.insertAdjacentHTML('beforeend',
+      '<section class="page" id="page-mycard">'
+      + '<div class="ph"><div class="ph-title">My card</div><div class="ph-sub">Your own Team Score card, read only. The same figures the Command Centre shows for you.</div></div>'
+      + '<div class="myc-bar"><label for="myc-week">WEEK<select class="fi" id="myc-week"></select></label></div>'
+      + '<div id="myc-body"></div></section>');
+  }
+  if (typeof PAGE_TITLES === 'object') PAGE_TITLES['mycard'] = 'My card';
+})();
+var mycOrigNav = nav;
+nav = function (page) {
+  if (page === 'mycard' && MYC.whoFor && MYC.whoFor === mycSeat() && !mycAllowed()) page = 'today';
+  var r = mycOrigNav.apply(this, [page].concat([].slice.call(arguments, 1)));
+  mycNavSync();
+  if (page === 'mycard') mycRender();
+  return r;
+};
+if (typeof smmEnterApp === 'function') {
+  var mycOrigEnter = smmEnterApp;
+  smmEnterApp = function () {
+    var r = mycOrigEnter.apply(this, arguments);
+    try { if (MYC.whoFor !== mycSeat()) { MYC.who = null; MYC.whoFor = null; } mycNavSync(); mycSync(); } catch (e) {}
+    return r;
+  };
+}
+try { if (mycSeat()) mycSync(); else mycNavSync(); } catch (e) {}
+
+/* THE WEEK PICKER: the CC's nine weeks, this week so far first and chosen, since this is your own card. */
+function mycFillWeeks() {
+  var sel = document.getElementById('myc-week');
+  if (!sel || sel.options.length) return;
+  var now = TS_ADAPTER.week(Date.now()), html = '';
+  for (var i = 0; i <= 8; i++) {
+    var w = TS_ADAPTER.week(now.startMs - i * 7 * 86400e3 + 3600e3);
+    var lbl = i === 0 ? 'This week so far, ' + w.label : i === 1 ? 'Last week, ' + w.label : w.label;
+    html += '<option value="' + w.startMs + '"' + (i === 0 ? ' selected' : '') + '>' + mycEsc(lbl) + '</option>';
+  }
+  sel.innerHTML = html;
+  sel.onchange = function () { mycRender(); };
+}
+
+/* THE VIEW: the same sums as the CC's tsRenderMore, on the same rows, so every figure matches. */
+function mycBuildView(d, rows) {
+  var seed = mycSeed(d);
+  var lines = { g: MM_ENGINE.score(seed, d.g.jobs, d.asOf, { dept: 'graphic' }), v: MM_ENGINE.score(seed, d.v.jobs, d.asOf, { dept: 'video' }) };
+  var smm = mycSmmPeople(rows.team).map(function (m) { return TS_SMM.smmCard(rows, m, d.wk, d.asOf); });
+  var sj = TS_ADAPTER.smmJobs({ log: rows.publog, clients: rows.clients, team: rows.team, events: rows.events }, d.wk.startMs, d.asOf);
+  lines.s = MM_ENGINE.score(seed, sj.jobs, d.asOf, { dept: 'smm' });
+  var sc = {};
+  smm.forEach(function (c) {
+    var s = MM_ENGINE.score(seed, sj.jobs, d.asOf, { emp: c.id });
+    sc[c.id] = { s: s, dated: sj.jobs.some(function (j) { return j.assignee === c.id; }) };
+  });
+  var heads = mycHeadPeople(rows.team).map(function (m) { return TS_SMM.headCard(rows, m, d.wk, d.asOf); });
+  return { d: d, rows: rows, lines: lines, smm: smm, heads: heads, sj: sj, sc: sc };
+}
+/* Only the signed in person's cards. A head's drill-down still lists their whole team, which is why the view holds all. */
+function mycDrawFor(who, V) {
+  if (!who || !(who.smm || who.head) || !V) return '';
+  var mine = who.smm ? V.smm.filter(function (c) { return c.id === who.id; })[0] : null;
+  var head = who.head ? V.heads.filter(function (x) { return x.id === who.id; })[0] : null;
+  var h = '';
+  if (mine) h += '<section class="myc-sec" id="myc-sec-s"><div class="myc-sec-hd"><h2>Your SMM card</h2><span class="myc-team">Tap the card for the figures behind it. An SMM with no Post on date due this week is tracked, not scored.</span></div>'
+    + '<div class="myc-cards">' + mycSmmCardHtml(mine, V.lines, V.sc[mine.id]) + '</div></section>';
+  if (head) h += '<section class="myc-sec" id="myc-sec-h"><div class="myc-sec-hd"><h2>Your head card</h2><span class="myc-team">Review decisions this week. On target means decided within 24 weekday hours of the hand-in. No single score.</span></div>'
+    + '<div class="myc-cards">' + mycHeadCardHtml(head) + '</div></section>';
+  if (!h) return '<div class="myc-empty">Your card is not in this week\'s rows yet.</div>';
+  return h + '<p class="myc-foot">Read only. Nothing on this page changes a figure.</p>';
+}
+async function mycRender() {
+  var body = document.getElementById('myc-body');
+  if (!body) return;
+  var tok = ++MYC.token;
+  body.removeAttribute('data-asof'); body.removeAttribute('data-start'); body.removeAttribute('data-who');
+  body.innerHTML = '<div class="myc-empty">Reading your card</div>';
+  try { await mycEnsureLibs(); }
+  catch (e) { if (tok === MYC.token) body.innerHTML = '<div class="myc-empty">' + mycEsc(e.message) + '. Nothing is shown rather than a wrong figure.</div>'; return; }
+  if (tok !== MYC.token) return;
+  mycFillWeeks();
+  await mycSync();
+  if (tok !== MYC.token) return;
+  if (MYC.whoFor !== mycSeat()) { body.innerHTML = '<div class="myc-empty">The team list could not be read, so your card is not shown. Open the page again to retry.</div>'; return; }
+  if (!mycAllowed()) {
+    body.innerHTML = ''; body.setAttribute('data-who', 'none');
+    if (typeof S !== 'undefined' && S.currentPage === 'mycard') nav('today');
+    return;
+  }
+  var sel = document.getElementById('myc-week');
+  var startMs = Number(sel && sel.value) || TS_ADAPTER.week(Date.now()).startMs;
+  var d, w;
+  try { d = await mycWeekData(startMs); w = await mycSmmWeek(d); }
+  catch (e) { if (tok === MYC.token) body.innerHTML = '<div class="myc-empty">Your card could not be read: ' + mycEsc(e.message) + '. Nothing is shown rather than a wrong figure.</div>'; return; }
+  if (tok !== MYC.token) return;
+  MYC.smmView = mycBuildView(d, w.rows);
+  body.innerHTML = mycDrawFor(MYC.who, MYC.smmView);
+  body.setAttribute('data-asof', String(d.asOf));
+  body.setAttribute('data-start', String(d.wk.startMs));
+  body.setAttribute('data-who', String(MYC.who.id));
+}
+
+/* THE SHEET: this file's own .modal-bg, body level, so its overlay manager locks the page and Back closes it. */
+function mycSheetEl() {
+  var ov = document.getElementById('myc-sheet');
+  if (ov) return ov;
+  ov = document.createElement('div');
+  ov.className = 'modal-bg'; ov.id = 'myc-sheet';
+  ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-labelledby', 'myc-sheet-title');
+  ov.innerHTML = '<div class="myc-sheet"><div class="myc-sheet-hd"><div><h2 id="myc-sheet-title"></h2><div class="myc-cap" id="myc-sheet-cap"></div></div>'
+    + '<button type="button" class="myc-x" aria-label="Close" data-close onclick="mycClose()">' + MYC_ICON_X + '</button></div><div class="myc-sheet-bd" id="myc-sheet-bd"></div></div>';
+  ov.addEventListener('click', function (e) { if (e.target === ov) mycClose(); });
+  document.body.appendChild(ov);
+  return ov;
+}
+function mycSheetOpen(key, title, cap, html) {
+  var ov = mycSheetEl();
+  document.getElementById('myc-sheet-title').textContent = title;
+  document.getElementById('myc-sheet-cap').textContent = cap;
+  document.getElementById('myc-sheet-bd').innerHTML = html;
+  ov.setAttribute('data-open', key);
+  ov.classList.add('open');
+  var bd = document.getElementById('myc-sheet-bd'); if (bd) bd.scrollTop = 0;
+}
+function mycClose() { var ov = document.getElementById('myc-sheet'); if (ov) { ov.classList.remove('open'); ov.removeAttribute('data-open'); } }
+
+window.mycOpenSmm = mycOpenSmm;
+window.mycOpenHead = mycOpenHead;
+window.mycClose = mycClose;
+window.mycRender = mycRender;
+window.mycSync = mycSync;
+window.MYC_PURE = { whoIn: mycWhoIn, drawFor: mycDrawFor, state: function () { return { who: MYC.who, whoFor: MYC.whoFor, v: MYC_V }; } };
+
+})();
+</script>
+<!-- @@BBSMM_MYCARD_END@@ -->
 <!-- @@BBSMM_MONTHCLOSE_BEGIN@@ -->
 <style>
 /* MONTH CLOSE and OWED VS POSTED (7 Oct 2026). Every class starts mc- so nothing
