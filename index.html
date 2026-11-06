@@ -10572,6 +10572,43 @@ async function runSelfTest(){
    }catch(e){ok('Hours: the checks ran',false,String(e&&e.message||e));}
   })();
 
+  /* ── POST ON and SPOT CHECK (Team Score phase 2): pure parts only, no writes ── */
+  (function(){
+   try{
+    const T='2026-11-06';
+    const st=(r)=>ptPostOnState(r,T);
+    ok('Post on: a passed date with no tick is red',st({planned_on:'2026-11-05'}).late===true,'late');
+    ok('Post on: a passed date that is ticked is not red',st({planned_on:'2026-11-05',instagram_at:'2026-11-05T09:00:00Z'}).late===false,'ticked');
+    ok('Post on: today and later are not red',st({planned_on:T}).late===false&&st({planned_on:'2026-11-09'}).late===false,'not late');
+    ok('Post on: no date is never red',st({}).late===false&&st(null).late===false,'empty');
+    ok('Post on: a passed date is read only',st({planned_on:'2026-11-05'}).readOnly===true,st({planned_on:'2026-11-05'}).why);
+    ok('Post on: any tick makes it read only',st({planned_on:'2026-11-09',facebook_at:'2026-11-06T03:00:00Z'}).readOnly===true&&st({linkedin_at:'2026-11-06T03:00:00Z'}).readOnly===true,'ticked');
+    ok('Post on: a future date with no tick stays open',st({planned_on:'2026-11-09'}).readOnly===false&&st({}).readOnly===false,'open');
+    ok('Post on: the day is read in Colombo',ptColomboDay(Date.UTC(2026,10,5,19,0))==='2026-11-06'&&ptColomboDay(Date.UTC(2026,10,5,18,0))==='2026-11-05','05:30 ahead');
+    ok('Post on: each guard refusal reads in plain words',/already marked posted/.test(ptGuardWords('planned_on cannot change: this item is already ticked posted'))&&/has passed, so it is locked/.test(ptGuardWords('planned_on 2026-11-01 has passed and is locked'))&&/Pick today or a later day/.test(ptGuardWords('planned_on 2026-11-01 is before today'))&&/before the item is marked posted/.test(ptGuardWords('cannot be saved with a posted tick in the same write')),'mapped');
+    const P=window.SC_PURE;
+    if(!P){ok('Spot check: the pure parts are loaded',false,'window.SC_PURE missing');return;}
+    const items=[];for(let i=1;i<=12;i++)items.push({id:i*7});
+    const ids=a=>a.map(x=>x.id).join(',');
+    const a1=P.pick(items,'2026-11-02',12),a2=P.pick(items.slice().reverse(),'2026-11-02',12);
+    ok('Spot check: the same seed picks the same 5',a1.length===5&&ids(a1)===ids(a2),ids(a1));
+    const b1=P.pick(items,'2026-11-02',22);
+    ok('Spot check: another person gets a different 5',ids(b1)!==ids(a1),ids(b1)+' vs '+ids(a1));
+    const c1=P.pick(items,'2026-10-26',12);
+    ok('Spot check: another week gets a different 5',ids(c1)!==ids(a1),ids(c1));
+    ok('Spot check: fewer than 5 posted shows them all',P.pick(items.slice(0,3),'2026-11-02',12).length===3&&P.pick([],'2026-11-02',12).length===0,'3 and 0');
+    ok('Spot check: the pick never repeats an item',new Set(a1.map(x=>x.id)).size===5,'unique');
+    const ws=P.weekStart(Date.UTC(2026,10,6,6,0),0);
+    ok('Spot check: the week starts Monday 00:00 Colombo',P.dayStr(ws)==='2026-11-02'&&new Date(ws).toISOString()==='2026-11-01T18:30:00.000Z',new Date(ws).toISOString());
+    ok('Spot check: last week is the Monday before',P.dayStr(P.weekStart(Date.UTC(2026,10,6,6,0),-1))==='2026-10-26','2026-10-26');
+    ok('Spot check: Sunday night Colombo is still the same week',P.dayStr(P.weekStart(Date.UTC(2026,10,8,18,0),0))==='2026-11-02','Sun 23:30');
+    ok('Spot check: posted is the first of the four ticks',P.firstTick({tiktok_at:'2026-11-04T10:00:00Z',facebook_at:'2026-11-03T10:00:00Z'})===Date.parse('2026-11-03T10:00:00Z')&&P.firstTick({})===null,'earliest');
+    ok('Spot check: only Nirvana, Shiara and Thulaib see it',P.allowedFor('NIRVANA')&&P.allowedFor('SHIARA')&&P.allowedFor('THULAIB')&&!P.allowedFor('HITHESH')&&!P.allowedFor('TIANA')&&!P.allowedFor(''),'gate');
+    const btn=document.getElementById('sb-spotcheck');
+    ok('Spot check: the sidebar button follows the gate',!!btn&&((btn.style.display!=='none')===P.allowedFor(S.currentUser)),(S.currentUser||'?')+' '+(btn?btn.style.display||'shown':'missing'));
+   }catch(e){ok('Post on and Spot check: the checks ran',false,String(e&&e.message||e));}
+  })();
+
   /* ── K · layout and design ──────────────────────────────────────────── */
   (function(){
    const host=document.querySelector('.main')||document.body;
@@ -10716,6 +10753,7 @@ async function ptLoad(cid, month, year) {
         .select('id,title,client_id,type,current_stage,target_month,target_year')
         .eq('client_id', cid).eq('target_month', month).eq('target_year', year)
         .in('current_stage', ['add_to_drive', 'posted']).or('is_archived.is.null,is_archived.eq.false'),
+      /* '*' carries planned_on, planned_by and planned_set_at (the Post on date, 6 Nov 2026) */
       sb.from('smm_publish_log')
         .select('*')
         .eq('client_id', cid).eq('target_year', year).eq('target_month', month)
@@ -10778,18 +10816,109 @@ async function ptToggle(srcTable, srcId, clientId, month, year, platform) {
   } catch (e) { console.error('Tick failed:', e); toast('Could not save the tick: ' + (e.message || ''), 'error'); }
 }
 
+/* ── POST ON DATE (Team Score phase 2, 6 Nov 2026) ──────────────────────────
+   Every finished row carries a "Post on" date beside the four ticks. It is saved
+   with the same upsert the ticks use and the database guard
+   (smm_publish_log_planned_guard) has the last word:
+     a date before today (Colombo) is refused;
+     a date that has passed is locked, it cannot be moved or cleared;
+     once any tick is set the date cannot change at all.
+   The field follows the same rules so a person is never offered what the guard
+   refuses: min = today, read only once the date has passed or any tick is set.
+   A row past its date with no tick is drawn red with the words
+   "Post on date passed". The ticks stay the Posted tap and the first tick is the
+   posted time. A tick save never carries planned_on, so it never moves a date. */
+function ptColomboDay(ms) {
+  /* YYYY-MM-DD in Colombo, built from the parts, never toISOString (L-SMM-032) */
+  var d = new Date((ms == null ? Date.now() : ms) + 330 * 60000);
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+}
+function ptAnyTick(row) {
+  if (!row) return false;
+  for (var i = 0; i < PT_PLATFORMS.length; i++) if (row[PT_PLATFORMS[i].key + '_at']) return true;
+  return false;
+}
+/* Pure: the state of one row's date field on a given Colombo day. */
+function ptPostOnState(row, today) {
+  var on = (row && row.planned_on) || '';
+  var ticked = ptAnyTick(row);
+  var passed = !!on && on < today;
+  return {
+    value: on,
+    late: passed && !ticked,                                   /* red: past its date, nothing ticked */
+    readOnly: passed || ticked,                                /* the guard locks both */
+    why: ticked ? 'Locked: this item is marked posted' : (passed ? 'Locked: the date has passed' : '')
+  };
+}
+/* The guard's refusal in plain words. */
+function ptGuardWords(msg) {
+  msg = String(msg || '');
+  if (/already ticked posted/i.test(msg)) return 'This item is already marked posted, so its Post on date cannot change.';
+  if (/passed and is locked/i.test(msg)) return 'This Post on date has passed, so it is locked.';
+  if (/before today/i.test(msg)) return 'That day has passed. Pick today or a later day.';
+  if (/same write/i.test(msg)) return 'Save the Post on date before the item is marked posted.';
+  if (/planned_pair/i.test(msg)) return 'The Post on date needs a name beside it. Sign in again and retry.';
+  return 'Could not save the Post on date.' + (msg ? ' ' + msg : '');
+}
+function ptDateHtml(srcTable, srcId, clientId, month, year) {
+  var row = ptLogRow(srcTable, srcId);
+  var st = ptPostOnState(row, ptColomboDay());
+  var fid = 'pt-on-' + srcTable.charAt(0) + srcId;
+  return '<div class="pt-on" style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">'
+    + '<label for="' + fid + '" style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:var(--text3)">POST ON</label>'
+    + '<input type="date" id="' + fid + '" class="pt-on-input" data-pt-on="' + srcTable + ':' + srcId + '"'
+    +   ' value="' + escHtml(st.value) + '" min="' + ptColomboDay() + '"'
+    +   (st.readOnly ? ' readonly disabled aria-readonly="true" title="' + escHtml(st.why) + '"' : ' title="The day this item should go out"')
+    +   ' onchange="ptSetDate(\'' + srcTable + '\',' + srcId + ',' + clientId + ',' + month + ',' + year + ',this)"'
+    +   ' style="font-size:16px;min-height:40px;padding:4px 8px;border-radius:8px;border:1px solid ' + (st.late ? 'var(--red)' : 'var(--border2)') + ';background:var(--bg2);color:var(--text);font-family:inherit;max-width:170px' + (st.readOnly ? ';opacity:.75' : '') + '">'
+    + '</div>';
+}
+async function ptSetDate(srcTable, srcId, clientId, month, year, el) {
+  if (!sb || !el) return;
+  var row = ptLogRow(srcTable, srcId);
+  var today = ptColomboDay();
+  var st = ptPostOnState(row, today);
+  var val = el.value || '';
+  if (st.readOnly) { el.value = st.value; toast(st.why.replace('Locked: ', 'The Post on date is locked: ') + '.', 'error'); return; }
+  if (val && val < today) { el.value = st.value; toast('That day has passed. Pick today or a later day.', 'error'); return; }
+  if (val === st.value) return;
+  if (!val && !row) return;                                    /* nothing to clear */
+  var payload = { source_table: srcTable, source_id: srcId, client_id: clientId, target_year: year, target_month: month,
+    planned_on: val || null, planned_by: val ? (S.currentUser || null) : null, updated_at: new Date().toISOString() };
+  el.disabled = true;
+  try {
+    var r = await sb.from('smm_publish_log').upsert(payload, { onConflict: 'source_table,source_id' }).select();
+    if (r.error) throw r.error;
+    if (r.data && r.data[0]) {
+      if (row) { PT.log[PT.log.indexOf(row)] = r.data[0]; } else PT.log.push(r.data[0]);
+    }
+    toast(val ? 'Post on date saved' : 'Post on date cleared');
+    renderContentPlan();
+  } catch (e) {
+    console.error('Post on date failed:', e);
+    el.value = st.value; el.disabled = false;
+    toast(ptGuardWords(e && (e.message || e.details)), 'error');
+  }
+}
+
 function ptProdRowHtml(item, srcTable, num) {
   var isVideo = srcTable === 'video_projects';
   var color = isVideo ? 'var(--pink)' : 'var(--cyan)';
   var srcLabel = isVideo ? 'VIDEO SYSTEM' : 'GRAPHIC SYSTEM';
   var typeLbl = (item.type || (isVideo ? 'reel' : 'post')).toUpperCase();
-  return '<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-left:3px solid ' + color + ';border-radius:var(--rs);margin-bottom:6px">'
+  var st = ptPostOnState(ptLogRow(srcTable, item.id), ptColomboDay());
+  var edge = st.late ? 'var(--red)' : color;
+  return '<div class="pt-prod-row' + (st.late ? ' pt-late' : '') + '" data-pt-src="' + srcTable + ':' + item.id + '" style="display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:11px 14px;background:' + (st.late ? 'var(--r10)' : 'var(--bg3)') + ';border:1px solid ' + (st.late ? 'var(--r20)' : 'var(--border)') + ';border-left:3px solid ' + edge + ';border-radius:var(--rs);margin-bottom:6px">'
     + '<div style="font-family:\'Poppins\',sans-serif;font-size:11px;font-weight:800;color:' + color + ';min-width:22px">' + String(num).padStart(2, '0') + '</div>'
-    + '<div style="flex:1;min-width:0">'
+    + '<div style="flex:1;min-width:140px">'
     +   '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">' + escHtml(item.title || 'Untitled') + '</div>'
     +   '<div style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:var(--text3);margin-top:2px">' + typeLbl + ' · FROM THE ' + srcLabel + '</div>'
+    +   (st.late ? '<div class="pt-late-note" style="font-size:11px;font-weight:700;color:var(--red);margin-top:3px">Post on date passed</div>' : '')
     + '</div>'
-    + ptBoxesHtml(srcTable, item.id, item.client_id, item.target_month, item.target_year)
+    + '<div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-left:auto">'
+    +   ptDateHtml(srcTable, item.id, item.client_id, item.target_month, item.target_year)
+    +   ptBoxesHtml(srcTable, item.id, item.client_id, item.target_month, item.target_year)
+    + '</div>'
     + '</div>';
 }
 
@@ -10822,6 +10951,298 @@ renderContentPlan = function() {
 };
 </script>
 <!-- @@BBSMM_PUBTRACK_END@@ -->
+<!-- @@BBSMM_SPOTCHECK_BEGIN@@ -->
+<!-- SPOT CHECK (Team Score phase 2, 6 Nov 2026). For NIRVANA, SHIARA and THULAIB only.
+     For the chosen week (Monday to Sunday, Colombo) it lists what each active SMM
+     posted (posted = the first of the four ticks inside the week; the credited
+     SMM = the client's assigned_smm, read live) and picks 5 per person by a seed
+     of the week start and the person id, so a reload shows the same 5. Each
+     pick opens its own link and takes 1 to 5 stars: one bb_review_events row
+     (system smm, job_id = smm_publish_log.id, kind rating). A rated item shows
+     its stars read only. Reads only, apart from that one insert. Every class
+     carries the sc- prefix so nothing reaches a rule outside this block. -->
+<style>
+.sc-bar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.sc-bar label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--text3)}
+.sc-bar select{font-size:16px;min-height:44px;padding:6px 12px;min-width:220px}
+.sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
+.sc-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;min-width:0}
+.sc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.sc-name{font-size:14px;font-weight:700;color:var(--text)}
+.sc-count{font-size:12px;color:var(--text2)}
+.sc-item{padding:12px 14px;border-bottom:1px solid var(--border);min-width:0}
+.sc-item:last-child{border-bottom:0}
+.sc-title{font-size:13px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.sc-meta{font-size:12px;color:var(--text2);margin-top:3px}
+.sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px}
+.sc-open{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--border2);color:var(--text);text-decoration:none;font-size:13px;font-weight:600}
+.sc-nolink{font-size:12px;color:var(--text3)}
+.sc-stars{display:flex;gap:4px}
+.sc-star{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer}
+.sc-star svg{width:22px;height:22px;display:block}
+.sc-star.on{color:#FBBF24;border-color:rgba(251,191,36,.55);background:rgba(251,191,36,.10)}
+.sc-star:disabled{cursor:default}
+.sc-rated{font-size:12px;color:var(--text2);margin-top:4px}
+.sc-empty{padding:18px 14px;font-size:13px;color:var(--text2)}
+.sc-note{font-size:12px;color:var(--text2);margin-top:12px}
+@media (max-width:768px){ .sc-grid{grid-template-columns:1fr} .sc-bar select{width:100%;min-width:0} .sc-bar label{flex:1} }
+</style>
+<script>
+(function(){
+  'use strict';
+  var SC_SEATS = ['NIRVANA', 'SHIARA', 'THULAIB'];
+  var SC_ROLE = 'Social Media Manager';
+  var SC_PICK = 5;
+  var SC = { week: 'this', prev: 'today', pushed: false, skipPop: false, data: null, saving: {}, seq: 0 };
+  var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6l2.9 6 6.5.9-4.7 4.6 1.1 6.5L12 17.5l-5.8 3.1 1.1-6.5L2.6 9.5l6.5-.9z"/></svg>';
+
+  /* ── PURE PARTS (the self test calls these) ─────────────────────────── */
+  function scAllowedFor(name){ return SC_SEATS.indexOf(String(name || '').toUpperCase()) > -1; }
+  /* Monday 00:00 Colombo as UTC ms, for this week (0) or a week back (-1). */
+  function scWeekStart(nowMs, back){
+    var off = 330 * 60000, c = new Date(nowMs + off);
+    var dow = (c.getUTCDay() + 6) % 7;                       /* Monday 0 */
+    var mon = Date.UTC(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate() - dow + 7 * (back || 0));
+    return mon - off;
+  }
+  function scDayStr(ms){ var d = new Date(ms + 330 * 60000); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); }
+  function scFirstTick(r){
+    var t = null;
+    ['tiktok_at', 'instagram_at', 'facebook_at', 'linkedin_at'].forEach(function(k){ if (r && r[k]) { var v = Date.parse(r[k]); if (!isNaN(v) && (t === null || v < t)) t = v; } });
+    return t;
+  }
+  /* A seeded pick: the same seed gives the same items in the same order. */
+  function scHash(str){ var h = 2166136261 >>> 0; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; }
+  function scRng(seed){ var a = seed >>> 0; return function(){ a = (a + 0x6D2B79F5) >>> 0; var t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function scPick(items, weekStartStr, personId, n){
+    var list = (items || []).slice().sort(function(a, b){ return a.id - b.id; });
+    var rnd = scRng(scHash(String(weekStartStr) + ':' + String(personId)));
+    for (var i = list.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var x = list[i]; list[i] = list[j]; list[j] = x; }
+    return list.slice(0, n == null ? SC_PICK : n);
+  }
+  window.SC_PURE = { allowedFor: scAllowedFor, weekStart: scWeekStart, dayStr: scDayStr, firstTick: scFirstTick, pick: scPick };
+
+  /* ── NAV: the button, the page, the gate ────────────────────────────── */
+  function scAllowed(){ return typeof S !== 'undefined' && scAllowedFor(S.currentUser); }
+  function scNavSync(){ var b = document.getElementById('sb-spotcheck'); if (b) b.style.display = scAllowed() ? '' : 'none'; }
+  (function mount(){
+    var anchor = document.getElementById('sb-teambrief');
+    if (anchor && !document.getElementById('sb-spotcheck')) {
+      anchor.insertAdjacentHTML('afterend',
+        '<button class="sb-item" type="button" data-page="spotcheck" id="sb-spotcheck" style="display:none">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.6 22 9.3 17 14 18.2 21 12 17.6 5.8 21 7 14 2 9.3 9 8.6 12 2"/></svg>'
+        + 'Spot check</button>');
+      document.getElementById('sb-spotcheck').addEventListener('click', function(){
+        var menuOpen = !!document.querySelector('.sidebar-backdrop.open');
+        if (S.currentPage !== 'spotcheck') SC.prev = S.currentPage || 'today';
+        nav('spotcheck');
+        if (typeof closeSidebarMobile === 'function') closeSidebarMobile();
+        /* One history entry, so Back returns to the page you came from. Wait for the
+           menu's own entry to go first. Otherwise this push is the one that Back removes. */
+        scAfterMenu(menuOpen, function(){
+          if (S.currentPage === 'spotcheck' && !(history.state && history.state.bbSpot)) {
+            try { history.pushState({ bbSpot: 1 }, ''); SC.pushed = true; } catch (e) {}
+          }
+        });
+      });
+    }
+    var main = document.querySelector('main.main');
+    if (main && !document.getElementById('page-spotcheck')) {
+      main.insertAdjacentHTML('beforeend',
+        '<section class="page" id="page-spotcheck">'
+        + '<div class="ph"><div class="ph-title">Spot check</div><div class="ph-sub" id="sc-sub">Five posted items per SMM, picked the same way on every reload. Open each one and give it 1 to 5 stars.</div></div>'
+        + '<div id="sc-root"></div></section>');
+    }
+    if (typeof PAGE_TITLES === 'object') PAGE_TITLES['spotcheck'] = 'Spot check';
+  })();
+  function scAfterMenu(menuWasOpen, fn){
+    if (!menuWasOpen) { fn(); return; }
+    var done = false;
+    var go = function(){ if (done) return; done = true; window.removeEventListener('popstate', go); setTimeout(fn, 30); };
+    window.addEventListener('popstate', go);
+    setTimeout(go, 1500);
+  }
+  /* Leaving by any route other than Back takes our history entry with it, so a later Back is never a dead press. */
+  function scLeft(menuWasOpen){
+    if (!SC.pushed) return;
+    SC.pushed = false;
+    scAfterMenu(menuWasOpen, function(){
+      if (history.state && history.state.bbSpot && S.currentPage !== 'spotcheck') { SC.skipPop = true; try { history.back(); } catch (e) { SC.skipPop = false; } }
+    });
+  }
+  window.addEventListener('popstate', function(){
+    if (SC.skipPop) { SC.skipPop = false; return; }
+    if (typeof S === 'undefined' || S.currentPage !== 'spotcheck' || !SC.pushed) return;
+    if (history.state && history.state.bbSpot) return;        /* a sheet on top of this page closed */
+    SC.pushed = false;
+    nav(SC.prev && SC.prev !== 'spotcheck' ? SC.prev : 'today');
+  });
+  var scOrigNav = nav;
+  nav = function(page, data){
+    var from = (typeof S !== 'undefined') ? S.currentPage : null;
+    var menuOpen = !!document.querySelector('.sidebar-backdrop.open');
+    if (page === 'spotcheck' && !scAllowed()) page = 'today';
+    var r = scOrigNav.apply(this, arguments.length ? [page].concat([].slice.call(arguments, 1)) : [page]);
+    scNavSync();
+    if (page === 'spotcheck') scRender();
+    else if (from === 'spotcheck') scLeft(menuOpen);
+    return r;
+  };
+  if (typeof smmEnterApp === 'function') {
+    var scOrigEnter = smmEnterApp;
+    smmEnterApp = function(){ var r = scOrigEnter.apply(this, arguments); try { scNavSync(); } catch (e) {} return r; };
+  }
+  try { scNavSync(); } catch (e) {}
+
+  /* ── DATA ───────────────────────────────────────────────────────────── */
+  function inList(ids){ return ids.length ? ids : [-1]; }
+  async function scLoad(back){
+    var nowMs = Date.now();
+    var startMs = scWeekStart(nowMs, back), endMs = startMs + 7 * 86400000;
+    var asOf = Math.min(endMs, nowMs);
+    var S0 = new Date(startMs).toISOString(), E0 = new Date(asOf).toISOString();
+    var or = ['tiktok_at', 'instagram_at', 'facebook_at', 'linkedin_at'].map(function(k){ return 'and(' + k + '.gte.' + S0 + ',' + k + '.lt.' + E0 + ')'; }).join(',');
+    var res = await Promise.all([
+      sb.from('team_members').select('id,name,role,active').eq('active', true).eq('role', SC_ROLE).order('name'),
+      sb.from('clients').select('id,name,assigned_smm'),
+      sb.from('smm_publish_log').select('id,source_table,source_id,client_id,tiktok_at,instagram_at,facebook_at,linkedin_at').or(or).order('id').limit(1000)
+    ]);
+    for (var i = 0; i < res.length; i++) if (res[i].error) throw res[i].error;
+    var team = res[0].data || [], clients = res[1].data || [], log = res[2].data || [];
+    var byClient = {}; clients.forEach(function(c){ byClient[c.id] = c; });
+    var nameCount = {}; team.forEach(function(m){ var k = String(m.name || '').toUpperCase(); nameCount[k] = (nameCount[k] || 0) + 1; });
+    var people = team.map(function(m){ return { id: m.id, name: m.name, key: String(m.name || '').toUpperCase(), items: [] }; });
+    var byKey = {}; people.forEach(function(p){ if (nameCount[p.key] === 1) byKey[p.key] = p; });
+    var noSmm = 0;
+    log.forEach(function(r){
+      var t = scFirstTick(r); if (t === null || t < startMs || t >= asOf) return;
+      var c = byClient[r.client_id]; var p = c && c.assigned_smm ? byKey[String(c.assigned_smm).toUpperCase()] : null;
+      if (!p) { noSmm++; return; }
+      p.items.push({ id: r.id, source_table: r.source_table, source_id: r.source_id, client: c ? c.name : '', posted: t });
+    });
+    var wk = scDayStr(startMs);
+    var picked = [];
+    people.forEach(function(p){ p.posted = p.items.length; p.picks = scPick(p.items, wk, p.id, SC_PICK); picked = picked.concat(p.picks); });
+    var vid = picked.filter(function(x){ return x.source_table === 'video_projects'; }).map(function(x){ return x.source_id; });
+    var gfx = picked.filter(function(x){ return x.source_table === 'graphic_projects'; }).map(function(x){ return x.source_id; });
+    var jobs = picked.map(function(x){ return x.id; });
+    var res2 = await Promise.all([
+      sb.from('video_projects').select('id,title').in('id', inList(vid)),
+      sb.from('graphic_projects').select('id,title,drive_link').in('id', inList(gfx)),   /* named columns: image_url is base64 */
+      sb.from('video_project_links').select('video_project_id,url,tag,created_at').in('video_project_id', inList(vid)).order('created_at', { ascending: false }).limit(1000),
+      sb.from('bb_review_events').select('id,job_id,stars,by_name,created_at').eq('system', 'smm').eq('kind', 'rating').in('job_id', inList(jobs)).order('created_at', { ascending: false }).limit(1000)
+    ]);
+    for (var j = 0; j < res2.length; j++) if (res2[j].error) throw res2[j].error;
+    var vt = {}, gt = {}, vl = {}, rated = {};
+    (res2[0].data || []).forEach(function(v){ vt[v.id] = v; });
+    (res2[1].data || []).forEach(function(g){ gt[g.id] = g; });
+    /* a video's link: its newest final cut, else its newest link of any kind */
+    (res2[2].data || []).forEach(function(l){ var cur = vl[l.video_project_id]; if (!l.url) return; if (!cur || (cur.tag !== 'final_cut' && l.tag === 'final_cut')) vl[l.video_project_id] = l; });
+    (res2[3].data || []).forEach(function(e){ if (!rated[e.job_id]) rated[e.job_id] = e; });
+    picked.forEach(function(x){
+      if (x.source_table === 'video_projects') { x.title = vt[x.source_id] && vt[x.source_id].title; x.link = vl[x.source_id] ? vl[x.source_id].url : null; }
+      else if (x.source_table === 'graphic_projects') { x.title = gt[x.source_id] && gt[x.source_id].title; x.link = gt[x.source_id] ? gt[x.source_id].drive_link : null; }
+      x.rating = rated[x.id] || null;
+    });
+    return { back: back, startMs: startMs, asOf: asOf, wk: wk, people: people, noSmm: noSmm };
+  }
+
+  /* ── DRAW ───────────────────────────────────────────────────────────── */
+  function esc(s){ return typeof escHtml === 'function' ? escHtml(s == null ? '' : String(s)) : String(s == null ? '' : s); }
+  function when(ms){ return new Date(ms).toLocaleString('en-GB', { timeZone: 'Asia/Colombo', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+  function safeUrl(u){ return /^https?:\/\//i.test(String(u || '')) ? String(u) : null; }
+  function starsHtml(x, personId){
+    var r = x.rating;
+    if (r) {
+      var h = '<div class="sc-stars" data-sc-rated="' + x.id + '" aria-label="Rated ' + r.stars + ' of 5">';
+      for (var i = 1; i <= 5; i++) h += '<button type="button" class="sc-star' + (i <= r.stars ? ' on' : '') + '" disabled aria-hidden="true" tabindex="-1">' + STAR + '</button>';
+      return h + '</div><div class="sc-rated">Rated ' + r.stars + ' of 5 by ' + esc(r.by_name || 'someone') + '</div>';
+    }
+    var busy = !!SC.saving[x.id];
+    var g = '<div class="sc-stars" role="group" aria-label="Rate this post">';
+    for (var n = 1; n <= 5; n++) g += '<button type="button" class="sc-star" data-sc-job="' + x.id + '" data-sc-person="' + personId + '" data-sc-n="' + n + '" aria-label="' + n + (n === 1 ? ' star' : ' stars') + '"' + (busy ? ' disabled' : '') + '>' + STAR + '</button>';
+    return g + '</div>';
+  }
+  function itemHtml(x, p){
+    var url = safeUrl(x.link);
+    return '<div class="sc-item" data-sc-item="' + x.id + '">'
+      + '<div class="sc-title">' + esc(x.title || 'Untitled') + '</div>'
+      + '<div class="sc-meta">' + esc(x.client || 'No client') + ' · posted ' + esc(when(x.posted)) + '</div>'
+      + '<div class="sc-row">'
+      +   (url ? '<a class="sc-open" href="' + esc(url) + '" target="_blank" rel="noopener">Open it</a>' : '<span class="sc-nolink">No link recorded</span>')
+      +   starsHtml(x, p.id)
+      + '</div></div>';
+  }
+  function scPaint(){
+    var root = document.getElementById('sc-root'); if (!root) return;
+    var d = SC.data;
+    var bar = '<div class="sc-bar"><label for="sc-week">WEEK<select class="fi" id="sc-week">'
+      + '<option value="this"' + (SC.week === 'this' ? ' selected' : '') + '>This week so far</option>'
+      + '<option value="last"' + (SC.week === 'last' ? ' selected' : '') + '>Last week</option>'
+      + '</select></label>'
+      + (d ? '<div class="sc-count" id="sc-range">' + esc(new Date(d.startMs).toLocaleDateString('en-GB', { timeZone: 'Asia/Colombo', day: 'numeric', month: 'short' })) + ' to ' + esc(new Date(d.startMs + 6 * 86400000).toLocaleDateString('en-GB', { timeZone: 'Asia/Colombo', day: 'numeric', month: 'short' })) + '</div>' : '')
+      + '</div>';
+    if (!d) { root.innerHTML = bar + '<div class="sc-empty">Loading</div>'; scWire(); return; }
+    if (!d.people.length) { root.innerHTML = bar + '<div class="sc-empty">No active Social Media Manager was found in the team list.</div>'; scWire(); return; }
+    root.innerHTML = bar + '<div class="sc-grid" data-sc-week="' + d.wk + '">' + d.people.map(function(p){
+      return '<div class="sc-card" data-sc-person="' + p.id + '">'
+        + '<div class="sc-head"><div class="sc-name">' + esc(p.name) + '</div><div class="sc-count">' + p.posted + ' posted, ' + p.picks.length + ' picked</div></div>'
+        + (p.picks.length ? p.picks.map(function(x){ return itemHtml(x, p); }).join('') : '<div class="sc-empty">Nothing marked posted for their clients in this week.</div>')
+        + '</div>';
+    }).join('') + '</div>'
+      + (d.noSmm ? '<div class="sc-note">' + d.noSmm + (d.noSmm === 1 ? ' posted item belongs' : ' posted items belong') + ' to clients with no active SMM and ' + (d.noSmm === 1 ? 'is' : 'are') + ' not shown.</div>' : '')
+      + '<div class="sc-note">Posted means the first of the four platform ticks. Each item is credited to the client\'s SMM as the client list reads today.</div>';
+    scWire();
+  }
+  function scWire(){
+    var sel = document.getElementById('sc-week');
+    if (sel) sel.onchange = function(){ SC.week = sel.value === 'last' ? 'last' : 'this'; scRender(); };
+    document.querySelectorAll('#sc-root .sc-star[data-sc-job]').forEach(function(b){ b.onclick = function(){ scRate(b); }; });
+  }
+  async function scRender(){
+    if (!document.getElementById('sc-root')) return;
+    if (!scAllowed()) { document.getElementById('sc-root').innerHTML = '<div class="sc-empty">Spot check is for Nirvana, Shiara and Thulaib.</div>'; return; }
+    var my = ++SC.seq;
+    SC.data = null; scPaint();
+    try {
+      var d = await scLoad(SC.week === 'last' ? -1 : 0);
+      if (my !== SC.seq) return;
+      SC.data = d; scPaint();
+    } catch (e) {
+      if (my !== SC.seq) return;
+      console.error('Spot check load failed', e);
+      var root = document.getElementById('sc-root');
+      if (root) root.innerHTML = '<div class="sc-empty">The posted list could not be read. Open the page again to retry.</div>';
+    }
+  }
+  function findItem(jobId){
+    if (!SC.data) return null;
+    for (var i = 0; i < SC.data.people.length; i++) for (var j = 0; j < SC.data.people[i].picks.length; j++) if (SC.data.people[i].picks[j].id === jobId) return SC.data.people[i].picks[j];
+    return null;
+  }
+  async function scRate(btn){
+    var jobId = Number(btn.getAttribute('data-sc-job')), personId = Number(btn.getAttribute('data-sc-person')), stars = Number(btn.getAttribute('data-sc-n'));
+    var x = findItem(jobId);
+    if (!x || x.rating || SC.saving[jobId] || !(stars >= 1 && stars <= 5)) return;
+    SC.saving[jobId] = true; scPaint();
+    var w = null;
+    try {
+      w = await sb.from('bb_review_events').insert([{ system: 'smm', job_id: jobId, person_id: personId, kind: 'rating', stars: stars, by_name: S.currentUser }]).select('id,job_id,stars,by_name,created_at');
+    } catch (e) { w = { error: e }; }
+    SC.saving[jobId] = false;
+    if (!w || w.error) {
+      console.error('Spot check rating failed', w && w.error);
+      toast('Could not save the stars: ' + ((w && w.error && w.error.message) || 'the database refused it'), 'error');
+      scPaint(); return;
+    }
+    x.rating = (w.data && w.data[0]) || { stars: stars, by_name: S.currentUser };
+    toast(stars + (stars === 1 ? ' star' : ' stars') + ' saved');
+    scPaint();
+  }
+  window.scRender = scRender;
+})();
+</script>
+<!-- @@BBSMM_SPOTCHECK_END@@ -->
 <!-- @@BBSMM_MONTHCLOSE_BEGIN@@ -->
 <style>
 /* MONTH CLOSE and OWED VS POSTED (7 Oct 2026). Every class starts mc- so nothing
