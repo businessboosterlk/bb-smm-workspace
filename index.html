@@ -11586,7 +11586,7 @@ function mycSmmCoach(b, s) {
   parts.sort(function (x, y) { return y[1] - x[1]; });
   var top = parts[0];
   if (!top || top[1] === 0) return s.ratingCount === 0 ? 'Quality is read from the spot check stars. None were given this week, so the score waits for them.' : 'Nothing lost this week. Keep it there.';
-  if (top[0] === 'c') return 'Post what is due first: ' + mycFig(b + '.open', s.cohort - s.completed, 'raw') + ' of ' + mycFig(b + '.cohort', s.cohort, 'raw') + ' posts due this week are not posted.';
+  if (top[0] === 'c') return 'Post what is due first: not posted yet, ' + mycFig(b + '.open', s.cohort - s.completed, 'raw') + ' of the ' + mycFig(b + '.cohort', s.cohort, 'raw') + ' due this week.';
   if (top[0] === 'o') return 'Post on the day set: ' + mycFig(b + '.late', s.ontimeD - s.ontimeN, 'raw') + ' of ' + mycFig(b + '.ontimeD', s.ontimeD, 'raw') + ' posts went up after their Post on day.';
   return 'Quality cost the most points this week: lift the spot check stars.';
 }
@@ -11649,10 +11649,10 @@ function mycOpenSmm(pid) {
     side += '<dl class="myc-facts">'
       + '<div><dt>Completion</dt><dd>' + mycFig(k + '.completed', s.completed, 'raw') + ' of ' + mycFig(k + '.cohort', s.cohort, 'raw') + ' posts due were posted: ' + mycPct(k + '.completionPct', s.completionPct) + '</dd></div>'
       + '<div><dt>On time</dt><dd>' + mycFig(k + '.ontimeN', s.ontimeN, 'raw') + ' of ' + mycFig(k + '.ontimeD', s.ontimeD, 'raw') + ' posted by the end of their Post on day: ' + mycPct(k + '.ontimePct', s.ontimePct) + '</dd></div>'
-      + '<div><dt>Quality</dt><dd>' + (s.ratingCount ? 'average of ' + mycFig(k + '.ratingCount', s.ratingCount, 'raw') + ' spot check star ratings: ' + mycPct(k + '.qualityPct', s.qualityPct) : 'Not measurable: no spot check stars this week.') + '</dd></div></dl>';
+      + '<div><dt>Quality</dt><dd>' + (s.ratingCount ? 'spot check stars given: ' + mycFig(k + '.ratingCount', s.ratingCount, 'raw') + ', average ' + mycPct(k + '.qualityPct', s.qualityPct) : 'Not measurable: no spot check stars this week.') + '</dd></div></dl>';
     side += '<div><h3 class="myc-h3">What hurt the score</h3><ul class="myc-ul">'
-      + '<li>Completion: ' + mycFig(k + '.open', s.cohort - s.completed, 'raw') + ' posts due and not posted' + (s.completionPct === null ? '' : ', ' + mycFig(k + '.lost.c', mycLost(s.completionPct, 0.5), '1dp') + ' points') + '</li>'
-      + '<li>On time: ' + mycFig(k + '.late', s.ontimeD - s.ontimeN, 'raw') + ' posted late' + (s.ontimePct === null ? '' : ', ' + mycFig(k + '.lost.o', mycLost(s.ontimePct, 0.3), '1dp') + ' points') + '</li>'
+      + '<li>Completion: ' + mycFig(k + '.open', s.cohort - s.completed, 'raw') + ' not posted of the posts due' + (s.completionPct === null ? '' : ', ' + mycFig(k + '.lost.c', mycLost(s.completionPct, 0.5), '1dp') + ' points') + '</li>'
+      + '<li>On time: ' + mycFig(k + '.late', s.ontimeD - s.ontimeN, 'raw') + ' posted after the Post on day' + (s.ontimePct === null ? '' : ', ' + mycFig(k + '.lost.o', mycLost(s.ontimePct, 0.3), '1dp') + ' points') + '</li>'
       + '<li>Quality: ' + (s.qualityPct === null ? 'not scored yet, no spot check stars' : mycFig(k + '.lost.q', mycLost(s.qualityPct, 0.2), '1dp') + ' points') + '</li></ul></div>';
     side += '<p class="myc-coach">' + mycSmmCoach(k, s) + '</p>';
     var byRef = {};
