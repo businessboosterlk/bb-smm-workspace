@@ -13248,11 +13248,11 @@ function weekDays(day) {
         nav('daychecks');
         if (typeof closeSidebarMobile === 'function') closeSidebarMobile();
         /* One history entry, so Back returns to the page you came from. The menu's own entry goes first. */
-        ncAfterMenu(menuOpen, function(){
+        ncAfterMenu(menuOpen, function(){ ncSettle(function(){
           if (S.currentPage === 'daychecks' && !(history.state && history.state.ncDay)) {
             try { history.pushState({ ncDay: 1 }, ''); NC.pushed = true; } catch (e) {}
           }
-        });
+        }); });
       });
     }
     var main = document.querySelector('main.main');
@@ -13271,20 +13271,40 @@ function weekDays(day) {
     window.addEventListener('popstate', go);
     setTimeout(go, 1500);
   }
-  /* Leaving by any route other than Back takes our history entry with it, so a later Back is never a dead press. */
+  /* Another page (Spot check) may have just asked the browser to go back off its own entry. Pushing before that
+     lands would let its Back remove our entry instead, so wait for that popstate or 300 ms first. */
+  function ncSettle(fn){
+    var done = false;
+    var go = function(){ if (done) return; done = true; window.removeEventListener('popstate', go); setTimeout(fn, 30); };
+    window.addEventListener('popstate', go);
+    setTimeout(go, 300);
+  }
+  /* Leaving by any route other than Back takes our history entry with it, so a later Back is never a dead press.
+     When the next page pushed its own entry on top of ours (Spot check does), ours stays underneath: its Back
+     brings you here and the popstate below keeps the two in step. */
   function ncLeft(menuWasOpen){
     if (!NC.pushed) return;
-    NC.pushed = false;
-    ncAfterMenu(menuWasOpen, function(){
-      if (history.state && history.state.ncDay && S.currentPage !== 'daychecks') { NC.skipPop = true; try { history.back(); } catch (e) { NC.skipPop = false; } }
-    });
+    ncAfterMenu(menuWasOpen, function(){ setTimeout(function(){
+      if (S.currentPage === 'daychecks') return;
+      if (history.state && history.state.ncDay) { NC.pushed = false; NC.skipPop = true; try { history.back(); } catch (e) { NC.skipPop = false; } }
+    }, 80); });
   }
   window.addEventListener('popstate', function(){
     if (NC.skipPop) { NC.skipPop = false; return; }
-    if (typeof S === 'undefined' || S.currentPage !== 'daychecks' || !NC.pushed) return;
-    if (history.state && history.state.ncDay) return;   /* a sheet on top of this page closed */
-    NC.pushed = false;
-    nav(NC.prev && NC.prev !== 'daychecks' ? NC.prev : 'today');
+    if (typeof S === 'undefined' || !NC.pushed) return;
+    var ours = !!(history.state && history.state.ncDay);
+    if (S.currentPage === 'daychecks') {
+      if (ours) return;                                   /* a sheet or a page on top of this one closed */
+      NC.pushed = false;
+      nav(NC.prev && NC.prev !== 'daychecks' ? NC.prev : 'today');
+    } else if (ours) {
+      /* the page that sat on our entry went elsewhere and backed off its own entry: take ours too. Checked again a
+         moment later, because the menu closing on a phone lands here too just before the next page pushes its own. */
+      setTimeout(function(){
+        if (!NC.pushed || S.currentPage === 'daychecks' || !(history.state && history.state.ncDay)) return;
+        NC.pushed = false; NC.skipPop = true; try { history.back(); } catch (e) { NC.skipPop = false; }
+      }, 200);
+    }
   });
   var ncOrigNav = nav;
   nav = function(page){
