@@ -10500,6 +10500,49 @@ async function runSelfTest(){
    }catch(e){ok('Team: SMM shows only SMM people',false,'query failed: '+(e&&e.message));}
   })();
 
+  /* ── M · DAY CHECKS (6 Nov 2026). Pure parts only: the judged rules and the box are fed
+     rows held in memory. Nothing is read from or written to bb_ops_log here. ──────────── */
+  (function(){
+   const P=window.NC_PURE, NR=window.NC_RULES;
+   if(!P||!NR){ok('Day checks: the block loaded',false,'NC_PURE or NC_RULES missing');return;}
+   ok('Day checks: the block loaded',true,'rules and pure parts present');
+   const gate=P.allowedFor('NIRVANA')&&P.allowedFor(' hithesh ')&&!P.allowedFor('TIANA')&&!P.allowedFor('THULAIB')&&!P.allowedFor('SHIARA')&&!P.allowedFor('')&&!P.allowedFor(null);
+   ok('Day checks: only Nirvana and Hithesh hold the page',gate,'seats '+P.seats.join(' ')+'; Tiana, Thulaib, Shiara and blank refused');
+   const btn=document.getElementById('sb-daychecks'), want=P.allowedFor(S.currentUser), shown=!!btn&&btn.style.display!=='none';
+   ok('Day checks: the sidebar button follows the seat',!!btn&&shown===want,(btn?'shown '+shown:'NO BUTTON')+' for '+S.currentUser);
+   const team=[];for(let i=1;i<=16;i++)team.push({id:i,name:'P'+String(i).padStart(2,'0'),active:true});
+   team[0].name='THULAIB';team[1].name='SHIARA';team[2].name='NIRVANA';team.push({id:99,name:'LEFT',active:false});
+   const ros=NR.roster(team,'nirvana');
+   ok('Day checks: the round list leaves out the seat, Thulaib, Shiara and leavers',ros.length===13&&!ros.some(m=>['THULAIB','SHIARA','NIRVANA','LEFT'].indexOf(m.name)!==-1),ros.length+' names');
+   const day='2026-11-06', t0=Date.parse(day+'T09:00:00+05:30'), late=t0+3*3600000;
+   const at=s=>new Date(t0+s*1000).toISOString();
+   const mk=(id,member,result,s)=>({id:id,day:day,kind:'round',member:member,result:result,by_name:'NIRVANA',note:result==='not_reached'?'probe':null,created_at:at(s)});
+   const r12=ros.slice(0,12).map((m,i)=>mk(1000+i,m.id,'called',i*60));
+   const b12=P.boxState(NR.roundSummary(r12,ros),NR.checkStatus(day,'morning_round',r12,late));
+   ok('Day checks: 12 of 13 marked keeps Everyone reached LOCKED',b12.locked===true&&b12.canTick===false&&b12.left===1,'locked '+b12.locked+', '+b12.left+' left');
+   const r13=r12.concat([mk(1012,ros[12].id,'not_reached',800)]);
+   const b13=P.boxState(NR.roundSummary(r13,ros),NR.checkStatus(day,'morning_round',r13,late));
+   ok('Day checks: 13 of 13 marked opens the box',b13.locked===false&&b13.canTick===true&&b13.left===0,'locked '+b13.locked+', can tick '+b13.canTick);
+   const rV=r13.concat([{id:1013,day:day,kind:'void',voids:1005,note:'probe',by_name:'NIRVANA',created_at:at(900)}]);
+   const bV=P.boxState(NR.roundSummary(rV,ros),NR.checkStatus(day,'morning_round',rV,late));
+   ok('Day checks: undoing one mark locks the box again',bV.locked===true&&bV.left===1,'locked '+bV.locked+', '+bV.left+' left');
+   const rT=r13.concat([{id:1014,day:day,kind:'check',check_name:'morning_round',result:'done',by_name:'NIRVANA',created_at:at(1000)}]);
+   const bT=P.boxState(NR.roundSummary(rT,ros),NR.checkStatus(day,'morning_round',rT,late));
+   ok('Day checks: a written tick shows as ticked, never as a live button',bT.ticked===true&&bT.canTick===false,'ticked '+bT.ticked);
+   const rB=ros.map((m,i)=>mk(2000+i,m.id,'called',i*0.5));
+   ok('Day checks: thirteen marks inside ten seconds read as marked in one go',P.boxState(NR.roundSummary(rB,ros),null).bulk===true&&b13.bulk===false,'quick round bulk, slow round not');
+   const two=[mk(3000,ros[0].id,'called',10),mk(3001,ros[0].id,'messaged',20)];
+   const lastA=P.latestRound(two,ros[0].id), lastB=P.latestRound(two.concat([{id:3002,day:day,kind:'void',voids:3001,note:'probe',by_name:'NIRVANA',created_at:at(30)}]),ros[0].id);
+   ok('Day checks: Undo takes back the latest mark and the one before shows again',lastA&&lastA.id===3001&&lastB&&lastB.id===3000,'latest '+(lastA&&lastA.id)+', after undo '+(lastB&&lastB.id));
+   const nr=P.build('round',{member:5,result:'not_reached',note:'  '},'nirvana'), nrOk=P.build('round',{member:5,result:'not_reached',note:'phone off'},'nirvana');
+   const vd=P.build('void',{voids:7,note:''},'NIRVANA'), fr=P.build('check',{check_name:'friday_report',day:'2026-11-05'},'NIRVANA');
+   ok('Day checks: Not reached and Undo refuse a blank reason, Friday report refuses a Thursday',!!nr.error&&!!vd.error&&!!fr.error&&!!nrOk.row&&nrOk.row.by_name==='NIRVANA'&&nrOk.row.note==='phone off','three refusals, one row');
+   const pts=['late','missed_meeting','no_word','mistake'].map(k=>{const b=P.build('slip',{member:5,result:k,note:'probe slip'},'NIRVANA');return b.row?b.row.points:null;});
+   ok('Day checks: slips carry exact points (1, 2, 3, 2)',pts.join()==='1,2,3,2'&&!!P.build('slip',{member:5,result:'toString',note:'probe'},'NIRVANA').error,pts.join(' '));
+   const built=[nrOk.row,P.build('check',{check_name:'day_list',day:day},'NIRVANA').row,P.build('void',{voids:7,note:'probe'},'NIRVANA').row,P.build('slip',{member:5,result:'late',note:'probe'},'NIRVANA').row];
+   ok('Day checks: no row sends day or created_at (the server sets both)',built.every(r=>r&&!('day' in r)&&!('created_at' in r)&&!('id' in r)),built.length+' rows built');
+  })();
+
   /* ── L · THE DAY BY THE HOUR (23 Oct 2026). Zero writes: probe rows live in memory and go
      through the SAME evaluator and the same slot drawing the board uses. ─────────────────── */
   await (async function(){
@@ -12762,6 +12805,738 @@ function mcRenderOwed(keepFocus) {
 })();
 </script>
 <!-- @@BBSMM_TEAMBRIEF_END@@ -->
+<!-- @@BBSMM_DAYCHECKS_BEGIN@@
+     DAY CHECKS (Nirvana's daily checks, Thulaib 6 Nov 2026, bb_pending 1496 to 1501). For NIRVANA and HITHESH only;
+     the button is hidden and the route goes home for every other seat. One tap per person for the morning round
+     (Called, Messaged, On leave or Not reached with a reason), the Everyone reached box that stays locked until every
+     name has a mark, the checks of the day and Note a slip. Every tap is one add only row in bb_ops_log. The database
+     sets the day and the time and refuses edits and deletes, so a wrong tap is undone with a void row that carries a
+     reason. The rules are the judged BB Crew part pasted byte for byte from
+     ~/bb-systems/nirvana-checks/crew/nc-rules.inline.js and exposed as window.NC_RULES; change the crew part and
+     paste again, never edit them here. Brief: ~/bb-systems/nirvana-checks/BRIEF.md. Every class carries the nc-
+     prefix so nothing reaches a rule outside this block. Graphics and Video send backs are counted in Team Score. -->
+<style>
+.nc-wrap{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.nc-col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.nc-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;min-width:0}
+.nc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.nc-h{font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
+.nc-count{font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums}
+.nc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info undo" "opts opts";gap:8px 12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)}
+.nc-row:last-child{border-bottom:0}
+.nc-info{grid-area:info;min-width:0}
+.nc-name{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.02em}
+.nc-state{font-size:12px;color:var(--text2);margin-top:2px;overflow-wrap:anywhere}
+.nc-state.nr{color:var(--red)}
+.nc-opts{grid-area:opts;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.nc-opt{display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 6px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;line-height:1.15;text-align:center;cursor:pointer;touch-action:manipulation}
+.nc-opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.nc-opt.leave[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow)}
+.nc-opt.nr[aria-pressed="true"]{background:var(--red);border-color:var(--red)}
+.nc-opt:disabled{opacity:.55;cursor:default}
+.nc-undo{grid-area:undo;display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:72px;padding:0 12px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;line-height:1;cursor:pointer;touch-action:manipulation}
+.nc-undo-sp{grid-area:undo;min-width:72px}
+.nc-box{padding:14px}
+.nc-boxbtn{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:0 14px;border-radius:10px;border:0;font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;line-height:1;cursor:pointer;background:var(--accent);color:var(--bg);touch-action:manipulation}
+.nc-boxbtn:disabled{background:var(--bg4);color:var(--text2);cursor:default}
+.nc-note{font-size:12px;color:var(--text2);margin-top:10px;line-height:1.45}
+.nc-bulk{font-size:12px;color:var(--text2);margin-top:10px;font-style:italic}
+.nc-done{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nc-done-t{font-size:13px;color:var(--text);line-height:1.45}
+.nc-check{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.nc-check:last-child{border-bottom:0}
+.nc-check-l{min-width:0}
+.nc-check-n{font-size:13px;font-weight:600;color:var(--text)}
+.nc-check-d{font-size:12px;color:var(--text2);margin-top:2px}
+.nc-check-r{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.nc-st{font-size:12px;font-weight:700;text-align:right}
+.nc-st.on_time{color:var(--green)}
+.nc-st.late{color:var(--yellow)}
+.nc-st.overdue{color:var(--red)}
+.nc-st.open{color:var(--text2);font-weight:500}
+.nc-tick{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:72px;padding:0 14px;border-radius:8px;border:0;background:var(--accent);color:var(--bg);font-family:inherit;font-size:13px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation}
+.nc-tick:disabled,.nc-undo:disabled,.nc-boxbtn.busy{opacity:.55;cursor:default}
+.nc-slipwrap{padding:14px}
+.nc-slipbtn{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation}
+.nc-slip{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--border)}
+.nc-slip-t{font-size:13px;color:var(--text);min-width:0;overflow-wrap:anywhere}
+.nc-slip-m{font-size:12px;color:var(--text2);margin-top:2px}
+.nc-empty{padding:16px 14px;font-size:13px;color:var(--text2)}
+.nc-fine{font-size:12px;color:var(--text2);padding:12px 14px;border-top:1px solid var(--border);line-height:1.45}
+.nc-input{width:100%;font-size:16px;min-height:48px;padding:10px 12px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:inherit;outline:none}
+.nc-input:focus{border-color:var(--accent)}
+.nc-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.nc-kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.nc-kind{min-height:56px;padding:6px 10px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;line-height:1.25;text-align:center;cursor:pointer;touch-action:manipulation}
+.nc-kind small{display:block;font-size:12px;font-weight:500;color:var(--text2)}
+.nc-kind[aria-pressed="true"]{border-color:var(--accent);background:var(--accent10);box-shadow:0 0 0 1px var(--accent) inset}
+.nc-bar{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.nc-bar .btn{width:100%;min-height:48px;justify-content:center;font-size:14px}
+.nc-err{font-size:12px;color:var(--red);margin-top:6px;min-height:16px}
+.nc-x{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.nc-h1{margin:0}
+.nc-msg{padding:18px 14px;font-size:14px;color:var(--text2)}
+@media (min-width:1100px){
+  .nc-row{grid-template-columns:minmax(96px,1fr) minmax(0,420px) 72px;grid-template-areas:"info opts undo"}
+}
+@media (max-width:900px){ .nc-wrap{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:767px){ #page-daychecks > .ph > div{flex:1 1 auto;text-align:center} }
+</style>
+<div class="modal-bg" id="modal-nc-reason">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="nc-reason-title">
+    <div class="modal-head"><div class="modal-title" id="nc-reason-title">Reason</div><button class="modal-close nc-x" type="button" aria-label="Close" onclick="closeModal('nc-reason')">×</button></div>
+    <div id="nc-reason-sub" class="nc-note" style="margin:0 0 12px"></div>
+    <label class="nc-label" for="nc-reason-input">One line, required</label>
+    <input class="nc-input" id="nc-reason-input" type="text" maxlength="300" autocomplete="off" enterkeyhint="done">
+    <div class="nc-err" id="nc-reason-err" role="alert"></div>
+    <div class="nc-bar">
+      <button class="btn btn-primary" type="button" id="nc-reason-save" onclick="ncReasonSave()">Save</button>
+      <button class="btn btn-ghost" type="button" onclick="closeModal('nc-reason')">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="modal-nc-slip">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="nc-slip-title">
+    <div class="modal-head"><div class="modal-title" id="nc-slip-title">Note a slip</div><button class="modal-close nc-x" type="button" aria-label="Close" onclick="closeModal('nc-slip')">×</button></div>
+    <label class="nc-label" for="nc-slip-person">Person</label>
+    <select class="nc-input" id="nc-slip-person"></select>
+    <div class="nc-label" style="margin-top:14px" id="nc-slip-kind-l">Kind</div>
+    <div class="nc-kinds" id="nc-slip-kinds" role="group" aria-labelledby="nc-slip-kind-l"></div>
+    <label class="nc-label" for="nc-slip-note" style="margin-top:14px">What happened, one line</label>
+    <input class="nc-input" id="nc-slip-note" type="text" maxlength="300" autocomplete="off" enterkeyhint="done">
+    <div class="nc-err" id="nc-slip-err" role="alert"></div>
+    <div class="nc-bar">
+      <button class="btn btn-primary" type="button" id="nc-slip-save" onclick="ncSlipSave()">Save slip</button>
+      <button class="btn btn-ghost" type="button" onclick="closeModal('nc-slip')">Cancel</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  'use strict';
+  /* ── the judged rules, crew/nc-rules.inline.js, byte for byte ── */
+const COLOMBO_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+function colomboDay(ms) {
+  if (typeof ms !== 'number' || isNaN(ms)) return '1970-01-01';
+  const d = new Date(ms + COLOMBO_OFFSET_MS);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+const DUE = {
+  day_list: '08:30',
+  morning_round: '09:30',
+  after_lunch: '14:30',
+  end_of_day: '18:00',
+  friday_report: '15:00',
+};
+
+const CHECKS = ['day_list', 'morning_round', 'after_lunch', 'end_of_day', 'friday_report'];
+
+function dueMs(day, checkName) {
+  if (typeof day !== 'string' || typeof checkName !== 'string') return NaN;
+  const time = DUE[checkName];
+  if (!time) return NaN;
+  const iso = `${day}T${time}:00+05:30`;
+  const ms = Date.parse(iso);
+  return ms;
+}
+
+function isFriday(day) {
+  if (typeof day !== 'string') return false;
+  const parts = day.split('-');
+  if (parts.length !== 3) return false;
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return false;
+  const utcMs = Date.UTC(y, m - 1, d);
+  if (isNaN(utcMs)) return false;
+  const utcDay = new Date(utcMs).getUTCDay();
+  return utcDay === 5;
+}
+
+function checksFor(day) {
+  const base = CHECKS.slice(0, 4);
+  if (isFriday(day)) {
+    return [...base, 'friday_report'];
+  }
+  return base;
+}
+
+function liveRows(rows) {
+  if (!Array.isArray(rows)) return [];
+  const voidIds = new Set();
+  for (const r of rows) {
+    if (r && r.kind === 'void' && r.voids != null) {
+      voidIds.add(r.voids);
+    }
+  }
+  return rows.filter(r => r && r.kind !== 'void' && !voidIds.has(r.id));
+}
+
+function checkStatus(day, checkName, rows, nowMs) {
+  if (typeof day !== 'string' || typeof checkName !== 'string') {
+    return { state: 'none', at: null };
+  }
+  if (checkName === 'friday_report' && !isFriday(day)) {
+    return { state: 'none', at: null };
+  }
+  const live = liveRows(rows);
+  const checks = live.filter(r => r.kind === 'check' && r.check_name === checkName && r.day === day);
+  if (checks.length === 0) {
+    const due = dueMs(day, checkName);
+    if (isNaN(due)) return { state: 'none', at: null };
+    const todayColombo = colomboDay(nowMs);
+    if (todayColombo > day) {
+      return { state: 'missed', at: null };
+    }
+    if (nowMs > due) {
+      return { state: 'overdue', at: null };
+    }
+    return { state: 'open', at: null };
+  }
+  let earliest = checks[0];
+  for (let i = 1; i < checks.length; i++) {
+    const a = Date.parse(earliest.created_at);
+    const b = Date.parse(checks[i].created_at);
+    if (!isNaN(b) && (isNaN(a) || b < a)) {
+      earliest = checks[i];
+    }
+  }
+  const at = Date.parse(earliest.created_at);
+  const due = dueMs(day, checkName);
+  if (isNaN(at) || isNaN(due)) return { state: 'none', at: null };
+  const state = at <= due ? 'on_time' : 'late';
+  return { state, at };
+}
+
+function roster(team, tickerName) {
+  if (!Array.isArray(team)) return [];
+  const exclude = new Set(['THULAIB', 'SHIARA']);
+  if (typeof tickerName === 'string') {
+    exclude.add(tickerName.trim().toUpperCase());
+  }
+  return team
+    .filter(m => m && m.active === true && !exclude.has((m.name || '').trim().toUpperCase()))
+    .sort((a, b) => (a.name || '').trim().toUpperCase().localeCompare((b.name || '').trim().toUpperCase()));
+}
+
+function roundSummary(rows, roster) {
+  const safeRows = Array.isArray(rows) ? liveRows(rows).filter(r => r.kind === 'round') : [];
+  const safeRoster = Array.isArray(roster) ? roster : [];
+  const rosterIds = new Set(safeRoster.map(m => m.id));
+  const byMember = {};
+  const memberTimes = {};
+  for (const r of safeRows) {
+    if (r.member == null || !rosterIds.has(r.member)) continue;
+    const ms = Date.parse(r.created_at);
+    if (isNaN(ms)) continue;
+    if (!(r.member in memberTimes) || ms > memberTimes[r.member]) {
+      memberTimes[r.member] = ms;
+      byMember[r.member] = r.result;
+    }
+  }
+  const of = safeRoster.length;
+  const markedIds = Object.keys(byMember).map(Number);
+  const marked = markedIds.length;
+  let reached = 0;
+  let onLeave = 0;
+  const notReached = [];
+  for (const m of safeRoster) {
+    const result = byMember[m.id];
+    if (result === 'called' || result === 'messaged') {
+      reached++;
+    }
+    if (result === 'on_leave') {
+      onLeave++;
+    }
+    if (result === 'not_reached') {
+      const row = safeRows.find(r => r.member === m.id && r.result === 'not_reached' && Date.parse(r.created_at) === memberTimes[m.id]);
+      notReached.push({ member: m.id, note: row ? row.note : null });
+    }
+  }
+  const unmarked = safeRoster.filter(m => !(m.id in byMember)).map(m => m.id);
+  const complete = of > 0 && marked === of;
+  const times = Object.values(memberTimes).sort((a, b) => a - b);
+  let spanSec = 0;
+  if (times.length >= 2) {
+    spanSec = Math.round((times[times.length - 1] - times[0]) / 1000);
+  }
+  const bulk = marked >= 3 && spanSec <= 10;
+  return { byMember, of, marked, reached, onLeave, notReached, unmarked, complete, bulk, spanSec };
+}
+
+const SLIP_POINTS = { late: 1, missed_meeting: 2, no_word: 3, mistake: 2 };
+
+function slipPoints(rows) {
+  const safeRows = Array.isArray(rows) ? liveRows(rows).filter(r => r.kind === 'slip') : [];
+  const sums = {};
+  for (const r of safeRows) {
+    if (r.member == null) continue;
+    const pts = Number(r.points);
+    if (isNaN(pts)) continue;
+    sums[r.member] = (sums[r.member] || 0) + pts;
+  }
+  return sums;
+}
+
+function watch(summary, form, nameOf) {
+  const noForm = [];
+  const noLink = [];
+  if (!summary || !summary.byMember || !form || !nameOf) {
+    return { noForm, noLink };
+  }
+  const linked = new Set((form.linked || []).map(s => (s || '').trim().toUpperCase()));
+  const sent = new Set((form.sent || []).map(s => (s || '').trim().toUpperCase()));
+  const ids = Object.keys(summary.byMember)
+    .map(Number)
+    .sort((a, b) => a - b);
+  for (const id of ids) {
+    const result = summary.byMember[id];
+    if (result !== 'called' && result !== 'messaged') continue;
+    const name = (nameOf[id] || '').trim().toUpperCase();
+    if (!name) continue;
+    if (!linked.has(name)) {
+      noLink.push(name);
+    } else if (!sent.has(name)) {
+      noForm.push(name);
+    }
+  }
+  return { noForm, noLink };
+}
+
+function weekDays(day) {
+  if (typeof day !== 'string') return [];
+  const parts = day.split('-');
+  if (parts.length !== 3) return [];
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return [];
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (isNaN(date.getTime())) return [];
+  const dayOfWeek = date.getUTCDay();
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(date);
+  monday.setUTCDate(date.getUTCDate() + diffToMonday);
+  const result = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const da = String(d.getUTCDate()).padStart(2, '0');
+    result.push(`${y}-${mo}-${da}`);
+  }
+  return result;
+}
+  /* ── end of the judged rules ── */
+  window.NC_RULES = { colomboDay, DUE, CHECKS, dueMs, isFriday, checksFor, liveRows, checkStatus, roster, roundSummary, SLIP_POINTS, slipPoints, watch, weekDays };
+
+  var NC_SEATS = ['NIRVANA', 'HITHESH'];
+  var NC_OFFSET = 5.5 * 3600000;
+  var NC_RESULTS = [
+    { key: 'called', label: 'Called', cls: '' },
+    { key: 'messaged', label: 'Messaged', cls: '' },
+    { key: 'on_leave', label: 'On leave', cls: 'leave' },
+    { key: 'not_reached', label: 'Not reached', cls: 'nr' }
+  ];
+  var NC_RESULT_WORD = { called: 'Called', messaged: 'Messaged', on_leave: 'On leave', not_reached: 'Not reached' };
+  var NC_CHECK_LABEL = { day_list: 'Day list out', morning_round: 'Morning round', after_lunch: 'After lunch call', end_of_day: 'End of day close', friday_report: 'Friday report' };
+  var NC_KINDS = [
+    { key: 'late', label: 'Late' },
+    { key: 'missed_meeting', label: 'Missed meeting or call' },
+    { key: 'no_word', label: 'No word all day' },
+    { key: 'mistake', label: 'Mistake' }
+  ];
+  var NC_STATE_WORD = { on_time: 'On time', late: 'Late', overdue: 'Overdue', open: 'Open', missed: 'Missed', none: '' };
+  var NC = { prev: 'today', pushed: false, skipPop: false, team: [], rows: [], day: '', loaded: false, err: '', seq: 0, busy: {}, reason: null, slipKind: null };
+
+  function has(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function seatOf(name){ return String(name == null ? '' : name).trim().toUpperCase(); }
+  function oneLine(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+
+  /* ── PURE PARTS (the self test feeds these rows held in memory) ─────── */
+  function ncAllowedFor(name){ return NC_SEATS.indexOf(seatOf(name)) !== -1; }
+  /* The box is locked until every name has a mark. A tick already written always shows as ticked. */
+  function ncBoxState(summary, mr){
+    var ticked = !!(mr && (mr.state === 'on_time' || mr.state === 'late'));
+    var complete = !!(summary && summary.complete);
+    var left = summary ? Math.max(0, (summary.of || 0) - (summary.marked || 0)) : 0;
+    return { ticked: ticked, locked: !ticked && !complete, canTick: !ticked && complete, left: left, bulk: !!(summary && summary.bulk) };
+  }
+  /* One row per tap. The server sets day and created_at, so neither is ever sent. */
+  function ncBuild(kind, f, by){
+    f = f || {};
+    var b = seatOf(by);
+    if (b.length < 2 || b.length > 40) return { error: 'No signed in name' };
+    var note = oneLine(f.note).slice(0, 300);
+    var member = Number(f.member);
+    if (kind === 'round') {
+      if (!has(NC_RESULT_WORD, f.result)) return { error: 'Unknown mark' };
+      if (!(member > 0)) return { error: 'Pick a person' };
+      if (f.result === 'not_reached' && note.length < 3) return { error: 'Write a reason of three letters or more' };
+      var r = { kind: 'round', member: member, result: f.result, by_name: b };
+      if (f.result === 'not_reached') r.note = note;
+      return { row: r };
+    }
+    if (kind === 'check') {
+      if (CHECKS.indexOf(f.check_name) === -1) return { error: 'Unknown check' };
+      if (f.check_name === 'friday_report' && !isFriday(f.day)) return { error: 'The Friday report is ticked on a Friday only' };
+      return { row: { kind: 'check', check_name: f.check_name, result: 'done', by_name: b } };
+    }
+    if (kind === 'slip') {
+      if (!(member > 0)) return { error: 'Pick a person' };
+      if (!has(SLIP_POINTS, f.result)) return { error: 'Pick what kind of slip' };
+      if (note.length < 3) return { error: 'Write what happened in three letters or more' };
+      return { row: { kind: 'slip', member: member, result: f.result, points: SLIP_POINTS[f.result], note: note, by_name: b } };
+    }
+    if (kind === 'void') {
+      if (!(Number(f.voids) > 0)) return { error: 'Nothing to undo' };
+      if (note.length < 3) return { error: 'Write a reason of three letters or more' };
+      return { row: { kind: 'void', voids: Number(f.voids), note: note, by_name: b } };
+    }
+    return { error: 'Unknown row' };
+  }
+  /* The same row roundSummary shows: the latest live round for that person, the first one on a tie. */
+  function ncLatestRound(rows, member){
+    var best = null, bt = -Infinity;
+    liveRows(rows).forEach(function(r){
+      if (r.kind !== 'round' || r.member !== member) return;
+      var t = Date.parse(r.created_at);
+      if (!isNaN(t) && t > bt) { bt = t; best = r; }
+    });
+    return best;
+  }
+  /* The same row checkStatus times: the earliest live tick of that check today. */
+  function ncEarliestCheck(rows, name, day){
+    var best = null, bt = Infinity;
+    liveRows(rows).forEach(function(r){
+      if (r.kind !== 'check' || r.check_name !== name || r.day !== day) return;
+      var t = Date.parse(r.created_at);
+      if (!isNaN(t) && t < bt) { bt = t; best = r; }
+    });
+    return best;
+  }
+  function ncHM(ms){ var d = new Date(ms + NC_OFFSET); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); }
+  function ncDayLabel(day){
+    var p = String(day).split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' }).replace(',', '');
+  }
+  window.NC_PURE = { seats: NC_SEATS.slice(), allowedFor: ncAllowedFor, boxState: ncBoxState, build: ncBuild, latestRound: ncLatestRound, earliestCheck: ncEarliestCheck, hm: ncHM, dayLabel: ncDayLabel };
+
+  /* ── NAV: the button, the page, the gate (the Spot check pattern) ───── */
+  function ncAllowed(){ return typeof S !== 'undefined' && ncAllowedFor(S.currentUser); }
+  function ncNavSync(){ var b = document.getElementById('sb-daychecks'); if (b) b.style.display = ncAllowed() ? '' : 'none'; }
+  (function mount(){
+    var anchor = document.querySelector('.sb-item[data-page="today"]');
+    if (anchor && !document.getElementById('sb-daychecks')) {
+      anchor.insertAdjacentHTML('afterend',
+        '<button class="sb-item" type="button" data-page="daychecks" id="sb-daychecks" style="display:none">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>'
+        + 'Day checks</button>');
+      document.getElementById('sb-daychecks').addEventListener('click', function(){
+        var menuOpen = !!document.querySelector('.sidebar-backdrop.open');
+        if (S.currentPage !== 'daychecks') NC.prev = S.currentPage || 'today';
+        nav('daychecks');
+        if (typeof closeSidebarMobile === 'function') closeSidebarMobile();
+        /* One history entry, so Back returns to the page you came from. The menu's own entry goes first. */
+        ncAfterMenu(menuOpen, function(){
+          if (S.currentPage === 'daychecks' && !(history.state && history.state.ncDay)) {
+            try { history.pushState({ ncDay: 1 }, ''); NC.pushed = true; } catch (e) {}
+          }
+        });
+      });
+    }
+    var main = document.querySelector('main.main');
+    if (main && !document.getElementById('page-daychecks')) {
+      main.insertAdjacentHTML('beforeend',
+        '<section class="page" id="page-daychecks">'
+        + '<div class="ph"><div><h1 class="ph-title nc-h1" id="nc-title">Today</h1><div class="ph-sub" id="nc-sub"></div></div></div>'
+        + '<div id="nc-root"></div></section>');
+    }
+    if (typeof PAGE_TITLES === 'object') PAGE_TITLES['daychecks'] = 'Day checks';
+  })();
+  function ncAfterMenu(menuWasOpen, fn){
+    if (!menuWasOpen) { fn(); return; }
+    var done = false;
+    var go = function(){ if (done) return; done = true; window.removeEventListener('popstate', go); setTimeout(fn, 30); };
+    window.addEventListener('popstate', go);
+    setTimeout(go, 1500);
+  }
+  /* Leaving by any route other than Back takes our history entry with it, so a later Back is never a dead press. */
+  function ncLeft(menuWasOpen){
+    if (!NC.pushed) return;
+    NC.pushed = false;
+    ncAfterMenu(menuWasOpen, function(){
+      if (history.state && history.state.ncDay && S.currentPage !== 'daychecks') { NC.skipPop = true; try { history.back(); } catch (e) { NC.skipPop = false; } }
+    });
+  }
+  window.addEventListener('popstate', function(){
+    if (NC.skipPop) { NC.skipPop = false; return; }
+    if (typeof S === 'undefined' || S.currentPage !== 'daychecks' || !NC.pushed) return;
+    if (history.state && history.state.ncDay) return;   /* a sheet on top of this page closed */
+    NC.pushed = false;
+    nav(NC.prev && NC.prev !== 'daychecks' ? NC.prev : 'today');
+  });
+  var ncOrigNav = nav;
+  nav = function(page){
+    var from = (typeof S !== 'undefined') ? S.currentPage : null;
+    var menuOpen = !!document.querySelector('.sidebar-backdrop.open');
+    var args = [].slice.call(arguments);
+    if (args[0] === 'daychecks' && !ncAllowed()) args[0] = 'today';
+    var r = ncOrigNav.apply(this, args);
+    ncNavSync();
+    if (args[0] === 'daychecks') { ncRender(); ncLoad(); }
+    else if (from === 'daychecks') ncLeft(menuOpen);
+    return r;
+  };
+  if (typeof smmEnterApp === 'function') {
+    var ncOrigEnter = smmEnterApp;
+    smmEnterApp = function(){ var r = ncOrigEnter.apply(this, arguments); try { ncNavSync(); } catch (e) {} return r; };
+  }
+  try { ncNavSync(); } catch (e) {}
+
+  /* ── DATA: today's rows only, read again after every write ──────────── */
+  async function ncLoad(){
+    if (!ncAllowed() || typeof sb === 'undefined' || !sb) return;
+    var my = ++NC.seq, day = colomboDay(Date.now());
+    try {
+      var res = await Promise.all([
+        sb.from('team_members').select('id,name,active').eq('active', true).order('name').limit(200),
+        sb.from('bb_ops_log').select('id,day,kind,check_name,member,result,points,note,by_name,voids,created_at')
+          .eq('day', day).order('created_at', { ascending: true }).order('id', { ascending: true }).limit(2000)
+      ]);
+      if (my !== NC.seq) return;
+      var err = res[0].error || res[1].error;
+      if (err) NC.err = err.message || 'The database refused the read';
+      else { NC.team = res[0].data || []; NC.rows = res[1].data || []; NC.day = day; NC.loaded = true; NC.err = ''; }
+    } catch (e) {
+      if (my !== NC.seq) return;
+      NC.err = (e && e.message) || 'No connection';
+    }
+    ncRender();
+  }
+  async function ncWrite(row, okMsg, key){
+    if (NC.busy[key]) return false;
+    NC.busy[key] = true;
+    var ok = false;
+    try {
+      var w = await sb.from('bb_ops_log').insert([row]).select('id');
+      if (w.error) toast('Not saved. ' + (w.error.message || 'The database refused it'), 'error');
+      else { ok = true; toast(okMsg, 'success'); }
+    } catch (e) {
+      toast('Not saved. ' + ((e && e.message) || 'No connection'), 'error');
+    }
+    NC.busy[key] = false;
+    ncLoad();
+    return ok;
+  }
+
+  /* ── DRAW ───────────────────────────────────────────────────────────── */
+  function ncList(){ return roster(NC.team, seatOf(S.currentUser)); }
+  function ncNameOf(id){ for (var i = 0; i < NC.team.length; i++) if (NC.team[i].id === id) return NC.team[i].name; return 'Someone'; }
+  function ncRender(){
+    var root = document.getElementById('nc-root'); if (!root) return;
+    var now = Date.now(), today = colomboDay(now);
+    var title = document.getElementById('nc-title'), sub = document.getElementById('nc-sub');
+    if (title) title.textContent = 'Today, ' + ncDayLabel(today);
+    if (!ncAllowed()) {
+      if (sub) sub.textContent = '';
+      root.innerHTML = '<div class="nc-card"><div class="nc-msg">Day checks are for Nirvana and Hithesh.</div></div>';
+      return;
+    }
+    if (!NC.loaded) {
+      if (sub) sub.textContent = '';
+      root.innerHTML = NC.err
+        ? '<div class="nc-card"><div class="nc-msg">Could not read today\'s checks. ' + esc(NC.err) + '</div><div class="nc-slipwrap"><button class="nc-slipbtn" type="button" data-nc-retry="1">Try again</button></div></div>'
+        : '<div class="nc-card"><div class="nc-msg">Reading today\'s checks</div></div>';
+      return;
+    }
+    if (NC.day !== today) { ncLoad(); }
+    var day = NC.day, rows = NC.rows, list = ncList();
+    var sum = roundSummary(rows, list);
+    var mr = checkStatus(day, 'morning_round', rows, now);
+    var box = ncBoxState(sum, mr);
+    if (sub) sub.textContent = 'Morning round: ' + sum.marked + ' of ' + sum.of + ' marked, due ' + DUE.morning_round;
+
+    var h = '';
+    if (NC.err) h += '<div class="nc-card" style="margin-bottom:18px"><div class="nc-msg">Could not refresh. ' + esc(NC.err) + '</div><div class="nc-slipwrap"><button class="nc-slipbtn" type="button" data-nc-retry="1">Try again</button></div></div>';
+    h += '<div class="nc-wrap"><div class="nc-col">';
+
+    /* The round: one tap of four per name, the latest mark wins. */
+    h += '<div class="nc-card" id="nc-round"><div class="nc-head"><div class="nc-h">Morning round</div><div class="nc-count" id="nc-count">' + sum.marked + ' of ' + sum.of + ' marked</div></div>';
+    if (!list.length) h += '<div class="nc-empty">Nobody on the list. The team list did not load.</div>';
+    list.forEach(function(m){
+      var last = ncLatestRound(rows, m.id), cur = sum.byMember[m.id];
+      var st = last
+        ? (NC_RESULT_WORD[last.result] + ' at ' + ncHM(Date.parse(last.created_at)) + ' by ' + last.by_name + (last.result === 'not_reached' && last.note ? ': ' + last.note : ''))
+        : 'Not marked yet';
+      h += '<div class="nc-row" data-member="' + m.id + '"><div class="nc-info"><div class="nc-name">' + esc(m.name) + '</div><div class="nc-state' + (cur === 'not_reached' ? ' nr' : '') + '">' + esc(st) + '</div></div>';
+      h += '<div class="nc-opts" role="group" aria-label="' + esc(m.name) + '">';
+      NC_RESULTS.forEach(function(o){
+        h += '<button class="nc-opt' + (o.cls ? ' ' + o.cls : '') + '" type="button" data-nc-round="' + o.key + '" data-m="' + m.id + '" aria-pressed="' + (cur === o.key ? 'true' : 'false') + '"' + (NC.busy['r' + m.id] ? ' disabled' : '') + '>' + o.label + '</button>';
+      });
+      h += '</div>';
+      h += last ? '<button class="nc-undo" type="button" data-nc-undo-round="' + m.id + '" aria-label="Undo the mark for ' + esc(m.name) + '">Undo</button>' : '<span class="nc-undo-sp"></span>';
+      h += '</div>';
+    });
+    h += '</div></div><div class="nc-col">';
+
+    /* Everyone reached: the morning_round check, locked until every name has a mark. */
+    h += '<div class="nc-card" id="nc-boxcard"><div class="nc-head"><div class="nc-h">Everyone reached</div><div class="nc-count">Due ' + DUE.morning_round + '</div></div><div class="nc-box">';
+    if (box.ticked) {
+      var mrRow = ncEarliestCheck(rows, 'morning_round', day);
+      h += '<div class="nc-done"><div class="nc-done-t">Ticked at ' + ncHM(mr.at) + (mrRow ? ' by ' + esc(mrRow.by_name) : '') + '. <span class="nc-st ' + mr.state + '">' + NC_STATE_WORD[mr.state] + '</span></div>'
+        + (mrRow ? '<button class="nc-undo" type="button" data-nc-undo-check="morning_round">Undo</button>' : '') + '</div>';
+    } else if (box.locked) {
+      h += '<button class="nc-boxbtn" type="button" id="nc-boxbtn" disabled>Everyone reached (' + box.left + ' left)</button><div class="nc-note">Opens when every name has a mark.</div>';
+    } else {
+      h += '<button class="nc-boxbtn" type="button" id="nc-boxbtn" data-nc-tick="morning_round"' + (NC.busy['c_morning_round'] ? ' disabled' : '') + '>Everyone reached</button>'
+        + '<div class="nc-note">' + sum.reached + ' reached, ' + sum.onLeave + ' on leave, ' + sum.notReached.length + ' not reached.</div>';
+    }
+    if (box.bulk) h += '<div class="nc-bulk">Marked in one go: Thulaib\'s card will show this</div>';
+    h += '</div></div>';
+
+    /* Checks of the day, one tap each. The morning round is ticked by the box above. */
+    h += '<div class="nc-card" id="nc-checks"><div class="nc-head"><div class="nc-h">Checks of the day</div></div>';
+    checksFor(day).forEach(function(name){
+      var s = checkStatus(day, name, rows, now), row = ncEarliestCheck(rows, name, day);
+      var d = 'Due ' + DUE[name] + (row ? ', ticked by ' + esc(row.by_name) : (name === 'morning_round' ? ', ticked with the Everyone reached box' : ''));
+      var stTxt = s.at != null ? ncHM(s.at) + ' ' + NC_STATE_WORD[s.state] : NC_STATE_WORD[s.state];
+      h += '<div class="nc-check" data-check="' + name + '"><div class="nc-check-l"><div class="nc-check-n">' + NC_CHECK_LABEL[name] + '</div><div class="nc-check-d">' + d + '</div></div><div class="nc-check-r">'
+        + '<span class="nc-st ' + s.state + '">' + esc(stTxt) + '</span>';
+      if (name !== 'morning_round') {
+        h += row
+          ? '<button class="nc-undo" type="button" data-nc-undo-check="' + name + '" aria-label="Undo ' + NC_CHECK_LABEL[name] + '">Undo</button>'
+          : '<button class="nc-tick" type="button" data-nc-tick="' + name + '"' + (NC.busy['c_' + name] ? ' disabled' : '') + '>Tick</button>';
+      }
+      h += '</div></div>';
+    });
+    h += '</div>';
+
+    /* Note a slip with today's slips under it. */
+    var slips = liveRows(rows).filter(function(r){ return r.kind === 'slip'; });
+    h += '<div class="nc-card" id="nc-slips"><div class="nc-head"><div class="nc-h">Slips today</div><div class="nc-count">' + slips.length + '</div></div>'
+      + '<div class="nc-slipwrap"><button class="nc-slipbtn" type="button" id="nc-slip-open" data-nc-slip-open="1">Note a slip</button></div>';
+    slips.forEach(function(r){
+      var k = NC_KINDS.filter(function(x){ return x.key === r.result; })[0];
+      h += '<div class="nc-slip" data-slip="' + r.id + '"><div class="nc-slip-t">' + esc(ncNameOf(r.member)) + ': ' + esc(k ? k.label : r.result) + ', ' + r.points + (r.points === 1 ? ' point' : ' points')
+        + '<div class="nc-slip-m">' + esc(r.note || '') + ' (' + ncHM(Date.parse(r.created_at)) + ' by ' + esc(r.by_name) + ')</div></div>'
+        + '<button class="nc-undo" type="button" data-nc-undo-slip="' + r.id + '" aria-label="Undo this slip">Undo</button></div>';
+    });
+    h += '<div class="nc-fine">Graphics and Video send backs are counted in Team Score, not here.</div></div>';
+    h += '</div></div>';
+    root.innerHTML = h;
+  }
+
+  /* ── TAPS ───────────────────────────────────────────────────────────── */
+  function ncTapRound(member, result, btn){
+    if (NC.busy['r' + member]) return;
+    var sum = roundSummary(NC.rows, ncList());
+    if (sum.byMember[member] === result) { toast(ncNameOf(member) + ' is already marked ' + NC_RESULT_WORD[result], 'info'); return; }
+    if (result === 'not_reached') { ncOpenReason({ mode: 'nr', member: member }); return; }
+    var b = ncBuild('round', { member: member, result: result }, S.currentUser);
+    if (b.error) { toast('Not saved. ' + b.error, 'error'); return; }
+    if (btn) btn.disabled = true;
+    ncWrite(b.row, ncNameOf(member) + ': ' + NC_RESULT_WORD[result], 'r' + member);
+  }
+  function ncTapCheck(name, btn){
+    var b = ncBuild('check', { check_name: name, day: NC.day }, S.currentUser);
+    if (b.error) { toast('Not saved. ' + b.error, 'error'); return; }
+    if (btn) btn.disabled = true;
+    ncWrite(b.row, NC_CHECK_LABEL[name] + ' ticked', 'c_' + name);
+  }
+  function ncOpenReason(r){
+    NC.reason = r;
+    var t = document.getElementById('nc-reason-title'), s = document.getElementById('nc-reason-sub');
+    var inp = document.getElementById('nc-reason-input'), er = document.getElementById('nc-reason-err');
+    if (r.mode === 'nr') { t.textContent = 'Not reached'; s.textContent = ncNameOf(r.member) + '. Why could they not be reached?'; }
+    else { t.textContent = 'Undo'; s.textContent = 'Undo ' + r.what + '. The row stays in the log with your reason.'; }
+    inp.value = ''; er.textContent = '';
+    document.getElementById('nc-reason-save').disabled = false;
+    openModal('nc-reason');
+  }
+  window.ncReasonSave = async function(){
+    var r = NC.reason; if (!r) { closeModal('nc-reason'); return; }
+    var note = document.getElementById('nc-reason-input').value, er = document.getElementById('nc-reason-err');
+    var b = r.mode === 'nr'
+      ? ncBuild('round', { member: r.member, result: 'not_reached', note: note }, S.currentUser)
+      : ncBuild('void', { voids: r.id, note: note }, S.currentUser);
+    if (b.error) { er.textContent = b.error; return; }
+    var btn = document.getElementById('nc-reason-save'); btn.disabled = true;
+    var ok = await ncWrite(b.row, r.mode === 'nr' ? ncNameOf(r.member) + ': Not reached' : 'Undone', r.mode === 'nr' ? 'r' + r.member : 'v' + r.id);
+    btn.disabled = false;
+    if (ok) { NC.reason = null; closeModal('nc-reason'); }
+    else er.textContent = 'Not saved. Try again.';
+  };
+  function ncOpenSlip(){
+    var sel = document.getElementById('nc-slip-person');
+    sel.innerHTML = '<option value="">Pick a person</option>' + ncList().map(function(m){ return '<option value="' + m.id + '">' + esc(m.name) + '</option>'; }).join('');
+    NC.slipKind = null;
+    ncPaintKinds();
+    document.getElementById('nc-slip-note').value = '';
+    document.getElementById('nc-slip-err').textContent = '';
+    document.getElementById('nc-slip-save').disabled = false;
+    openModal('nc-slip');
+  }
+  function ncPaintKinds(){
+    document.getElementById('nc-slip-kinds').innerHTML = NC_KINDS.map(function(k){
+      var p = SLIP_POINTS[k.key];
+      return '<button class="nc-kind" type="button" data-nc-kind="' + k.key + '" aria-pressed="' + (NC.slipKind === k.key ? 'true' : 'false') + '">' + k.label + '<small>' + p + (p === 1 ? ' point' : ' points') + '</small></button>';
+    }).join('');
+  }
+  window.ncSlipSave = async function(){
+    var er = document.getElementById('nc-slip-err');
+    var b = ncBuild('slip', { member: document.getElementById('nc-slip-person').value, result: NC.slipKind, note: document.getElementById('nc-slip-note').value }, S.currentUser);
+    if (b.error) { er.textContent = b.error; return; }
+    var btn = document.getElementById('nc-slip-save'); btn.disabled = true;
+    var ok = await ncWrite(b.row, 'Slip noted for ' + ncNameOf(b.row.member), 'slip');
+    btn.disabled = false;
+    if (ok) closeModal('nc-slip');
+    else er.textContent = 'Not saved. Try again.';
+  };
+  document.addEventListener('click', function(e){
+    var t = e.target && e.target.closest ? e.target : null; if (!t) return;
+    var k = t.closest('[data-nc-kind]');
+    if (k) { NC.slipKind = k.getAttribute('data-nc-kind'); ncPaintKinds(); document.getElementById('nc-slip-err').textContent = ''; return; }
+    var root = document.getElementById('nc-root'); if (!root || !root.contains(t)) return;
+    var b;
+    if ((b = t.closest('[data-nc-round]'))) { ncTapRound(Number(b.getAttribute('data-m')), b.getAttribute('data-nc-round'), b); return; }
+    if ((b = t.closest('[data-nc-undo-round]'))) {
+      var m = Number(b.getAttribute('data-nc-undo-round')), last = ncLatestRound(NC.rows, m);
+      if (last) ncOpenReason({ mode: 'void', id: last.id, what: 'the mark for ' + ncNameOf(m) });
+      return;
+    }
+    if ((b = t.closest('[data-nc-tick]'))) { ncTapCheck(b.getAttribute('data-nc-tick'), b); return; }
+    if ((b = t.closest('[data-nc-undo-check]'))) {
+      var n = b.getAttribute('data-nc-undo-check'), row = ncEarliestCheck(NC.rows, n, NC.day);
+      if (row) ncOpenReason({ mode: 'void', id: row.id, what: NC_CHECK_LABEL[n] + ' at ' + ncHM(Date.parse(row.created_at)) });
+      return;
+    }
+    if ((b = t.closest('[data-nc-undo-slip]'))) {
+      var id = Number(b.getAttribute('data-nc-undo-slip')), sr = NC.rows.filter(function(r){ return r.id === id; })[0];
+      if (sr) ncOpenReason({ mode: 'void', id: id, what: 'the slip for ' + ncNameOf(sr.member) });
+      return;
+    }
+    if (t.closest('[data-nc-slip-open]')) { ncOpenSlip(); return; }
+    if (t.closest('[data-nc-retry]')) { ncLoad(); return; }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' || !e.target) return;
+    if (e.target.id === 'nc-reason-input') { e.preventDefault(); window.ncReasonSave(); }
+    else if (e.target.id === 'nc-slip-note') { e.preventDefault(); window.ncSlipSave(); }
+  });
+})();
+</script>
+<!-- @@BBSMM_DAYCHECKS_END@@ -->
 <!-- @@BB_PUSH_BEGIN@@ -->
 <script>
 /* ════════════════════════════════════════════════════════════════════════════
