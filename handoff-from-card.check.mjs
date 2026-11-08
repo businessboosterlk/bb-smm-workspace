@@ -157,6 +157,29 @@ for (const [size, opts] of [['phone', { viewport: { width: 390, height: 844 }, d
     await ctx.close();
   }
 }
+/* BUILD 5 click path: the Weekly Report sheet was not one of the sheet manager's overlays, so Back once left the app
+   instead of closing it, and its close button was an empty square. */
+for (const [size, opts] of [['phone', { viewport: { width: 402, height: 874 }, isMobile: true, hasTouch: true }], ['desk', { viewport: { width: 1440, height: 900 } }]]) {
+  const { ctx, p, errs } = await page(b, opts, []);
+  const url0 = p.url();
+  const open = async () => { if (p.url() !== url0) await p.goto(url0, { waitUntil: 'domcontentloaded' }).then(() => p.waitForFunction(() => typeof S === 'object' && S.currentUser === 'NIRVANA', null, { timeout: 15000 })).then(() => p.waitForTimeout(1500)).catch(() => {}); await p.evaluate(() => window.generateWeeklyReport()).catch(() => {}); await p.waitForSelector('#bb-weekly-report-modal', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(300); };
+  await open();
+  const x = await p.evaluate(() => { const e = document.querySelector('#bb-weekly-report-modal button[aria-label="Close"]'); return e ? e.textContent : null; });
+  pass(`${size} Weekly Report: the close button shows a cross and says Close`, x === '\u2715', JSON.stringify(x));
+  pass(`${size} Weekly Report: opening it pins the page behind`, await p.evaluate(() => document.body.classList.contains('sheet-open')));
+  await p.goBack({ timeout: 3000 }).catch(() => {}); await p.waitForTimeout(500);
+  pass(`${size} Weekly Report: Back once closes it and stays in the app`, p.url() === url0 && await p.locator('#bb-weekly-report-modal').count() === 0 && await p.evaluate(() => typeof S === 'object' && S.currentUser === 'NIRVANA' && !document.body.classList.contains('sheet-open')).catch(() => false), p.url());
+  await open();
+  const h0 = await p.evaluate(() => history.length);
+  await p.locator('#bb-weekly-report-modal button[aria-label="Close"]').click({ timeout: 3000 }).catch(() => p.evaluate(() => { const m = document.getElementById('bb-weekly-report-modal'); const c = m && m.querySelector('button'); if (c) c.click(); })); await p.waitForTimeout(500);
+  pass(`${size} Weekly Report: the cross closes it and unpins the page`, await p.locator('#bb-weekly-report-modal').count() === 0 && !(await p.evaluate(() => document.body.classList.contains('sheet-open'))) && !(await p.evaluate(() => [...document.body.children].some(e => e.hasAttribute('inert')))));
+  await open();
+  await p.mouse.click(5, opts.viewport.height - 5); await p.waitForTimeout(500);
+  pass(`${size} Weekly Report: a tap outside closes it and unpins the page`, await p.locator('#bb-weekly-report-modal').count() === 0 && !(await p.evaluate(() => document.body.classList.contains('sheet-open'))));
+  pass(`${size} Weekly Report: closing it never leaves the app`, p.url() === url0 && await p.evaluate(() => typeof S === 'object' && S.currentUser === 'NIRVANA').catch(() => false), p.url());
+  pass(`${size} Weekly Report: no page errors`, errs.length === 0, errs.slice(0, 2).join(' | '));
+  await ctx.close();
+}
 await b.close();
 console.log(rows.join('\n'));
 console.log(`\nRESULT: ${total - bad} of ${total} PASS${bad ? ', ' + bad + ' FAIL' : ''}`);

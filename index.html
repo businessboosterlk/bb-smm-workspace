@@ -8583,7 +8583,7 @@ function updateSmmAgentsBadge(count) {
       '<div style="background:#111318;border:1px solid rgba(0,229,255,0.2);border-radius:18px;width:100%;max-width:620px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">' +
         '<div style="padding:18px 22px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">' +
           '<div style="font-size:14px;font-weight:800;color:#fff">Weekly Report</div>' +
-          '<button onclick="document.getElementById(\'bb-weekly-report-modal\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text3);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit;line-height:1"></button>' +
+          '<button data-close aria-label="Close" onclick="document.getElementById(\'bb-weekly-report-modal\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--text3);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:inherit;line-height:1">\u2715</button>' +
         '</div>' +
         '<div style="padding:18px 22px;overflow-y:auto">' + contentHtml + '</div>' +
       '</div>';
@@ -9913,7 +9913,8 @@ body.sheet-open{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <script>
 var BBF=(function(){
  /* Backdrops and modals only. Never the two sliding panels: see note 1. */
- var OVS='.modal-bg, #smm-checkin-overlay, #agent-drawer-overlay, #bb-detail-overlay, .sidebar-backdrop';
+ /* #bb-weekly-report-modal added 8 Nov 2026 (BUILD 5): without it Back left the app instead of closing the report */
+ var OVS='.modal-bg, #smm-checkin-overlay, #agent-drawer-overlay, #bb-detail-overlay, #bb-weekly-report-modal, .sidebar-backdrop';
  /* Must stay reachable while a backdrop is open: see note 2. */
  var KEEP='#agent-drawer-panel, #bb-detail-panel, .sidebar';   /* documented in partnerOf() */
  var lockedY=0, locked=false, lastFocus=null, histDepth=0, closing=false;
@@ -10066,6 +10067,10 @@ var BBF=(function(){
    muts.forEach(function(m){
     [].slice.call(m.addedNodes).forEach(function(n){
      if(n.nodeType===1&&n.matches&&n.matches(OVS)){watch(n);sawOverlay=true;}
+    });
+    /* an overlay that closes by removing itself (the Weekly Report) must unpin the page too */
+    [].slice.call(m.removedNodes).forEach(function(n){
+     if(n.nodeType===1&&n.matches&&n.matches(OVS))sawOverlay=true;
     });
    });
    if(sawOverlay)scheduleSync();
