@@ -33,10 +33,11 @@ const CARD = [
   { id: 904, title: 'Send the Waverley report', due: null, client_id: 43, notes: null, sent_by: 'SHIARA', seen_at: '2026-11-08T03:00:00Z', stuck_note: null, stuck_at: null, stuck_reply: null, stuck_reply_at: null, done: true, done_note: 'Sent on WhatsApp', completed_at: '2026-11-08T05:00:00Z', created_at: '2026-11-05T03:00:00Z' }
 ];
 
-async function page(b, opts, cardRows) {
+const SEAT_ID = { THULAIB: 23, SHIARA: 24, NIRVANA: 12, TIANA: 22, HITHESH: 29 };
+async function page(b, opts, cardRows, seat = 'NIRVANA') {
   const ctx = await b.newContext({ ...opts, colorScheme: 'dark' });
-  await ctx.addInitScript(() => { sessionStorage.setItem('smm-seat', 'NIRVANA'); });
-  const calls = [], writes = [];
+  await ctx.addInitScript((s) => { sessionStorage.setItem('smm-seat', s); }, seat);
+  const calls = [], writes = [], taskReads = [];
   await ctx.route(/supabase\.co\//, async (route) => {
     const req = route.request(), u = new URL(req.url());
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -46,9 +47,9 @@ async function page(b, opts, cardRows) {
       return json({ ok: true });
     }
     if (req.method() !== 'GET' && req.method() !== 'HEAD') writes.push(req.method() + ' ' + u.pathname);
-    if (u.pathname === '/rest/v1/team_members' && u.search.includes('name=eq.NIRVANA') && u.search.includes('select=id&')) return json(TEAM);
+    if (u.pathname === '/rest/v1/team_members' && u.search.includes('select=id&')) { const n = (u.search.match(/name=eq\.([A-Z]+)/) || [])[1]; return json(SEAT_ID[n] ? [{ id: SEAT_ID[n] }] : []); }
     if (u.pathname === '/rest/v1/clients') return json(CLIENTS);
-    if (u.pathname === '/rest/v1/tasks' && u.search.includes('sent_to_id=eq.12')) return json(cardRows);
+    if (u.pathname === '/rest/v1/tasks' && u.search.includes('sent_to_id=')) { taskReads.push(u.search); return json(u.search.includes('sent_to_id=eq.12&') ? cardRows : []); }
     if (u.pathname.startsWith('/rest/v1/rpc/')) return json(null);
     return json([]);
   });
@@ -57,16 +58,17 @@ async function page(b, opts, cardRows) {
   p.on('pageerror', e => errs.push('pageerror: ' + String(e.message || e)));
   p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await p.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await p.waitForFunction(() => typeof S === 'object' && S.currentUser === 'NIRVANA', null, { timeout: 15000 }).catch(() => {});
+  await p.waitForFunction((s) => typeof S === 'object' && S.currentUser === s, seat, { timeout: 15000 }).catch(() => {});
   await p.waitForSelector('#ho-card-mount', { state: 'attached', timeout: 8000 }).catch(() => {});
   await p.waitForTimeout(1500);
-  return { ctx, p, calls, errs, writes };
+  return { ctx, p, calls, errs, writes, taskReads };
 }
 
 const b = await chromium.launch();
 for (const [size, opts] of [['phone', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }], ['desk', { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 }]]) {
   const L = size;
-  const { ctx, p, calls, errs, writes } = await page(b, opts, CARD);
+  const { ctx, p, calls, errs, writes, taskReads } = await page(b, opts, CARD);
+  pass(`${L} Nirvana's card reads only tasks sent to Nirvana`, taskReads.length >= 1 && taskReads.every(q => q.includes('sent_to_id=eq.12&')), taskReads.length + ' reads');
   pass(`${L} signed in as Nirvana from the saved seat`, await p.evaluate(() => S.currentUser) === 'NIRVANA');
   const card = p.locator('#ho-card-mount .ho-card');
   pass(`${L} card shows`, await p.locator('#ho-card-mount:not([hidden]) .ho-card').count() === 1);
@@ -141,6 +143,17 @@ for (const [size, opts] of [['phone', { viewport: { width: 390, height: 844 }, d
     pass(`${L} no tasks: the card shows nothing at all`, st.there && st.hidden === true && st.h === 0 && st.inner === 0, JSON.stringify(st));
     pass(`${L} no tasks: nothing is written`, calls.length === 0, calls.map(x => x.name).join(','));
     pass(`${L} no tasks: no page or console errors`, errs.length === 0, errs.slice(0, 3).join(' | '));
+    await ctx.close();
+  }
+  /* Thulaib, bb_pending 1595: the card shows ONLY to the person the task is for. Nirvana has four tasks; every other
+     seat (Thulaib and Shiara included) sees no card and never reads a task sent to someone else. */
+  for (const seat of ['THULAIB', 'SHIARA', 'TIANA', 'HITHESH']) {
+    const { ctx, p, errs, calls, taskReads } = await page(b, opts, CARD, seat);
+    const st = await p.evaluate(() => { const m = document.getElementById('ho-card-mount'); return { who: S.currentUser, shown: !!(m && !m.hidden && m.offsetHeight), tasks: m ? m.querySelectorAll('.ho-task').length : 0 }; });
+    const own = 'sent_to_id=eq.' + SEAT_ID[seat] + '&';
+    pass(`${L} ${seat}: signed in, no card while the tasks are Nirvana's`, st.who === seat && !st.shown && st.tasks === 0, JSON.stringify(st));
+    pass(`${L} ${seat}: reads only tasks sent to ${seat}`, taskReads.length >= 1 && taskReads.every(q => q.includes(own)), taskReads.map(q => (q.match(/sent_to_id=eq\.\d+/) || [''])[0]).join(','));
+    pass(`${L} ${seat}: nothing written, no errors`, calls.length === 0 && errs.length === 0, calls.map(x => x.name).concat(errs).join(' | ').slice(0, 200));
     await ctx.close();
   }
 }
