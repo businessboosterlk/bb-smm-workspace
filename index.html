@@ -50,7 +50,8 @@ window.__ST_LOG=[];
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
 <!-- Pinned and hashed (fault SMM-10, 6 Oct 2026): @2 was a moving, generated file with no integrity check. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<!-- defer (BUILD 5 speed, 8 Nov 2026): it blocked the first paint. The client is made the moment it lands; see smmMakeClient. -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <style>
 /* ============================================================
    BB SMM WORKSPACE V4, MATCHES COMMAND CENTRE LAYOUT
@@ -2437,7 +2438,12 @@ tr:last-child td { border-bottom: none; }
 const SUPABASE_URL = 'https://yyviiwnqgphyklcoijyd.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_RkGimnQ1rzRrU4Io5qn9xg_Fgi4LxiO';
 let sb = null;
-try {
+/* THE LIBRARY IS DEFERRED, so at this line it may not be here yet. A deferred script runs before DOMContentLoaded,
+   and this is the first DOMContentLoaded listener in the page, so sb exists before any other start code asks for it.
+   Nothing at parse time uses sb (checked 8 Nov 2026 with a parse of every inline script); smmRestoreSeat polls for it. */
+function smmMakeClient() {
+  if (sb || !window.supabase) return sb;
+  try {
   /* NO SHARED LOGIN. A signInWithPassword used to run here, at client creation,
      before anyone touched the PIN screen, so opening the public URL handed the
      visitor an authenticated session. invoices and costs carry ONLY an
@@ -2451,14 +2457,22 @@ try {
      out, because Supabase stores the session in localStorage, so everyone who
      had ever opened this app kept a working session. Same fix as the Video
      System, see its LANDMINES.md L-VID-011. */
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-  /* _smmAuthReady is awaited in three places, so it stays a promise. What it
-     MEANS is inverted: it now resolves once we are definitely signed OUT. */
-  window._smmAuthReady = (async function(){
-    try{ await sb.auth.signOut({scope:'local'}); }catch(e){}
-    try{ Object.keys(localStorage).forEach(function(k){ if(/^sb-.*-auth-token$/.test(k)||k.indexOf('supabase.auth.token')===0) localStorage.removeItem(k); }); }catch(e){}
-  })();
-} catch (e) { console.warn(e); }
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  } catch (e) { console.warn(e); }
+  return sb;
+}
+/* _smmAuthReady is awaited in three places, so it stays a promise, made now. What it
+   MEANS is inverted: it resolves once we are definitely signed OUT (or the library never came). */
+window._smmAuthReady = new Promise(function (done) {
+  function go() {
+    var c = smmMakeClient();
+    (async function(){
+      if (c) { try{ await c.auth.signOut({scope:'local'}); }catch(e){} }
+      try{ Object.keys(localStorage).forEach(function(k){ if(/^sb-.*-auth-token$/.test(k)||k.indexOf('supabase.auth.token')===0) localStorage.removeItem(k); }); }catch(e){}
+    })().then(done, done);
+  }
+  if (window.supabase || document.readyState !== 'loading') go(); else document.addEventListener('DOMContentLoaded', go, { once: true });
+});
 
 // ============ USERS (login) ============
 const USERS = { THULAIB: '1031', SHIARA: '1006', NIRVANA: '2222', TIANA: '1010', HITHESH: '3344' };

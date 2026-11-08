@@ -157,6 +157,31 @@ for (const [size, opts] of [['phone', { viewport: { width: 390, height: 844 }, d
     await ctx.close();
   }
 }
+/* BUILD 5 speed: supabase-js was the one script blocking the first paint. It is deferred now; the client is made when
+   it lands. With the library held back 2.5 s the login screen still paints at once and a saved seat still restores. */
+{
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  pass('speed: supabase-js loads with defer, nothing else blocks', /<script defer src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\.117\.2\/dist\/umd\/supabase\.js" integrity="sha384-/.test(html) && (html.match(/<script(?![^>]*\b(defer|async)\b)[^>]*\bsrc=/g) || []).length === 0);
+  for (const seat of ['NIRVANA', null]) {
+    const ctx = await b.newContext({ viewport: { width: 402, height: 874 }, isMobile: true, hasTouch: true });
+    if (seat) await ctx.addInitScript(s => { if (location.protocol !== 'about:') sessionStorage.setItem('smm-seat', s); }, seat);
+    await ctx.route(/cdn\.jsdelivr\.net\/npm\/@supabase/, async r => { await new Promise(x => setTimeout(x, 2500)); r.continue(); });
+    await ctx.route(/supabase\.co\//, r => { const q = r.request(), u = new URL(q.url()); if (u.pathname.endsWith('app_session_check')) return r.fulfill({ status: 200, contentType: 'application/json', body: '"NIRVANA"' }); if (u.pathname === '/rest/v1/tasks') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(CARD) }); if (q.method() === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: u.pathname === '/rest/v1/clients' ? JSON.stringify(CLIENTS) : u.pathname === '/rest/v1/team_members' ? '[{"id":12}]' : '[]' }); return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }); });
+    const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+    await p.goto(BASE, { waitUntil: 'commit' });
+    const fcp = await p.evaluate(() => new Promise(r => { const f = () => { const e = performance.getEntriesByName('first-contentful-paint')[0]; e ? r(Math.round(e.startTime)) : setTimeout(f, 50); }; f(); })).catch(() => -1);
+    if (seat) {
+      const ok = await p.waitForFunction(() => typeof S === 'object' && S.currentUser === 'NIRVANA' && !!sb, null, { timeout: 15000 }).then(() => true).catch(() => false);
+      await p.waitForSelector('#ho-card-mount .ho-task', { timeout: 8000 }).catch(() => {});
+      pass('speed: library held back 2.5 s, first paint under 1 s and the saved seat still restores with its card', fcp >= 0 && fcp < 1000 && ok && await p.locator('#ho-card-mount .ho-task').count() >= 1, 'first paint ' + fcp + ' ms');
+    } else {
+      await p.waitForTimeout(3500);
+      pass('speed: library held back 2.5 s, no seat, the login screen paints under 1 s and the client is made', fcp >= 0 && fcp < 1000 && await p.evaluate(() => !!sb && !S.currentUser), 'first paint ' + fcp + ' ms');
+    }
+    pass(`speed: slow library ${seat ? 'with' : 'without'} a seat, no page errors`, errs.length === 0, errs.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+}
 /* BUILD 5 click path: the Weekly Report sheet was not one of the sheet manager's overlays, so Back once left the app
    instead of closing it, and its close button was an empty square. */
 for (const [size, opts] of [['phone', { viewport: { width: 402, height: 874 }, isMobile: true, hasTouch: true }], ['desk', { viewport: { width: 1440, height: 900 } }]]) {
