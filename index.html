@@ -135,6 +135,10 @@ input, textarea, select, button { font-family: inherit; color: inherit; }
   z-index: 9999;
 }
 .login-bg.gone { display: none; }
+/* While the sign-in cover is up, the app under it is hidden too (it keeps its size, so nothing reflows when the
+   cover goes). Nobody can see it, but the browser still counted its jump when the late stylesheet landed as
+   layout shift, and Tab could reach buttons behind the cover. Speed check 8 Nov 2026. */
+body:has(#login:not(.gone)) .main { visibility: hidden; }
 .login-box {
   background: var(--bg2); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 16px; padding: 32px 32px 28px; width: 100%; max-width: 360px;
@@ -1400,8 +1404,11 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; z-index: 300; }
   .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
-  .main { margin-left: 0; }
-  .page { padding: 64px 14px 40px; }
+  /* The top bar clearance sits here too, with the same values as the PHONE LAYER (L-SMM-022) far below.
+     That layer arrives about 3.6 s in on a slow phone; with only 64px on .page up here the page jumped 52px
+     when it landed (layout shift 0.158, speed check 8 Nov 2026). Both places now agree, so nothing moves. */
+  .main { margin-left: 0; padding-top: calc(52px + var(--sat)); padding-bottom: calc(84px + var(--sab)); }
+  .page { padding: 14px 14px 40px; }
   .kanban-board { grid-template-columns: 1fr; }
   .cp-fields, .cp-stats { grid-template-columns: 1fr 1fr; }
   .today-hero { flex-direction: column; align-items: flex-start; }
@@ -1552,7 +1559,7 @@ tr:last-child td { border-bottom: none; }
 <!-- ============ LOGIN ============ -->
 <div class="login-bg" id="login">
   <div class="login-box">
-    <img src="bb-logo.png" class="login-logo-img" alt="Business Booster">
+    <img src="bb-logo.png" class="login-logo-img" width="834" height="338" alt="Business Booster">
     <div class="login-sub">SMM WORKSPACE</div>
     <div class="login-date" id="login-date">·</div>
     <input class="login-input" id="log-name" placeholder="YOUR NAME" autocomplete="off" autocapitalize="characters" enterkeyhint="next" style="text-transform:uppercase" onkeydown="if(event.key==='Enter')document.getElementById('log-pin').focus()">

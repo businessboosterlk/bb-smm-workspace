@@ -174,13 +174,31 @@ for (const [size, opts] of [['phone', { viewport: { width: 390, height: 844 }, d
       const ok = await p.waitForFunction(() => typeof S === 'object' && S.currentUser === 'NIRVANA' && !!sb, null, { timeout: 15000 }).then(() => true).catch(() => false);
       await p.waitForSelector('#ho-card-mount .ho-task', { timeout: 8000 }).catch(() => {});
       pass('speed: library held back 2.5 s, first paint under 1 s and the saved seat still restores with its card', fcp >= 0 && fcp < 1000 && ok && await p.locator('#ho-card-mount .ho-task').count() >= 1, 'first paint ' + fcp + ' ms');
+      pass('speed: signed in, the app is visible (the sign-in cover no longer hides it)', await p.evaluate(() => getComputedStyle(document.querySelector('.main')).visibility === 'visible'));
     } else {
       await p.waitForTimeout(3500);
       pass('speed: library held back 2.5 s, no seat, the login screen paints under 1 s and the client is made', fcp >= 0 && fcp < 1000 && await p.evaluate(() => !!sb && !S.currentUser), 'first paint ' + fcp + ' ms');
+      pass('speed: signed out, the app under the sign-in cover is hidden', await p.evaluate(() => getComputedStyle(document.querySelector('.main')).visibility === 'hidden'));
     }
     pass(`speed: slow library ${seat ? 'with' : 'without'} a seat, no page errors`, errs.length === 0, errs.slice(0, 2).join(' | '));
     await ctx.close();
   }
+}
+/* BUILD 5 layout shift: the PHONE LAYER stylesheet sits 9,800 lines down and lands about 3.6 s in on a slow phone. It moved
+   the top clearance from .page to .main, so the app under the sign-in cover jumped 52px (layout shift 0.158). The first
+   stylesheet now carries the same clearance and the app is hidden while the cover is up. Same slow phone as speed.mjs. */
+{
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await ctx.route(/supabase\.co\//, r => r.request().method() === 'GET' ? r.continue() : r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+  await ctx.addInitScript(() => { let w = 0, ws = 0, last = 0; window.__cls = 0; new PerformanceObserver(l => { for (const e of l.getEntries()) { if (e.hadRecentInput) continue; if (e.startTime - last > 1000 || e.startTime - ws > 5000) { w = 0; ws = e.startTime; } w += e.value; last = e.startTime; window.__cls = Math.max(window.__cls, w); } }).observe({ type: 'layout-shift', buffered: true }); });
+  const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p);
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 1.6 * 1024 * 1024 / 8, uploadThroughput: 750 * 1024 / 8 });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await p.goto(BASE); await p.waitForLoadState('load', { timeout: 60000 }).catch(() => {}); await p.waitForTimeout(3000);
+  const cls = await p.evaluate(() => window.__cls);
+  pass('speed: signed out on a slow phone, layout shift under 0.1', cls < 0.1, 'layout shift ' + cls.toFixed(3));
+  await ctx.close();
 }
 /* BUILD 5 click path: the Weekly Report sheet was not one of the sheet manager's overlays, so Back once left the app
    instead of closing it, and its close button was an empty square. */
