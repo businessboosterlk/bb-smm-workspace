@@ -3,7 +3,11 @@
    gates the words (house style, no numbers, no he or she), and draws the one page.
    TONE (Thulaib, 23 Oct: "I don't want it to feel like a prison"): written to the person as "you", kind first, nothing
    is "missed" or "failed", unfinished work is "carried to next week", no scores, no comparison with anyone else. */
-import { createRequire } from 'module'; import fs from 'fs'; import path from 'path'; import { execFileSync } from 'child_process';
+import { createRequire } from 'module'; import fs from 'fs'; import path from 'path'; import net from 'net'; import { execFileSync } from 'child_process';
+/* THE CONNECT WINDOW (10 Nov 2026). Node tries each address of a host for only 250 ms. From Colombo one round trip to a US
+   host is about 290 ms, so on a busy line every address times out and fetch dies with a bare "fetch failed": three Fridays
+   were lost to it (23 Oct, 30 Oct, 6 Nov). Memory: node-connect-window-colombo. */
+net.setDefaultAutoSelectFamilyAttemptTimeout(1500);
 const require = createRequire(import.meta.url);
 export const HOME = process.env.HOME;
 export const SB = 'https://yyviiwnqgphyklcoijyd.supabase.co/rest/v1/';
@@ -11,7 +15,39 @@ export const ANON = fs.readFileSync(path.join(HOME, 'bb-smm-workspace/index.html
 export const MODEL = 'deepseek-ai/DeepSeek-V4-Flash-0731'; const PRICE_IN = 0.06, PRICE_OUT = 0.18;            // claude-rail prices.json, verified 15 Oct
 export const SEATS = ['Nirvana', 'Tiana', 'Hithesh'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const get = async q => { const r = await fetch(SB + q, { headers: { apikey: ANON, Authorization: 'Bearer ' + ANON } }); if (!r.ok) throw new Error(q.split('?')[0] + ' HTTP ' + r.status); return r.json(); };
+/* THE NETWORK RAIL (10 Nov 2026). Every call goes through net_(): a time limit, up to four tries with a growing wait, and an
+   error that names the real cause (ENOTFOUND, ETIMEDOUT, UND_ERR_CONNECT_TIMEOUT and so on), never only "fetch failed".
+   safe: true retries any network fault and HTTP 429 or 5xx. Reads and the draft change nothing. The two writes are safe to
+   repeat as well, read from their definitions on 10 Nov 2026: bb_week_review_put replaces the row for that seat and week and
+   never touches a released one; bb_week_review_release only takes rows not yet released, so a second call queues no second push.
+   safe: false retries ONLY when the connection was never made. Use it for any future call that is not safe to repeat. */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const NEVER_SENT = /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|EHOSTUNREACH|ENETUNREACH|ENETDOWN|UND_ERR_CONNECT_TIMEOUT/;
+export function causeOf(e) {
+  const seen = []; let c = e;
+  while (c && seen.length < 6) { if (c.code) seen.push(c.code); else if (c.name && c.name !== 'Error' && c.name !== 'TypeError') seen.push(c.name); (c.errors || []).forEach(x => x && x.code && seen.push(x.code)); c = c.cause; }
+  return [...new Set(seen)].join(' ') || String((e && e.message) || e);
+}
+export const isNetwork = e => !!(e && e.network);
+const WAITS = (process.env.WR_WAITS || '3000,15000,60000').split(',').map(Number);
+export async function net_(label, url, opt = {}, { safe = true, timeout = 30000 } = {}) {
+  let last = '';
+  for (let i = 0; i <= WAITS.length; i++) {
+    try {
+      const r = await fetch(process.env.WR_FAKE_HOST ? url.replace(/^https:\/\/[^/]+/, 'https://' + process.env.WR_FAKE_HOST) : url, { ...opt, signal: AbortSignal.timeout(timeout) });
+      if (safe && (r.status === 429 || r.status >= 500) && i < WAITS.length) { last = 'HTTP ' + r.status; await sleep(WAITS[i]); continue; }
+      return r;
+    } catch (e) {
+      last = causeOf(e);
+      const again = i < WAITS.length && (safe || NEVER_SENT.test(last));
+      if (process.env.WR_DEBUG) console.error(`${label}: try ${i + 1} ${last}${again ? ', waiting ' + WAITS[i] / 1000 + ' s' : ''}`);
+      if (!again) { const err = new Error(`network ${last} (${label}, ${i + 1} ${i ? 'tries' : 'try'})`); err.network = true; throw err; }
+      await sleep(WAITS[i]);
+    }
+  }
+  const err = new Error(`network ${last} (${label}, ${WAITS.length + 1} tries)`); err.network = true; throw err;
+}
+const get = async q => { const r = await net_('Supabase read', SB + q, { headers: { apikey: ANON, Authorization: 'Bearer ' + ANON } }); if (!r.ok) throw new Error(q.split('?')[0] + ' HTTP ' + r.status); return r.json(); };
 const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 export function mondayOf(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); const g = x.getDay(); x.setDate(x.getDate() - g + (g === 0 ? -6 : 1)); return iso(x); }
 
@@ -46,7 +82,7 @@ Voice: speak to the person as "you". Warm, plain and specific. Name real tasks a
 Rules: British English. Never use an em dash or an en dash. Never put a comma before "and", "or", "but" or "nor". No filler words like "delve", "leverage", "seamless", "robust", "journey", "testament".
 Never write a number, in digits or in words; the page prints the numbers itself. Never compare the person with anyone. Never say missed, failed, behind or lazy: unfinished work is simply carried to next week. If a note says it waits on a client, say that.
 Use ONLY the facts given. Never invent a task, client, idea or result.
-Return JSON only: {"summary": "two or three sentences on the shape of the week, starting with what went well", "went_well": ["up to 3"], "carried": ["up to 3 unfinished tasks, said neutrally"], "next_week": ["up to 3 small, practical suggestions drawn from the carried work or the ideas"], "learned": "one sentence on what the week shows you practised; an empty string if the facts do not say"}`;
+Return JSON only: {"summary": "two or three sentences on the shape of the week, starting with what went well", "went_well": ["up to 3"], "carried": ["up to 3 tasks whose finished is false, said neutrally; an empty list if every task is finished"], "next_week": ["up to 3 small, practical suggestions drawn from the carried work or the ideas"], "learned": "one sentence on what the week shows you practised; an empty string if the facts do not say"}`;
 const NUMWORDS = /\b(\d+%?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|half|dozen)\b/gi;
 const PRONOUN = /\b(she|he|her|him|his|hers)\b/i;
 const BANNED = /\b(missed|failed|failing|behind|lazy|poor|should have)\b/i;
@@ -65,14 +101,17 @@ export async function draft(g) {
   const usage = { prompt_tokens: 0, completion_tokens: 0 }; let words = null, f = '', drafts = 0;
   while (drafts < 3) {
     drafts++;
-    const res = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', { method: 'POST', headers: { Authorization: 'Bearer ' + DI, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: MODEL, temperature: 0.2, max_tokens: 900, response_format: { type: 'json_object' }, messages: msgs }) });
+    const res = await net_('DeepInfra draft', 'https://api.deepinfra.com/v1/openai/chat/completions', { method: 'POST', headers: { Authorization: 'Bearer ' + DI, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, temperature: 0.2, max_tokens: 900, response_format: { type: 'json_object' }, messages: msgs }) }, { timeout: 120000 });
     if (!res.ok) throw new Error('DeepInfra HTTP ' + res.status + ' ' + (await res.text()).slice(0, 160));
     const j = await res.json(); usage.prompt_tokens += j.usage.prompt_tokens; usage.completion_tokens += j.usage.completion_tokens;
     const raw = j.choices[0].message.content.replace(/^```json|```$/g, '');
     words = JSON.parse(raw);
     ['went_well', 'carried', 'next_week'].forEach(k => { words[k] = (words[k] || []).filter(x => typeof x === 'string' && x.trim()).slice(0, 3); });
     words.summary = String(words.summary || ''); words.learned = String(words.learned || '');
+    /* Seen 10 Nov 2026: with every task finished the model still filled "Carried" with finished work that "may need follow-up".
+       Carried is a fact, so the code decides: nothing unfinished means the list is empty and the page prints "Nothing to note". */
+    if (!(g.rows || []).some(r => r.status !== 'done')) words.carried = [];
     f = faults([words.summary, ...words.went_well, ...words.carried, ...words.next_week, words.learned].join('\n'), (g.rows || []).map(r => r.notes).join(' '));
     if (process.env.WR_DEBUG) console.error('draft ' + drafts + ':\n' + (f || 'clean'));
     if (!f) break;
@@ -86,32 +125,42 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&am
 export function pageHtml(g, w, tag) {
   const N = g.numbers, li = a => (a || []).map(x => `<li>${esc(x)}</li>`).join('') || '<li>Nothing to note</li>';
   const hasClient = g.rows.some(r => r.client_name);
+  /* ONE PAGE (10 Nov 2026). A full week is twenty or more rows: past TWO_COL rows the table is set in two columns, split
+     between days where it can, and pdf() then shrinks the page a step at a time until it is one sheet. */
+  const TWO_COL = 14; let halves = [g.rows];
+  if (g.rows.length > TWO_COL) { let cut = Math.ceil(g.rows.length / 2); for (const c of [cut, cut + 1, cut - 1, cut + 2, cut - 2]) if (c > 0 && c < g.rows.length && g.rows[c].day_of_week !== g.rows[c - 1].day_of_week) { cut = c; break; } halves = [g.rows.slice(0, cut), g.rows.slice(cut)]; }
+  const tbl = rows => `<table><tr><th>Day</th>${hasClient ? '<th>Client</th>' : ''}<th>Task</th><th>Finished</th></tr>${rows.map(r => `<tr><td>${DAYS[r.day_of_week - 1]}</td>${hasClient ? `<td>${esc(r.client_name || '')}</td>` : ''}<td>${esc(r.notes)}</td><td>${r.status === 'done' ? 'Yes' : 'Carried'}</td></tr>`).join('')}</table>`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @page{size:A4;margin:14mm}body{font:10.5pt/1.4 -apple-system,Inter,Helvetica,sans-serif;color:#141820}
 h1{font-size:20pt;margin:0 0 2px}.sub{color:#5b6472;margin-bottom:12px}.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 14px}
 .n{border:1px solid #dde2ea;border-radius:8px;padding:8px 10px}.n b{display:block;font-size:17pt}.n span{color:#5b6472;font-size:9pt}
 h2{font-size:11.5pt;margin:10px 0 3px}ul{margin:0;padding-left:18px}li{margin:2px 0}table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-top:4px}
-td,th{border-bottom:1px solid #eef1f5;padding:3px 6px;text-align:left;vertical-align:top}td:last-child,th:last-child{white-space:nowrap}.foot{margin-top:12px;color:#8a93a1;font-size:8.5pt}</style></head><body>
+td,th{border-bottom:1px solid #eef1f5;padding:3px 6px;text-align:left;vertical-align:top}td:last-child,th:last-child{white-space:nowrap}.two{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:start}.foot{margin-top:12px;color:#8a93a1;font-size:8.5pt}</style></head><body>
 <h1>${esc(g.who)}, your week</h1><div class="sub">${esc(g.facts.week)} 2026${tag ? '. ' + esc(tag) : ''}</div>
 <p>${esc(w.summary)}</p>
 <div class="nums"><div class="n"><b>${N.done} of ${N.tasks}</b><span>tasks finished</span></div><div class="n"><b>${N.timed}</b><span>tasks with a time</span></div>
 <div class="n"><b>${N.linked}</b><span>with work linked</span></div><div class="n"><b>${N.ideas}</b><span>ideas banked</span></div></div>
 <h2>Went well</h2><ul>${li(w.went_well)}</ul><h2>Carried to next week</h2><ul>${li(w.carried)}</ul><h2>For next week</h2><ul>${li(w.next_week)}</ul>
 ${w.learned ? `<h2>What the week shows</h2><p>${esc(w.learned)}</p>` : ''}
-<h2>The week as planned</h2><table><tr><th>Day</th>${hasClient ? '<th>Client</th>' : ''}<th>Task</th><th>Finished</th></tr>${g.rows.map(r => `<tr><td>${DAYS[r.day_of_week - 1]}</td>${hasClient ? `<td>${esc(r.client_name || '')}</td>` : ''}<td>${esc(r.notes)}</td><td>${r.status === 'done' ? 'Yes' : 'Carried'}</td></tr>`).join('')}</table>
+<h2>The week as planned</h2><div class="${halves.length > 1 ? 'two' : ''}">${halves.map(tbl).join('')}</div>
 <div class="foot">Numbers counted from the Weekly Plan as typed. Words drafted by ${MODEL.split('/')[1]} on DeepInfra from those rows only.</div></body></html>`;
 }
 export async function pdf(html, out) {
   const { chromium } = require(path.join(HOME, 'bb-systems/batch/node_modules/playwright'));
+  const SCALES = [1, 0.94, 0.88, 0.82, 0.76]; let pages = 0, used = 1;
+  const count = () => (fs.readFileSync(out, 'latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
   const browser = await chromium.launch(); try {
-    const page = await browser.newPage(); await page.setContent(html); await page.pdf({ path: out, format: 'A4', printBackground: true });
+    const page = await browser.newPage(); await page.setContent(html);
+    /* Shrink to fit: full size first, then smaller a step at a time. Below FLOOR the type is too small to read, so the
+       one page refusal still stands as the guard. */
+    for (const scale of SCALES) { await page.pdf({ path: out, format: 'A4', printBackground: true, scale }); pages = count(); used = scale; if (pages === 1) break; }
   } finally { await browser.close(); }
-  const pages = (fs.readFileSync(out, 'latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
-  if (pages !== 1) { fs.unlinkSync(out); throw new Error('REFUSED: ' + pages + ' pages, the review is one page'); }
+  if (pages !== 1) { fs.unlinkSync(out); throw new Error('REFUSED: ' + pages + ' pages even at ' + Math.round(used * 100) + ' per cent size, the review is one page'); }
+  if (process.env.WR_DEBUG) console.error('pdf: one page at ' + Math.round(used * 100) + ' per cent size');
   return out;
 }
 export async function rpc(fn, body) {
   const tok = fs.readFileSync(path.join(HOME, '.bb-secrets/booster-brain.env'), 'utf8').match(/^BRAIN_PUT_TOKEN=(.*)$/m)[1].trim();
-  const r = await fetch(SB + 'rpc/' + fn, { method: 'POST', headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json', 'x-bb-brain-put': tok }, body: JSON.stringify(body) });
+  const r = await net_('Supabase ' + fn, SB + 'rpc/' + fn, { method: 'POST', headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json', 'x-bb-brain-put': tok }, body: JSON.stringify(body) }, { safe: true, timeout: 60000 });
   const t = await r.text(); if (!r.ok) throw new Error(fn + ' HTTP ' + r.status + ' ' + t.slice(0, 200)); return JSON.parse(t || 'null');
 }
